@@ -1,0 +1,30 @@
+{
+  "name": "观微 - 鉴伪求真",
+  "short_name": "观微",
+  "description": "AI 辅助信息求证社区 — 截图鉴定、情绪操控检测、多源交叉验证",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f0e8",
+  "theme_color": "#c0392b",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "categories": ["news", "utilities", "social"],
+  "lang": "zh-CN"
+}

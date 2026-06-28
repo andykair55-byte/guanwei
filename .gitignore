@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+backend/venv/
+backend/.venv/
+
+# Build output
+dist/
+
+# Environment
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+backend/__pycache__/
+
+# Database
+*.db
+backend/*.db
+
+# Logs
+*.log
+
+# Server
+server/
