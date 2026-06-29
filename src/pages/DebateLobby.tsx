@@ -1,9 +1,22 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Coins, Swords } from 'lucide-react'
 import { useDebateStore } from '../stores/debateStore'
 import { useUserStore } from '../stores/userStore'
 import LobbyRoomCard from '../components/debate/LobbyRoomCard'
+import { useDeviceFrame } from '../contexts/DeviceFrameContext'
+
+function useIsDesktop() {
+  const { inDeviceFrame } = useDeviceFrame()
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768)
+  useEffect(() => {
+    if (inDeviceFrame) return
+    const handler = () => setIsDesktop(window.innerWidth >= 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [inDeviceFrame])
+  return inDeviceFrame ? false : isDesktop
+}
 
 export default function DebateLobby() {
   const navigate = useNavigate()
@@ -11,6 +24,7 @@ export default function DebateLobby() {
   const isLoadingLobby = useDebateStore(s => s.isLoadingLobby)
   const fetchLobbyRooms = useDebateStore(s => s.fetchLobbyRooms)
   const userPoints = useUserStore(s => s.user.points)
+  const isDesktop = useIsDesktop()
 
   useEffect(() => { fetchLobbyRooms() }, [fetchLobbyRooms])
 
@@ -18,7 +32,7 @@ export default function DebateLobby() {
     <div className="flex flex-col min-h-screen bg-paper-texture">
       {/* Header */}
       <div className="sticky top-0 z-20 glass border-b border-line/50">
-        <div className="flex items-center h-12 px-4 max-w-[480px] mx-auto">
+        <div className={`flex items-center h-12 px-4 ${isDesktop ? '' : 'max-w-[480px] mx-auto'}`}>
           <button onClick={() => navigate('/melon')} className="flex items-center gap-1 text-ink-700 text-sm active:opacity-60">
             <ArrowLeft size={18} />
             <span>返回</span>
@@ -36,7 +50,7 @@ export default function DebateLobby() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 max-w-[480px] mx-auto w-full px-4 py-4">
+      <div className={`flex-1 w-full px-4 py-4 ${isDesktop ? 'max-w-4xl mx-auto' : 'max-w-[480px] mx-auto'}`}>
         {/* 说明 */}
         <div className="p-3 bg-surface rounded-xl border border-line/30 mb-4">
           <p className="text-[12px] text-ink-500 leading-relaxed">
@@ -46,8 +60,8 @@ export default function DebateLobby() {
 
         {/* 房间列表 */}
         {isLoadingLobby ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => (
+          <div className={isDesktop ? 'grid grid-cols-2 gap-4' : 'space-y-3'}>
+            {[1, 2, 3, 4].map(i => (
               <div key={i} className="bg-surface rounded-xl p-4 border border-line/30">
                 <div className="skeleton h-5 w-3/4 mb-3" />
                 <div className="skeleton h-4 w-1/2 mb-2" />
@@ -60,6 +74,16 @@ export default function DebateLobby() {
             <Swords size={36} className="mx-auto text-ink-faint mb-3" />
             <p className="text-[14px] text-ink-400 mb-1">暂无辩论房间</p>
             <p className="text-[12px] text-ink-faint">创建第一个房间开始辩论</p>
+          </div>
+        ) : isDesktop ? (
+          <div className="grid grid-cols-2 gap-4">
+            {lobbyRooms.map(room => (
+              <LobbyRoomCard
+                key={room.id}
+                room={room}
+                onClick={() => navigate(`/debate-room/${room.id}`)}
+              />
+            ))}
           </div>
         ) : (
           <div className="space-y-3">

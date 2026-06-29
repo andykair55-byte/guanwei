@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Upload, Camera, MapPin, Clock, Shield, AlertTriangle,
@@ -6,6 +6,19 @@ import {
   Aperture, Eye, RefreshCw, Info,
 } from 'lucide-react'
 import * as exifr from 'exifr'
+import { useDeviceFrame } from '../contexts/DeviceFrameContext'
+
+function useIsDesktop() {
+  const { inDeviceFrame } = useDeviceFrame()
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768)
+  useEffect(() => {
+    if (inDeviceFrame) return
+    const handler = () => setIsDesktop(window.innerWidth >= 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [inDeviceFrame])
+  return inDeviceFrame ? false : isDesktop
+}
 
 // ===== 类型定义 =====
 
@@ -204,6 +217,7 @@ function calcRiskScore(risks: RiskItem[]): number {
 
 export default function ExifAnalyzer() {
   const navigate = useNavigate()
+  const isDesktop = useIsDesktop()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [exifData, setExifData] = useState<ExifData | null>(null)
@@ -319,7 +333,7 @@ export default function ExifAnalyzer() {
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">
       {/* 顶部导航栏 */}
-      <div className="px-4 pt-3 pb-2 flex items-center gap-3">
+      <div className={`px-4 pt-3 pb-2 flex items-center gap-3 ${isDesktop ? 'max-w-3xl mx-auto w-full' : ''}`}>
         <button
           onClick={() => navigate(-1)}
           className="p-1.5 -ml-1.5 rounded-lg hover:bg-paper-dark transition-colors"
@@ -340,7 +354,7 @@ export default function ExifAnalyzer() {
         )}
       </div>
 
-      <div className="flex-1 px-4 pb-4 overflow-y-auto">
+      <div className={`flex-1 px-4 pb-4 overflow-y-auto ${isDesktop ? 'max-w-3xl mx-auto w-full' : ''}`}>
         {/* ===== 上传状态 ===== */}
         {state === 'idle' && (
           <div className="animate-fade-in-up">

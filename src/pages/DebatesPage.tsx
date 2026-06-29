@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Swords, Users, Zap, Flame, Clock, Star, ChevronRight,
@@ -6,9 +6,23 @@ import {
 import { TOPICS } from '../services/debateArenaService'
 import { ALL_CHARACTERS } from '../services/characters'
 import CharacterIcon from '../components/CharacterIcon'
+import { useDeviceFrame } from '../contexts/DeviceFrameContext'
+
+function useIsDesktop() {
+  const { inDeviceFrame } = useDeviceFrame()
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768)
+  useEffect(() => {
+    if (inDeviceFrame) return
+    const handler = () => setIsDesktop(window.innerWidth >= 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [inDeviceFrame])
+  return inDeviceFrame ? false : isDesktop
+}
 
 export default function DebatesPage() {
   const navigate = useNavigate()
+  const isDesktop = useIsDesktop()
   const [selectedAffirm, setSelectedAffirm] = useState<string>('baize')
   const [selectedNegate, setSelectedNegate] = useState<string>('xiezhi')
   const [selectingSide, setSelectingSide] = useState<'affirm' | 'negate' | null>(null)
@@ -48,7 +62,7 @@ export default function DebatesPage() {
         </div>
       </div>
 
-      <div className="flex-1 px-5 pt-4 pb-6 space-y-4">
+      <div className={`flex-1 pt-4 pb-6 space-y-4 ${isDesktop ? 'px-6 max-w-3xl mx-auto' : 'px-5'}`}>
         {/* ===== Matchup Bar ===== */}
         <div className="bg-surface rounded-xl shadow-card p-4">
           <div className="flex items-center gap-3">

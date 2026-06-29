@@ -8,6 +8,7 @@ import { useVerificationStore } from '../stores/verificationStore'
 import AgentProgress from '../components/AgentProgress'
 import EvidenceTimeline from '../components/EvidenceTimeline'
 import SmartInput from '../components/SmartInput'
+import { useDeviceFrame } from '../contexts/DeviceFrameContext'
 import type { LucideIcon } from 'lucide-react'
 
 function CredibilityStars({ level }: { level: number }) {
@@ -45,6 +46,7 @@ function VerifyPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const [input, setInput] = useState('')
+  const { notchHeight } = useDeviceFrame()
 
   const {
     dailyFreeUsed,
@@ -85,9 +87,13 @@ function VerifyPage() {
 
   // ===== 分析中 =====
   if (isAnalyzing) {
+    const headerPadding = notchHeight > 0 ? `${notchHeight + 8}px` : undefined
     return (
       <div className="flex flex-col min-h-full bg-paper-texture">
-        <div className="px-5 pt-4 pb-2">
+        <div
+          className="px-5 pb-2"
+          style={{ paddingTop: headerPadding || '16px' }}
+        >
           <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface shadow-card text-ink-500 text-[12px]">
             <Shield size={12} className="text-seal" />
             <span>剩余 {remainingFree} 次免费</span>
@@ -121,9 +127,13 @@ function VerifyPage() {
 
   // ===== 结果 =====
   if (result) {
+    const headerPadding = notchHeight > 0 ? `${notchHeight + 8}px` : undefined
     return (
       <div className="flex flex-col min-h-full bg-paper-texture">
-        <div className="px-5 pt-4 pb-2">
+        <div
+          className="px-5 pb-2"
+          style={{ paddingTop: headerPadding || '16px' }}
+        >
           <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface shadow-card text-ink-500 text-[12px]">
             <Shield size={12} className="text-seal" />
             <span>剩余 {remainingFree} 次免费</span>
@@ -194,16 +204,20 @@ function VerifyPage() {
   }
 
   // ===== 默认输入 =====
+  const defaultPadding = notchHeight > 0 ? `${notchHeight + 8}px` : undefined
   return (
     <div className="flex flex-col min-h-full bg-paper-texture">
       {/* 顶部 */}
-      <div className="px-5 pt-4 pb-2 flex items-center justify-between">
+      <div
+        className="px-5 pb-2 flex items-center justify-between"
+        style={{ paddingTop: defaultPadding || '16px' }}
+      >
         <div>
-          <h1 className="text-xl font-bold text-ink-900 tracking-tight">求证</h1>
-          <p className="text-[11px] text-ink-400 mt-0.5">AI 辅助你判断，不替你做决定</p>
+          <h1 className="text-2xl font-bold text-ink-900 tracking-tight">求证</h1>
+          <p className="text-sm text-ink-400 mt-0.5">AI 辅助你判断，不替你做决定</p>
         </div>
-        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface shadow-card text-ink-500 text-[12px]">
-          <Shield size={12} className="text-seal" />
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface shadow-card text-ink-500 text-sm">
+          <Shield size={14} className="text-seal" />
           <span>{remainingFree} 次</span>
         </div>
       </div>
@@ -212,7 +226,7 @@ function VerifyPage() {
         {/* 额度提示 */}
         {quotaExhausted && (
           <div className="mb-4 p-4 rounded-xl bg-surface shadow-card">
-            <p className="text-[13px] text-ink-700 mb-3 font-medium">今日免费次数已用完</p>
+            <p className="text-base text-ink-700 mb-3 font-medium">今日免费次数已用完</p>
             <button
               onClick={() => purchaseExtra()}
               className="w-full py-3 rounded-xl bg-gold text-white text-[13px] font-medium active:scale-[0.98] transition-transform flex items-center justify-center gap-1.5"

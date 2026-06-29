@@ -277,3 +277,19 @@ input:focus, textarea:focus {
   animation: shimmer 1.5s ease-in-out infinite;
   border-radius: 8px;
 }
+
+/* ===== PC 端全局字号放大 ===== */
+@media (min-width: 768px) {
+  /* 10px → 12px, 11px → 13px, 12px → 14px, 13px → 15px, 14px → 16px */
+  .text-\[9px\]   { font-size: 11px; }
+  .text-\[10px\]  { font-size: 13px; }
+  .text-\[11px\]  { font-size: 14px; }
+  .text-\[12px\]  { font-size: 14px; }
+  .text-\[13px\]  { font-size: 15px; }
+  .text-\[14px\]  { font-size: 16px; }
+
+  /* Tailwind 标准字号也放大一档 */
+  .text-xs   { font-size: 0.875rem; line-height: 1.25rem; } /* 12→14px */
+  .text-sm   { font-size: 1rem; line-height: 1.5rem; }      /* 14→16px */
+  .text-base { font-size: 1.0625rem; line-height: 1.625rem; } /* 16→17px */
+}

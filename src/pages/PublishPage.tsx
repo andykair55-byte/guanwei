@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { X, ImagePlus, MapPin, ChevronDown, Shield, Loader2, Check } from 'lucide-react'
 import { api } from '../services/api'
+import { useDeviceFrame } from '../contexts/DeviceFrameContext'
 
 type PostType = '吃瓜爆料' | '公益求助' | '求助求证'
 
@@ -9,6 +10,7 @@ const postTypes: PostType[] = ['吃瓜爆料', '公益求助', '求助求证']
 
 function PublishPage() {
   const navigate = useNavigate()
+  const { notchHeight } = useDeviceFrame()
   const [postType, setPostType] = useState<PostType>('吃瓜爆料')
   const [showTypePicker, setShowTypePicker] = useState(false)
   const [coverImage, setCoverImage] = useState<string | null>(null)
@@ -69,11 +71,16 @@ function PublishPage() {
     }
   }
 
+  const headerHeight = notchHeight > 0 ? notchHeight + 56 : 56
+
   return (
     <div className="fixed inset-0 z-40 bg-paper-texture animate-slide-up">
       <div className="flex flex-col h-full max-w-[480px] mx-auto">
         {/* 顶部栏 */}
-        <div className="flex items-center justify-between px-5 h-14 border-b border-line/50 flex-shrink-0 glass">
+        <div
+          className="flex items-center justify-between px-5 border-b border-line/50 flex-shrink-0 glass"
+          style={{ height: `${headerHeight}px` }}
+        >
           <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-xl flex items-center justify-center active:bg-paper-dark transition-colors">
             <X size={20} className="text-ink-700" />
           </button>

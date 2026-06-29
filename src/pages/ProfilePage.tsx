@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/authStore'
 import { RANK_CONFIG, getRankProgress } from '../config/ranks'
 import RankBadge from '../components/RankBadge'
 import RankProgress from '../components/RankProgress'
+import { useDeviceFrame } from '../contexts/DeviceFrameContext'
 import type { LucideIcon } from 'lucide-react'
 
 const rankIconMap: Record<string, LucideIcon> = {
@@ -18,6 +19,7 @@ const badgeIconMap: Record<string, LucideIcon> = {
 
 export default function ProfilePage() {
   const { user, fetchStats, fetchPoints } = useAuthStore()
+  const { notchHeight } = useDeviceFrame()
 
   useEffect(() => {
     fetchStats()
@@ -39,10 +41,15 @@ export default function ProfilePage() {
 
   const progress = getRankProgress(user)
 
+  const notchPadding = notchHeight > 0 ? `${notchHeight + 8}px` : undefined
+
   return (
     <div className="min-h-full bg-paper-texture pb-6">
       {/* 用户信息卡 */}
-      <div className="px-5 pt-5 pb-4">
+      <div
+        className="px-5 pb-4"
+        style={{ paddingTop: notchPadding || '20px' }}
+      >
         <div className="flex items-center gap-4">
           <div className="relative">
             <img

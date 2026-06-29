@@ -1,9 +1,22 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Clock, RefreshCw, GitBranch, ChevronDown, ChevronUp,
   Calendar, Hash, AlertCircle, CheckCircle,
 } from 'lucide-react'
+import { useDeviceFrame } from '../contexts/DeviceFrameContext'
+
+function useIsDesktop() {
+  const { inDeviceFrame } = useDeviceFrame()
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768)
+  useEffect(() => {
+    if (inDeviceFrame) return
+    const handler = () => setIsDesktop(window.innerWidth >= 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [inDeviceFrame])
+  return inDeviceFrame ? false : isDesktop
+}
 
 // ===== 类型 =====
 
@@ -184,6 +197,7 @@ function formatDate(sortKey: number): string {
 
 export default function TimelineBuilder() {
   const navigate = useNavigate()
+  const isDesktop = useIsDesktop()
   const [input, setInput] = useState('')
   const [events, setEvents] = useState<TimelineEvent[]>([])
   const [state, setState] = useState<AnalysisState>('idle')
@@ -231,12 +245,12 @@ export default function TimelineBuilder() {
   return (
     <div className="flex flex-col min-h-full bg-paper-texture">
       {/* 顶部导航 */}
-      <div className="px-5 pt-4 pb-2 flex items-center gap-3">
+      <div className={`px-5 pt-4 pb-2 flex items-center gap-3 ${isDesktop ? 'max-w-3xl mx-auto w-full' : ''}`}>
         <button onClick={() => navigate(-1)} className="p-1.5 -ml-1.5 rounded-lg hover:bg-paper-dark transition-colors active:scale-95">
           <ArrowLeft size={20} className="text-ink-700" />
         </button>
         <div className="flex-1">
-          <h1 className="text-[16px] font-bold text-ink-900">时间线重建</h1>
+          <h1 className={`${isDesktop ? 'text-xl' : 'text-[16px]'} font-bold text-ink-900`}>时间线重建</h1>
           <p className="text-[11px] text-ink-400">从混乱信息中提取事件脉络</p>
         </div>
         {state === 'done' && (
@@ -246,7 +260,7 @@ export default function TimelineBuilder() {
         )}
       </div>
 
-      <div className="flex-1 px-5 pb-6 overflow-y-auto">
+      <div className={`flex-1 px-5 pb-6 overflow-y-auto ${isDesktop ? 'max-w-3xl mx-auto w-full' : ''}`}>
         {/* ===== 输入状态 ===== */}
         {state === 'idle' && (
           <div className="animate-fade-in-up space-y-4">

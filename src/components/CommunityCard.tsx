@@ -57,7 +57,7 @@ function CommunityCard({ post, index = 0, onClick }: CommunityCardProps) {
 
       {/* 内容区 */}
       <div className="p-3">
-        <h3 className="text-[13px] text-ink-900 leading-snug line-clamp-2 mb-2.5 font-medium min-h-[2.4em]">
+        <h3 className="text-sm text-ink-900 leading-snug line-clamp-2 mb-2.5 font-medium min-h-[2.4em]">
           {post.title}
         </h3>
 
@@ -68,7 +68,7 @@ function CommunityCard({ post, index = 0, onClick }: CommunityCardProps) {
               alt={post.authorName}
               className="w-4 h-4 rounded-full flex-shrink-0 bg-paper-dark"
             />
-            <span className="text-[11px] text-ink-400 truncate">{post.authorName}</span>
+            <span className="text-xs text-ink-400 truncate">{post.authorName}</span>
           </div>
 
           <button
@@ -80,8 +80,8 @@ function CommunityCard({ post, index = 0, onClick }: CommunityCardProps) {
               liked ? 'text-seal' : 'text-ink-400'
             }`}
           >
-            <Heart size={12} className={liked ? 'fill-seal' : ''} />
-            <span className="text-[11px]">{formatLikes(liked ? post.likes + 1 : post.likes)}</span>
+            <Heart size={13} className={liked ? 'fill-seal' : ''} />
+            <span className="text-xs">{formatLikes(liked ? post.likes + 1 : post.likes)}</span>
           </button>
         </div>
       </div>

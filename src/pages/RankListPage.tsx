@@ -2,16 +2,23 @@ import { useAuthStore } from '../stores/authStore'
 import { RANK_CONFIG, RANK_ORDER } from '../config/ranks'
 import { ChevronLeft } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useDeviceFrame } from '../contexts/DeviceFrameContext'
 
 export default function RankListPage() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
+  const { notchHeight } = useDeviceFrame()
+
+  const headerHeight = notchHeight > 0 ? notchHeight + 56 : 56
 
   return (
     <div className="min-h-screen bg-paper pb-20">
       {/* 头部 */}
       <div className="sticky top-0 bg-paper border-b border-line z-10">
-        <div className="flex items-center h-14 px-4">
+        <div
+          className="flex items-center px-4"
+          style={{ height: `${headerHeight}px` }}
+        >
           <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-ink-900">
             <ChevronLeft size={24} />
           </button>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { X, Smartphone, ChevronLeft, ChevronRight } from 'lucide-react'
+import { DeviceFrameProvider } from '../contexts/DeviceFrameContext'
 
 interface DevicePreset {
   name: string
@@ -123,7 +124,9 @@ export default function DeviceFrame({ children, onClose }: DeviceFrameProps) {
 
               {/* App 内容 */}
               <div className="w-full h-full overflow-hidden">
-                {children}
+                <DeviceFrameProvider notchHeight={device.notchHeight}>
+                  {children}
+                </DeviceFrameProvider>
               </div>
             </div>
           </div>

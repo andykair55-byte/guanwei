@@ -12,8 +12,21 @@ import RemovalVoteModal from '../components/debate/RemovalVoteModal'
 import SummaryPanel from '../components/debate/SummaryPanel'
 import DanmakuOverlay from '../components/DanmakuOverlay'
 import { getPhaseLabel } from '../types/debate'
+import { useDeviceFrame } from '../contexts/DeviceFrameContext'
 import type { DanmakuQueueItem } from '../services/danmakuService'
 import { pickDanmaku, toQueueItems } from '../services/danmakuService'
+
+function useIsDesktop() {
+  const { inDeviceFrame } = useDeviceFrame()
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768)
+  useEffect(() => {
+    if (inDeviceFrame) return
+    const handler = () => setIsDesktop(window.innerWidth >= 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [inDeviceFrame])
+  return inDeviceFrame ? false : isDesktop
+}
 
 export default function DebateRoomPage() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -41,6 +54,7 @@ export default function DebateRoomPage() {
   const resetRoom = useDebateStore(s => s.resetRoom)
 
   const user = useUserStore(s => s.user)
+  const isDesktop = useIsDesktop()
 
   const [showRemovalModal, setShowRemovalModal] = useState(false)
   const [latestJudgment, setLatestJudgment] = useState<string | null>(null)
@@ -205,7 +219,7 @@ export default function DebateRoomPage() {
 
       {/* Header */}
       <div className="sticky top-0 z-20 glass border-b border-line/50">
-        <div className="flex items-center h-12 px-4 max-w-[480px] mx-auto">
+        <div className={`flex items-center h-12 px-4 ${isDesktop ? '' : 'max-w-[480px] mx-auto'}`}>
           <button onClick={() => { resetRoom(); navigate('/debate-lobby') }} className="flex items-center gap-1 text-ink-700 text-sm active:opacity-60">
             <ArrowLeft size={18} />
           </button>
@@ -237,7 +251,7 @@ export default function DebateRoomPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 max-w-[480px] mx-auto w-full flex flex-col">
+      <div className={`flex-1 w-full flex flex-col ${isDesktop ? 'max-w-4xl mx-auto' : 'max-w-[480px] mx-auto'}`}>
         {/* 舞台 */}
         <div className="px-4 pt-3 pb-2">
           <DebateStage

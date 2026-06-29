@@ -7,6 +7,19 @@ import {
 import CharacterIcon from '../components/CharacterIcon'
 import { getTopic, TOPICS, type ThinkingStep, type RoundScore } from '../services/debateArenaService'
 import { getCharacter } from '../services/characters'
+import { useDeviceFrame } from '../contexts/DeviceFrameContext'
+
+function useIsDesktop() {
+  const { inDeviceFrame } = useDeviceFrame()
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768)
+  useEffect(() => {
+    if (inDeviceFrame) return
+    const handler = () => setIsDesktop(window.innerWidth >= 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [inDeviceFrame])
+  return inDeviceFrame ? false : isDesktop
+}
 
 // ===== Types =====
 
@@ -30,6 +43,7 @@ const THINKING_ICON_MAP: Record<string, ElementType> = {
 export default function AIBattle() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const isDesktop = useIsDesktop()
   const opponentId = searchParams.get('negate') || 'xiezhi'
   const topicId = searchParams.get('topic') || 'college'
   const topic = getTopic(topicId) || TOPICS[0]
@@ -206,12 +220,12 @@ export default function AIBattle() {
   return (
     <div className="flex flex-col min-h-full bg-paper-texture">
       {/* Header */}
-      <div className="px-5 pt-4 pb-2 flex items-center gap-3">
+      <div className={`px-5 pt-4 pb-2 flex items-center gap-3 ${isDesktop ? 'max-w-4xl mx-auto w-full' : ''}`}>
         <button onClick={() => navigate(-1)} className="p-1.5 -ml-1.5 rounded-lg hover:bg-paper-dark transition-colors active:scale-95">
           <ArrowLeft size={20} className="text-ink-700" />
         </button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-[15px] font-bold text-ink-900 truncate">{topic.title}</h1>
+          <h1 className={`${isDesktop ? 'text-lg' : 'text-[15px]'} font-bold text-ink-900 truncate`}>{topic.title}</h1>
           <p className="text-[11px] text-ink-400">人机对决 · 你 vs {opponent.name}</p>
         </div>
         <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-surface shadow-card">
@@ -219,7 +233,7 @@ export default function AIBattle() {
         </div>
       </div>
 
-      <div className="flex-1 px-5 pb-4 overflow-y-auto flex flex-col gap-3">
+      <div className={`flex-1 px-5 pb-4 overflow-y-auto flex flex-col gap-3 ${isDesktop ? 'max-w-4xl mx-auto w-full' : ''}`}>
         {/* ===== VS Header ===== */}
         <div className="bg-surface rounded-xl shadow-card p-4">
           <div className="flex items-center gap-3">

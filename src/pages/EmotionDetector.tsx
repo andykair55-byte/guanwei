@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Shield, AlertTriangle, CheckCircle, XCircle,
@@ -6,6 +6,19 @@ import {
 } from 'lucide-react'
 import { analyzeEmotion, type EmotionAnalysisResult, type RiskLevel } from '../services/emotionAnalysis'
 import SmartInput from '../components/SmartInput'
+import { useDeviceFrame } from '../contexts/DeviceFrameContext'
+
+function useIsDesktop() {
+  const { inDeviceFrame } = useDeviceFrame()
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768)
+  useEffect(() => {
+    if (inDeviceFrame) return
+    const handler = () => setIsDesktop(window.innerWidth >= 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [inDeviceFrame])
+  return inDeviceFrame ? false : isDesktop
+}
 
 type AnalysisState = 'idle' | 'analyzing' | 'done'
 
@@ -24,6 +37,7 @@ const riskColors: Record<RiskLevel, { bg: string; text: string; border: string; 
 
 export default function EmotionDetector() {
   const navigate = useNavigate()
+  const isDesktop = useIsDesktop()
   const [input, setInput] = useState('')
   const [result, setResult] = useState<EmotionAnalysisResult | null>(null)
   const [state, setState] = useState<AnalysisState>('idle')
@@ -62,12 +76,12 @@ export default function EmotionDetector() {
   return (
     <div className="flex flex-col min-h-full bg-paper-texture">
       {/* 顶部导航 */}
-      <div className="px-5 pt-4 pb-2 flex items-center gap-3">
+      <div className={`px-5 pt-4 pb-2 flex items-center gap-3 ${isDesktop ? 'max-w-3xl mx-auto w-full' : ''}`}>
         <button onClick={() => navigate(-1)} className="p-1.5 -ml-1.5 rounded-lg hover:bg-paper-dark transition-colors active:scale-95">
           <ArrowLeft size={20} className="text-ink-700" />
         </button>
         <div className="flex-1">
-          <h1 className="text-[16px] font-bold text-ink-900">情绪操控检测</h1>
+          <h1 className={`${isDesktop ? 'text-xl' : 'text-[16px]'} font-bold text-ink-900`}>情绪操控检测</h1>
           <p className="text-[11px] text-ink-400">拆解话术结构，识别修辞陷阱</p>
         </div>
         {state === 'done' && (
@@ -77,7 +91,7 @@ export default function EmotionDetector() {
         )}
       </div>
 
-      <div className="flex-1 px-5 pb-6 overflow-y-auto">
+      <div className={`flex-1 px-5 pb-6 overflow-y-auto ${isDesktop ? 'max-w-3xl mx-auto w-full' : ''}`}>
         {/* ===== 输入状态 ===== */}
         {state === 'idle' && (
           <div className="animate-fade-in-up space-y-4">

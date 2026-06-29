@@ -1,17 +1,32 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Search, Inbox } from 'lucide-react'
 import CommunityCard from '../components/CommunityCard'
 import { getCommunityPosts } from '../services/mockData'
+import { useDeviceFrame } from '../contexts/DeviceFrameContext'
 
 const tabs = ['推荐', '关注', '公益', '求助', '热帖']
+
+function useIsDesktop() {
+  const { inDeviceFrame } = useDeviceFrame()
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768)
+  useEffect(() => {
+    if (inDeviceFrame) return
+    const handler = () => setIsDesktop(window.innerWidth >= 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [inDeviceFrame])
+  return inDeviceFrame ? false : isDesktop
+}
 
 function CommunityPage() {
   const [selectedTab, setSelectedTab] = useState('推荐')
   const [searchFocused, setSearchFocused] = useState(false)
+  const { notchHeight } = useDeviceFrame()
+  const isDesktop = useIsDesktop()
 
   const posts = useMemo(() => getCommunityPosts(selectedTab), [selectedTab])
 
-  // 分成两列做瀑布流
+  // 移动端两列瀑布流
   const { leftCol, rightCol } = useMemo(() => {
     const left: typeof posts = []
     const right: typeof posts = []
@@ -29,13 +44,18 @@ function CommunityPage() {
     return { leftCol: left, rightCol: right }
   }, [posts])
 
+  const notchPadding = notchHeight > 0 ? `${notchHeight + 8}px` : undefined
+
   return (
     <div className="flex flex-col min-h-full bg-paper-texture">
       {/* 顶部 */}
-      <div className="sticky top-0 z-20 glass-subtle">
-        <div className="px-5 pt-4 pb-3">
+      <div className={`sticky top-0 z-20 glass-subtle ${isDesktop ? 'border-b border-line/30' : ''}`}>
+        <div
+          className={`${isDesktop ? 'px-6 pb-3' : 'px-5 pb-3'}`}
+          style={{ paddingTop: notchPadding || (isDesktop ? '20px' : '16px') }}
+        >
           <div className="flex items-center justify-between mb-3">
-            <h1 className="text-xl font-bold text-ink-900 tracking-tight">社区</h1>
+            <h1 className={`${isDesktop ? 'text-3xl' : 'text-xl'} font-bold text-ink-900 tracking-tight`}>社区</h1>
           </div>
 
           {/* 搜索栏 */}
@@ -44,11 +64,11 @@ function CommunityPage() {
               ? 'bg-surface shadow-card ring-1 ring-seal/20'
               : 'bg-surface/70'
           }`}>
-            <Search size={16} className={`flex-shrink-0 transition-colors ${searchFocused ? 'text-seal' : 'text-ink-400'}`} />
+            <Search size={18} className={`flex-shrink-0 transition-colors ${searchFocused ? 'text-seal' : 'text-ink-400'}`} />
             <input
               type="text"
               placeholder="搜索帖子、话题、用户"
-              className="flex-1 bg-transparent text-[14px] text-ink-900 placeholder:text-ink-400"
+              className={`flex-1 bg-transparent ${isDesktop ? 'text-base' : 'text-[14px]'} text-ink-900 placeholder:text-ink-400`}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
             />
@@ -56,14 +76,14 @@ function CommunityPage() {
         </div>
 
         {/* Tab 标签 */}
-        <div className="flex px-5 gap-1 overflow-x-auto scrollbar-none">
+        <div className={`flex ${isDesktop ? 'px-6' : 'px-5'} gap-1 overflow-x-auto scrollbar-none`}>
           {tabs.map((tab) => {
             const isActive = selectedTab === tab
             return (
               <button
                 key={tab}
                 onClick={() => setSelectedTab(tab)}
-                className={`shrink-0 px-3 py-2 text-[13px] transition-all whitespace-nowrap relative ${
+                className={`shrink-0 px-3 py-2 ${isDesktop ? 'text-base' : 'text-[13px]'} transition-all whitespace-nowrap relative ${
                   isActive ? 'text-seal font-semibold' : 'text-ink-400 font-normal'
                 }`}
               >
@@ -78,13 +98,19 @@ function CommunityPage() {
       </div>
 
       {/* 瀑布流 */}
-      <div className="flex-1 px-3 pb-6">
+      <div className={`flex-1 ${isDesktop ? 'px-6 py-4' : 'px-3 pb-6'}`}>
         {posts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24">
             <div className="w-16 h-16 rounded-xl bg-paper-dark flex items-center justify-center mb-4">
               <Inbox size={28} className="text-ink-400" />
             </div>
             <p className="text-ink-500 text-sm font-medium">暂无内容</p>
+          </div>
+        ) : isDesktop ? (
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            {posts.map((post, i) => (
+              <CommunityCard key={post.id} post={post} index={i} />
+            ))}
           </div>
         ) : (
           <div className="flex gap-2.5">

@@ -4,6 +4,8 @@ import { Search, SlidersHorizontal, Inbox, PenSquare } from 'lucide-react'
 import { api } from '../services/api'
 import { transformMelonList } from '../utils/transform'
 import MelonCard from '../components/MelonCard'
+import MelonCardCompact from '../components/MelonCardCompact'
+import { useDeviceFrame } from '../contexts/DeviceFrameContext'
 import type { MelonDebateInfo } from '../components/MelonCard'
 import type { Melon, MelonCategory } from '../types'
 
@@ -11,8 +13,22 @@ const categories: ('全部' | MelonCategory)[] = [
   '全部', '娱乐', '科技', '生活科普', '社会热点', '历史', '财经',
 ]
 
+function useIsDesktop() {
+  const { inDeviceFrame } = useDeviceFrame()
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768)
+  useEffect(() => {
+    if (inDeviceFrame) return
+    const handler = () => setIsDesktop(window.innerWidth >= 768)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [inDeviceFrame])
+  return inDeviceFrame ? false : isDesktop
+}
+
 function MelonFieldPage() {
   const navigate = useNavigate()
+  const isDesktop = useIsDesktop()
+  const { notchHeight } = useDeviceFrame()
   const [melons, setMelons] = useState<Melon[]>([])
   const [selectedCategory, setSelectedCategory] = useState<typeof categories[number]>('全部')
   const [refreshing, setRefreshing] = useState(false)
@@ -89,16 +105,21 @@ function MelonFieldPage() {
     return { status, spectatorCount, vacantSeats, totalSeats, entryCost, currentRound }
   }, [])
 
+  const notchPadding = notchHeight > 0 ? `${notchHeight + 8}px` : undefined
+
   return (
     <div className="flex flex-col min-h-full bg-paper-texture">
       {/* 顶部区域 */}
-      <div className="sticky top-0 z-20 glass-subtle">
+      <div className={`sticky top-0 z-20 glass-subtle ${isDesktop ? 'border-b border-line/30' : ''}`}>
         {/* 品牌标题 + 搜索 */}
-        <div className="px-5 pt-4 pb-3">
+        <div
+          className={`${isDesktop ? 'px-6 pb-3' : 'px-5 pb-3'}`}
+          style={{ paddingTop: notchPadding || (isDesktop ? '20px' : '16px') }}
+        >
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h1 className="text-xl font-bold text-ink-900 tracking-tight">瓜田</h1>
-              <p className="text-[11px] text-ink-400 mt-0.5">不信一家之言，只认证据说话</p>
+              <h1 className={`${isDesktop ? 'text-3xl' : 'text-xl'} font-bold text-ink-900 tracking-tight`}>瓜田</h1>
+              <p className={`${isDesktop ? 'text-sm' : 'text-[11px]'} text-ink-400 mt-0.5`}>不信一家之言，只认证据说话</p>
             </div>
             <button className="w-9 h-9 rounded-xl bg-surface flex items-center justify-center shadow-card active:scale-95 transition-transform">
               <SlidersHorizontal size={16} className="text-ink-500" />
@@ -111,11 +132,11 @@ function MelonFieldPage() {
               ? 'bg-surface shadow-card ring-1 ring-seal/20'
               : 'bg-surface/70'
           }`}>
-            <Search size={16} className={`flex-shrink-0 transition-colors ${searchFocused ? 'text-seal' : 'text-ink-400'}`} />
+            <Search size={18} className={`flex-shrink-0 transition-colors ${searchFocused ? 'text-seal' : 'text-ink-400'}`} />
             <input
               type="text"
               placeholder="搜索你想求证的内容"
-              className="flex-1 bg-transparent text-[14px] text-ink-900 placeholder:text-ink-400"
+              className={`flex-1 bg-transparent ${isDesktop ? 'text-base' : 'text-[14px]'} text-ink-900 placeholder:text-ink-400`}
               onFocus={() => setSearchFocused(true)}
               onBlur={() => setSearchFocused(false)}
             />
@@ -123,14 +144,14 @@ function MelonFieldPage() {
         </div>
 
         {/* 分类标签 - 下划线风格 */}
-        <div className="flex px-5 gap-1 overflow-x-auto scrollbar-none">
+        <div className={`flex ${isDesktop ? 'px-6' : 'px-5'} gap-1 overflow-x-auto scrollbar-none`}>
           {categories.map((cat) => {
             const isActive = selectedCategory === cat
             return (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`shrink-0 px-3 py-2 text-[13px] transition-all whitespace-nowrap relative ${
+                className={`shrink-0 px-3 py-2 ${isDesktop ? 'text-base' : 'text-[13px]'} transition-all whitespace-nowrap relative ${
                   isActive
                     ? 'text-seal font-semibold'
                     : 'text-ink-400 font-normal'
@@ -158,10 +179,10 @@ function MelonFieldPage() {
 
       {/* 卡片列表 */}
       <div
-        className="flex-1 px-4 pb-6"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        className={`flex-1 ${isDesktop ? 'px-6 py-4' : 'px-4 pb-6'}`}
+        onTouchStart={!isDesktop ? handleTouchStart : undefined}
+        onTouchMove={!isDesktop ? handleTouchMove : undefined}
+        onTouchEnd={!isDesktop ? handleTouchEnd : undefined}
       >
         {refreshing && (
           <div className="flex justify-center py-4">
@@ -170,17 +191,31 @@ function MelonFieldPage() {
         )}
 
         {loading && !refreshing ? (
-          <div className="flex flex-col divide-y divide-line/30">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="py-4">
-                <div className="skeleton h-[180px] rounded-xl" />
-                <div className="mt-3 space-y-2">
-                  <div className="skeleton h-4 w-3/4" />
-                  <div className="skeleton h-3 w-1/3" />
+          isDesktop ? (
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {[1, 2, 3, 4, 5, 6].map(i => (
+                <div key={i} className="rounded-xl overflow-hidden border border-line/20 bg-surface">
+                  <div className="skeleton aspect-[4/3]" />
+                  <div className="p-3 space-y-2">
+                    <div className="skeleton h-4 w-3/4" />
+                    <div className="skeleton h-3 w-1/3" />
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col divide-y divide-line/30">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="py-4">
+                  <div className="skeleton h-[180px] rounded-xl" />
+                  <div className="mt-3 space-y-2">
+                    <div className="skeleton h-4 w-3/4" />
+                    <div className="skeleton h-3 w-1/3" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         ) : melons.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24">
             <div className="w-16 h-16 rounded-xl bg-paper-dark flex items-center justify-center mb-4">
@@ -188,6 +223,19 @@ function MelonFieldPage() {
             </div>
             <p className="text-ink-500 text-sm font-medium">暂无该分类的内容</p>
             <p className="text-ink-400 text-xs mt-1">看看其他分类吧</p>
+          </div>
+        ) : isDesktop ? (
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {melons.map((melon, i) => (
+              <MelonCardCompact
+                key={melon.id}
+                melon={melon}
+                index={i}
+                debateInfo={getDebateInfo(melon)}
+                onClick={() => navigate(`/debate-room/room-${melon.id}`)}
+                onVerify={() => handleVerify(melon.title)}
+              />
+            ))}
           </div>
         ) : (
           <div className="flex flex-col divide-y divide-line/30">
@@ -205,13 +253,15 @@ function MelonFieldPage() {
         )}
       </div>
 
-      {/* 快捷发帖 FAB */}
-      <button
-        onClick={() => navigate('/publish')}
-        className="fixed bottom-20 right-4 z-30 w-12 h-12 rounded-full bg-seal text-white shadow-lg flex items-center justify-center active:scale-90 transition-transform"
-      >
-        <PenSquare size={20} />
-      </button>
+      {/* 快捷发帖 FAB - 仅移动端显示 */}
+      {!isDesktop && (
+        <button
+          onClick={() => navigate('/publish')}
+          className="fixed bottom-20 right-4 z-30 w-12 h-12 rounded-full bg-seal text-white shadow-lg flex items-center justify-center active:scale-90 transition-transform"
+        >
+          <PenSquare size={20} />
+        </button>
+      )}
     </div>
   )
 }
