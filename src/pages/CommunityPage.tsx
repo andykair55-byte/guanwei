@@ -104,7 +104,8 @@ function CommunityPage() {
             <div className="w-16 h-16 rounded-xl bg-paper-dark flex items-center justify-center mb-4">
               <Inbox size={28} className="text-ink-400" />
             </div>
-            <p className="text-ink-500 text-sm font-medium">暂无内容</p>
+            <p className="text-ink-500 text-sm font-medium mb-1">暂无{selectedTab === '推荐' ? '' : selectedTab}内容</p>
+            <p className="text-ink-400 text-xs">换个分类看看，或发布第一篇帖子</p>
           </div>
         ) : isDesktop ? (
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">

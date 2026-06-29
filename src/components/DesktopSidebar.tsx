@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Wheat, Users, Plus, Search, User, Swords, Wrench, Trophy } from 'lucide-react'
+import { Wheat, Users, Plus, Search, User, Swords, Wrench, Trophy, Cpu } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 interface NavItem {
@@ -22,6 +22,7 @@ const toolItems: NavItem[] = [
   { path: '/tools/emotion', label: '情绪检测', icon: Search },
   { path: '/tools/reverse-image', label: '反向搜图', icon: Search },
   { path: '/tools/timeline', label: '时间线', icon: Search },
+  { path: '/settings/llm', label: 'LLM 设置', icon: Cpu },
 ]
 
 export default function DesktopSidebar() {

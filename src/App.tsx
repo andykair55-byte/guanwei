@@ -28,6 +28,7 @@ const AIBattle = lazy(() => import('./pages/AIBattle'))
 const RoundTable = lazy(() => import('./pages/RoundTable'))
 const DebateLobby = lazy(() => import('./pages/DebateLobby'))
 const DebateRoomPage = lazy(() => import('./pages/DebateRoomPage'))
+const LLMSettingsPage = lazy(() => import('./pages/LLMSettingsPage'))
 
 function PageLoader() {
   return (
@@ -56,7 +57,9 @@ function Layout() {
     return (
       <div className="flex flex-col h-dvh bg-paper-texture">
         <main className="flex-1 overflow-y-auto overflow-x-hidden mx-auto w-full max-w-[480px]">
-          <Outlet />
+          <div className="animate-page-enter">
+            <Outlet />
+          </div>
         </main>
         <TabBar />
       </div>
@@ -88,7 +91,9 @@ function Layout() {
 
         {/* 页面内容 — 不设 max-width，填满中间栏 */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden">
-          <Outlet />
+          <div className="animate-page-enter">
+            <Outlet />
+          </div>
         </main>
       </div>
 
@@ -152,6 +157,7 @@ function App() {
         <Route path="/round-table" element={<RoundTable />} />
         <Route path="/debate-lobby" element={<DebateLobby />} />
         <Route path="/debate-room/:roomId" element={<DebateRoomPage />} />
+        <Route path="/settings/llm" element={<LLMSettingsPage />} />
         <Route element={<Layout />}>
           <Route path="/melon" element={<MelonFieldPage />} />
           <Route path="/community" element={<CommunityPage />} />

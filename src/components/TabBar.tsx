@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Wheat, Users, Plus, Search, User } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -20,12 +21,21 @@ const tabs: Tab[] = [
 function TabBar() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [activeTab, setActiveTab] = useState('/melon')
+
+  // 根据当前路径更新激活的 tab
+  useEffect(() => {
+    const matched = tabs.find(t => t.path !== '/publish' && location.pathname.startsWith(t.path))
+    if (matched) {
+      setActiveTab(matched.path)
+    }
+  }, [location.pathname])
 
   return (
     <nav className="flex-shrink-0 glass border-t border-line/50 pb-safe">
       <div className="mx-auto flex max-w-[480px] items-end h-[56px]">
         {tabs.map((tab) => {
-          const isActive = location.pathname.startsWith(tab.path) && tab.path !== '/publish'
+          const isActive = tab.path !== '/publish' && activeTab === tab.path
           const Icon = tab.icon
 
           if (tab.isCenter) {

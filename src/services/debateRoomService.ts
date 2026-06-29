@@ -158,7 +158,7 @@ function generateMockSpeechesForRoom(room: DebateRoom) {
 }
 
 /** 为未知melon ID动态创建房间 */
-function createDynamicRoom(melonId: string): DebateRoom {
+function createDynamicRoom(melonId: string, roomIdOverride?: string): DebateRoom {
   const num = parseInt(melonId.replace(/\D/g, '')) || 0
   const tpl = GENERIC_TOPICS[num % GENERIC_TOPICS.length]
   const topic = { id: melonId, topic: tpl.topic, affirm: tpl.affirm, negate: tpl.negate }
@@ -170,7 +170,7 @@ function createDynamicRoom(melonId: string): DebateRoom {
   const phase = getDebatePhase(round, DEFAULT_ROOM_RULES)
 
   const room: DebateRoom = {
-    id: `room-${melonId}`,
+    id: roomIdOverride || `room-${melonId}`,
     topicId: melonId,
     topic: tpl.topic,
     affirmLabel: tpl.affirm,
@@ -237,6 +237,12 @@ export const debateRoomService = {
     if (roomId.startsWith('room-melon-')) {
       const melonId = roomId.replace('room-', '')
       return createDynamicRoom(melonId)
+    }
+
+    // 从 room-X 中提取 X，动态创建（MelonFieldPage 导航用）
+    if (roomId.startsWith('room-')) {
+      const num = roomId.replace('room-', '')
+      return createDynamicRoom(`melon-${num}`, roomId)
     }
 
     return null

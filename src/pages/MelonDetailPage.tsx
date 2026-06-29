@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Share2, Users, Clock, Check, ThumbsUp, ThumbsDown, Swords, AlertCircle, Heart, MessageSquare, FileText } from 'lucide-react'
 import { api } from '../services/api'
 import { transformMelon, transformReport, transformEvidenceList } from '../utils/transform'
+import { generateMockEvidence, generateMockReport } from '../services/mockData'
 import CommentSection from '../components/CommentSection'
 import type { Melon, Report, Evidence } from '../types'
 
@@ -77,13 +78,22 @@ export default function MelonDetailPage() {
         try {
           const apiReport: any = await api.getReport(melonId)
           setReport(transformReport(apiReport))
-        } catch { /* 报告获取失败 */ }
+        } catch {
+          const mockReport = generateMockReport(String(melonId), transformed.result ?? true)
+          setReport(mockReport)
+        }
 
         try {
           const apiEvidences: any = await api.getEvidences(melonId)
           const evidenceList = apiEvidences.list || apiEvidences || []
           setEvidences(transformEvidenceList(evidenceList))
-        } catch { /* 佐证获取失败 */ }
+        } catch {
+          const mockEvidences = generateMockEvidence(String(melonId))
+          setEvidences(mockEvidences.map((ev, i) => ({
+            ...ev,
+            id: `ev_mock_${i}`,
+          })))
+        }
       }
     } catch (e) {
       console.error('获取瓜详情失败:', e)

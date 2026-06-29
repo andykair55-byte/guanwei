@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { X, ImagePlus, MapPin, ChevronDown, Shield, Loader2, Check } from 'lucide-react'
 import { api } from '../services/api'
+import { localModerate } from '../services/contentFilter'
 import { useDeviceFrame } from '../contexts/DeviceFrameContext'
 
 type PostType = '吃瓜爆料' | '公益求助' | '求助求证'
@@ -48,8 +49,15 @@ function PublishPage() {
         setModerateMsg(res.message || '内容可能包含敏感信息，建议修改后发布')
       }
     } catch {
-      setModerateStatus('pass')
-      setModerateMsg('审核服务暂不可用，发布后将进行人工审核')
+      // 后端不可用时，降级到前端正则检测
+      const localResult = localModerate(content)
+      if (localResult.passed) {
+        setModerateStatus(localResult.flagged ? 'warn' : 'pass')
+        setModerateMsg(localResult.reason || '本地审核通过')
+      } else {
+        setModerateStatus('warn')
+        setModerateMsg(localResult.reason || '内容可能包含敏感信息')
+      }
     }
   }, [content])
 

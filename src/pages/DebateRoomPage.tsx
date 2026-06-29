@@ -193,7 +193,21 @@ export default function DebateRoomPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-paper-texture">
         <Shield size={36} className="text-ink-faint mb-3" />
-        <p className="text-[14px] text-ink-400 mb-2">房间不存在或已关闭</p>
+        <p className="text-[14px] text-ink-400 mb-2">房间加载失败</p>
+        <p className="text-[12px] text-ink-faint">{redirectTimer}s 后自动返回大厅...</p>
+        <button onClick={() => navigate('/debate-lobby')} className="mt-4 px-4 py-2 bg-seal text-white rounded-xl text-sm active:scale-95 transition-transform">
+          立即返回
+        </button>
+      </div>
+    )
+  }
+
+  // 房间已结束
+  if (currentRoom && currentRoom.status === 'ended') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-paper-texture">
+        <Shield size={36} className="text-ink-faint mb-3" />
+        <p className="text-[14px] text-ink-400 mb-2">房间已关闭</p>
         <p className="text-[12px] text-ink-faint">{redirectTimer}s 后自动返回大厅...</p>
         <button onClick={() => navigate('/debate-lobby')} className="mt-4 px-4 py-2 bg-seal text-white rounded-xl text-sm active:scale-95 transition-transform">
           立即返回

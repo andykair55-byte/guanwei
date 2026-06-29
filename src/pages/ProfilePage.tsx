@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Settings, Trophy, Coins, ChevronRight, Award, Loader2, Sprout, Leaf, Flower2, Star, Diamond } from 'lucide-react'
+import { Settings, Trophy, Coins, ChevronRight, Award, Loader2, Sprout, Leaf, Flower2, Star, Diamond, Cpu } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { RANK_CONFIG, getRankProgress } from '../config/ranks'
 import RankBadge from '../components/RankBadge'
@@ -166,6 +166,19 @@ export default function ProfilePage() {
               <Award size={16} className="text-seal" />
             </div>
             <span className="text-[14px] text-ink-900 font-medium">段位说明</span>
+          </div>
+          <ChevronRight size={16} className="text-ink-400" />
+        </Link>
+
+        <Link
+          to="/settings/llm"
+          className="flex items-center justify-between bg-surface rounded-xl shadow-card p-4 active:scale-[0.99] transition-transform"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
+              <Cpu size={16} className="text-blue-600" />
+            </div>
+            <span className="text-[14px] text-ink-900 font-medium">LLM 设置</span>
           </div>
           <ChevronRight size={16} className="text-ink-400" />
         </Link>

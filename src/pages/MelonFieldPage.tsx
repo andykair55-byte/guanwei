@@ -35,17 +35,20 @@ function MelonFieldPage() {
   const [loading, setLoading] = useState(true)
   const [pullDistance, setPullDistance] = useState(0)
   const [searchFocused, setSearchFocused] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const touchStartY = useRef(0)
   const isPulling = useRef(false)
 
   const fetchMelons = useCallback(async (category?: string) => {
     try {
       setLoading(true)
+      setError(null)
       const data: any = await api.getMelons(category && category !== '全部' ? category : undefined)
       const items = data.items || data || []
       setMelons(transformMelonList(items))
     } catch (e) {
       console.error('获取瓜列表失败:', e)
+      setError('网络异常，点击重试')
     } finally {
       setLoading(false)
     }
@@ -216,6 +219,19 @@ function MelonFieldPage() {
               ))}
             </div>
           )
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-24">
+            <div className="w-16 h-16 rounded-xl bg-seal/10 flex items-center justify-center mb-4">
+              <Inbox size={28} className="text-seal" />
+            </div>
+            <p className="text-ink-700 text-sm font-medium mb-1">{error}</p>
+            <button
+              onClick={() => fetchMelons(selectedCategory)}
+              className="mt-2 px-4 py-2 rounded-xl bg-seal/10 text-seal text-sm font-medium active:scale-95 transition-transform"
+            >
+              点击重试
+            </button>
+          </div>
         ) : melons.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24">
             <div className="w-16 h-16 rounded-xl bg-paper-dark flex items-center justify-center mb-4">
