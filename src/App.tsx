@@ -4,7 +4,7 @@ import TabBar from './components/TabBar'
 import DesktopSidebar from './components/DesktopSidebar'
 import DesktopRightPanel from './components/DesktopRightPanel'
 import DeviceFrame from './components/DeviceFrame'
-import { Smartphone, Monitor } from 'lucide-react'
+import { Smartphone, Monitor, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react'
 
 // Route-level code splitting — each page is a separate chunk
 const MelonFieldPage = lazy(() => import('./pages/MelonFieldPage'))
@@ -29,6 +29,7 @@ const RoundTable = lazy(() => import('./pages/RoundTable'))
 const DebateLobby = lazy(() => import('./pages/DebateLobby'))
 const DebateRoomPage = lazy(() => import('./pages/DebateRoomPage'))
 const LLMSettingsPage = lazy(() => import('./pages/LLMSettingsPage'))
+const AdminPage = lazy(() => import('./pages/AdminPage'))
 
 function PageLoader() {
   return (
@@ -51,6 +52,8 @@ function useIsDesktop() {
 function Layout() {
   const isDesktop = useIsDesktop()
   const [showDeviceFrame, setShowDeviceFrame] = useState(false)
+  const [showSidebar, setShowSidebar] = useState(true)
+  const [showRightPanel, setShowRightPanel] = useState(true)
 
   // 移动端：原始布局
   if (!isDesktop) {
@@ -68,25 +71,41 @@ function Layout() {
 
   // PC 端：Twitter 风格三栏布局
   return (
-    <div className="flex h-dvh bg-ink-100/50 overflow-hidden">
+    <div className="flex h-dvh bg-white overflow-hidden">
       {/* 左侧导航 */}
-      <DesktopSidebar />
+      {showSidebar && <DesktopSidebar />}
 
       {/* 中间内容区 — 填满可用空间，两侧 border 分隔 */}
-      <div className="flex-1 flex flex-col min-w-0 border-x border-line/30 bg-paper-texture">
+      <div className="flex-1 flex flex-col min-w-0 border-x border-line/30 bg-white">
         {/* 顶部工具栏 */}
-        <div className="flex items-center justify-between px-6 h-14 border-b border-line/30 bg-surface/80 flex-shrink-0">
+        <div className="flex items-center justify-between px-6 h-14 border-b border-line/30 bg-white flex-shrink-0">
           <div className="flex items-center gap-2 text-ink-400">
+            <button
+              onClick={() => setShowSidebar(s => !s)}
+              className="p-1.5 rounded-lg hover:bg-ink-900/5 text-ink-400 hover:text-ink-600 transition-colors"
+              title={showSidebar ? '隐藏左侧栏' : '显示左侧栏'}
+            >
+              {showSidebar ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
+            </button>
             <Monitor size={15} />
             <span className="text-[12px]">PC 视图</span>
           </div>
-          <button
-            onClick={() => setShowDeviceFrame(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-900/5 hover:bg-ink-900/10 text-ink-600 text-[12px] font-medium transition-colors border border-line/30"
-          >
-            <Smartphone size={14} />
-            真机模拟
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowDeviceFrame(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink-900/5 hover:bg-ink-900/10 text-ink-600 text-[12px] font-medium transition-colors border border-line/30"
+            >
+              <Smartphone size={14} />
+              真机模拟
+            </button>
+            <button
+              onClick={() => setShowRightPanel(s => !s)}
+              className="p-1.5 rounded-lg hover:bg-ink-900/5 text-ink-400 hover:text-ink-600 transition-colors"
+              title={showRightPanel ? '隐藏右侧栏' : '显示右侧栏'}
+            >
+              {showRightPanel ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+            </button>
+          </div>
         </div>
 
         {/* 页面内容 — 不设 max-width，填满中间栏 */}
@@ -98,13 +117,13 @@ function Layout() {
       </div>
 
       {/* 右侧面板 */}
-      <DesktopRightPanel />
+      {showRightPanel && <DesktopRightPanel />}
 
       {/* 真机模拟弹窗 */}
       {showDeviceFrame && (
         <DeviceFrame onClose={() => setShowDeviceFrame(false)}>
           <div className="flex flex-col h-full bg-paper-texture">
-            <main className="flex-1 overflow-y-auto overflow-x-hidden">
+            <main className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none">
               <Outlet />
             </main>
             <TabBar />
@@ -158,6 +177,7 @@ function App() {
         <Route path="/debate-lobby" element={<DebateLobby />} />
         <Route path="/debate-room/:roomId" element={<DebateRoomPage />} />
         <Route path="/settings/llm" element={<LLMSettingsPage />} />
+        <Route path="/admin" element={<AdminPage />} />
         <Route element={<Layout />}>
           <Route path="/melon" element={<MelonFieldPage />} />
           <Route path="/community" element={<CommunityPage />} />

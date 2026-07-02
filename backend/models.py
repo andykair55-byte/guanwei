@@ -15,6 +15,7 @@ class User(Base):
     avatar = Column(String(500), default="")
     points = Column(Integer, default=100)
     rank = Column(String(20), default="吃瓜群众")
+    is_admin = Column(Boolean, default=False)
     total_guesses = Column(Integer, default=0)
     correct_guesses = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -83,7 +84,7 @@ class Evidence(Base):
 class Report(Base):
     """AI实锤报告"""
     __tablename__ = "reports"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     melon_id = Column(Integer, ForeignKey("melons.id"))
     timeline = Column(Text)
@@ -93,18 +94,66 @@ class Report(Base):
     tendency_direction = Column(Boolean)
     disclaimer = Column(String(500))
     generated_at = Column(DateTime, default=datetime.utcnow)
-    
+
     melon = relationship("Melon", back_populates="report")
+    evidence_items = relationship("EvidenceChain", back_populates="report")
+
+
+class EvidenceChain(Base):
+    """证据链（AI 生成的结构化证据）"""
+    __tablename__ = "evidence_chains"
+
+    id = Column(Integer, primary_key=True, index=True)
+    report_id = Column(Integer, ForeignKey("reports.id"))
+    source_url = Column(String(1000))             # 来源 URL
+    source_type = Column(String(20))              # 来源类型：official/media/social/forum
+    credibility_level = Column(Integer, default=3) # 可信度等级：1-5星
+    timestamp = Column(DateTime)                  # 证据时间戳
+    content_summary = Column(Text)                # 内容摘要
+    relevance_score = Column(Float, default=0.0)  # 相关性评分：0-1
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    report = relationship("Report", back_populates="evidence_items")
 
 class PointsRecord(Base):
     """积分变动记录"""
     __tablename__ = "points_records"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     amount = Column(Integer)
     type = Column(String(20))
     description = Column(String(200))
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     user = relationship("User", back_populates="points_records")
+
+
+class AuditLog(Base):
+    """操作审计日志"""
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    admin_id = Column(Integer, ForeignKey("users.id"))
+    admin_name = Column(String(50))
+    action = Column(String(50))          # reveal_melon, delete_user, adjust_points, etc.
+    target_type = Column(String(30))     # melon, user, pipeline, llm
+    target_id = Column(Integer, nullable=True)
+    detail = Column(Text, default="")    # JSON 字符串，记录操作前后状态
+    ip_address = Column(String(45), default="")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class PipelineRun(Base):
+    """Pipeline 运行记录"""
+    __tablename__ = "pipeline_runs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    pipeline_id = Column(String(36), unique=True, index=True)
+    input_content = Column(Text)
+    status = Column(String(20), default="pending")  # pending / running / success / failed / timeout
+    duration_ms = Column(Integer, default=0)
+    node_results = Column(Text, default="{}")        # JSON: 每个节点的执行状态
+    error_message = Column(Text, default="")
+    event_log = Column(Text, default="[]")            # JSON: 完整事件日志
+    created_at = Column(DateTime, default=datetime.utcnow)

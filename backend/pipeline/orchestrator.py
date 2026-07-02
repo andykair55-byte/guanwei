@@ -1,10 +1,21 @@
-"""LangGraph 编排器 - 编排多个 Agent"""
+"""LangGraph 编排器 - 集成 Mirror 容错内核
+
+核心架构：
+1. Commander 拦截器 - 包装每个节点，注入容错逻辑
+2. AgentPool - 主备 Agent 池，支持热替换
+3. Checkpointer - 状态检查点机制，支持回滚
+4. EventSystem - 实时事件广播，支持 WebSocket 推送
+"""
 import logging
-from typing import Literal
+import uuid
+import time
+from typing import Literal, Callable, Any
 
 from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.memory import MemorySaver
 
 from pipeline.schemas import PipelineState
+from pipeline.commander import commander
 from agents.models import (
     CollectorInput,
     VerifierInput,
@@ -22,25 +33,23 @@ logger = logging.getLogger(__name__)
 
 
 class PipelineOrchestrator:
-    """Pipeline 编排器，负责协调多个 Agent 执行"""
+    """Pipeline 编排器 - 集成 Mirror 容错内核"""
 
     def __init__(self):
+        self.checkpointer = MemorySaver()
         self.graph = self._build_graph()
 
     def _build_graph(self) -> StateGraph:
-        """构建 LangGraph DAG"""
+        """构建带容错能力的 LangGraph DAG"""
         graph = StateGraph(PipelineState)
 
-        # 添加节点
-        graph.add_node("moderation", self._moderation_node)
-        graph.add_node("collector", self._collector_node)
-        graph.add_node("verifier", self._verifier_node)
-        graph.add_node("analyzer", self._analyzer_node)
+        graph.add_node("moderation", commander.wrap_node(self._moderation_node))
+        graph.add_node("collector", commander.wrap_node(self._collector_node))
+        graph.add_node("verifier", commander.wrap_node(self._verifier_node))
+        graph.add_node("analyzer", commander.wrap_node(self._analyzer_node))
 
-        # 设置入口
         graph.set_entry_point("moderation")
 
-        # 条件边
         graph.add_conditional_edges(
             "moderation",
             self._should_proceed,
@@ -50,12 +59,11 @@ class PipelineOrchestrator:
             }
         )
 
-        # 后续流程
         graph.add_edge("collector", "verifier")
         graph.add_edge("verifier", "analyzer")
         graph.add_edge("analyzer", END)
 
-        return graph.compile()
+        return graph.compile(checkpointer=self.checkpointer)
 
     def _should_proceed(self, state: PipelineState) -> Literal["proceed", "block"]:
         """判断是否继续执行"""
@@ -71,7 +79,7 @@ class PipelineOrchestrator:
 
     async def _moderation_node(self, state: PipelineState) -> PipelineState:
         """审核节点"""
-        logger.info("Step 1: Moderation")
+        logger.info("[Pipeline] Step 1: Moderation")
         state["step"] = "moderation"
 
         try:
@@ -100,7 +108,7 @@ class PipelineOrchestrator:
 
     async def _collector_node(self, state: PipelineState) -> PipelineState:
         """搜集节点"""
-        logger.info("Step 2: Collection")
+        logger.info("[Pipeline] Step 2: Collection")
         state["step"] = "collector"
 
         try:
@@ -124,11 +132,10 @@ class PipelineOrchestrator:
 
     async def _verifier_node(self, state: PipelineState) -> PipelineState:
         """验证节点"""
-        logger.info("Step 3: Verification")
+        logger.info("[Pipeline] Step 3: Verification")
         state["step"] = "verifier"
 
         try:
-            # 转换来源数据
             sources = [
                 SourceItem(**s) for s in state.get("collected_sources", [])
                 if s.get("content")
@@ -155,7 +162,7 @@ class PipelineOrchestrator:
 
     async def _analyzer_node(self, state: PipelineState) -> PipelineState:
         """分析节点"""
-        logger.info("Step 4: Analysis")
+        logger.info("[Pipeline] Step 4: Analysis")
         state["step"] = "analyzer"
 
         try:
@@ -208,15 +215,24 @@ class PipelineOrchestrator:
 
         return state
 
-    async def run(self, user_input: str) -> dict:
+    async def run(
+        self,
+        user_input: str,
+        demo_crash_trigger: str = None,
+        crash_probability: float = 0.0,
+    ) -> dict:
         """执行完整 Pipeline
 
         Args:
             user_input: 用户输入的待验证信息
+            demo_crash_trigger: 演示模式 - 指定在哪个节点触发崩溃
+            crash_probability: 演示模式 - 崩溃概率 (0.0-1.0)
 
         Returns:
-            Pipeline 执行结果
+            Pipeline 执行结果，包含事件日志和最终结果
         """
+        thread_id = str(uuid.uuid4())
+
         initial_state: PipelineState = {
             "user_input": user_input,
             "collected_sources": [],
@@ -226,17 +242,43 @@ class PipelineOrchestrator:
             "final_result": None,
             "error": None,
             "step": "start",
+            "agent_pool": commander._init_agent_pool(),
+            "checkpoints": [],
+            "events": [],
+            "demo_crash_trigger": demo_crash_trigger,
+            "crash_probability": crash_probability,
         }
 
         try:
-            result = await self.graph.ainvoke(initial_state)
-            return result.get("final_result") or {
+            result = await self.graph.ainvoke(
+                initial_state,
+                config={"configurable": {"thread_id": thread_id}}
+            )
+
+            final_result = result.get("final_result") or {
                 "success": False,
                 "error": result.get("error") or "Pipeline 执行异常",
             }
+
+            final_result["events"] = result.get("events", [])
+            final_result["agent_pool_state"] = {
+                "current_provider": result["agent_pool"]["current_provider"],
+                "fail_count": result["agent_pool"]["fail_count"],
+                "backup_count": len(result["agent_pool"]["backup"]),
+            }
+            final_result["checkpoint_count"] = len(result.get("checkpoints", []))
+
+            return final_result
+
         except Exception as e:
             logger.error(f"Pipeline error: {e}")
-            return {"success": False, "error": str(e)}
+            return {
+                "success": False,
+                "error": str(e),
+                "events": [],
+                "agent_pool_state": None,
+                "checkpoint_count": 0,
+            }
 
 
 orchestrator = PipelineOrchestrator()

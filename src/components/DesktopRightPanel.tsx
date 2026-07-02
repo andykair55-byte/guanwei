@@ -21,35 +21,38 @@ export default function DesktopRightPanel() {
   const navigate = useNavigate()
 
   return (
-    <aside className="w-[280px] flex-shrink-0 h-full overflow-y-auto border-l border-line/30 bg-surface/30">
+    <aside className="w-[280px] flex-shrink-0 h-full overflow-y-auto panel-right border-l border-line/30">
       {/* 热门辩论 */}
       <div className="p-4">
         <div className="flex items-center gap-2 mb-3">
-          <Flame size={18} className="text-seal" />
-          <h3 className="text-base font-semibold text-ink-900">正在激辩</h3>
+          <div className="w-6 h-6 rounded-lg bg-seal/[0.07] flex items-center justify-center">
+            <Flame size={14} className="text-seal" />
+          </div>
+          <h3 className="text-[15px] font-semibold text-ink-900">正在激辩</h3>
+          <span className="ml-auto text-[11px] text-ink-400 bg-ink-100/50 px-2 py-0.5 rounded-full">{hotDebates.length} 场</span>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {hotDebates.map((debate, i) => (
             <button
               key={debate.id}
               onClick={() => navigate(`/debate-room/${debate.id}`)}
-              className="w-full text-left p-3 rounded-xl bg-surface/80 border border-line/20 hover:border-seal/20 hover:shadow-sm transition-all group"
+              className="w-full text-left p-3 rounded-xl bg-[#f8f9fa] border border-line/15 hover:border-seal/15 hover:bg-white transition-all duration-150 group"
             >
-              <div className="flex items-start gap-2">
-                <span className={`text-sm font-bold ${i < 3 ? 'text-seal' : 'text-ink-400'}`}>
+              <div className="flex items-start gap-2.5">
+                <span className={`text-sm font-bold mt-0.5 w-4 text-center ${i < 3 ? 'text-seal' : 'text-ink-400/60'}`}>
                   {i + 1}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-base text-ink-700 font-medium line-clamp-2 leading-snug group-hover:text-seal transition-colors">
+                  <p className="text-[14px] text-ink-700 font-medium line-clamp-2 leading-snug group-hover:text-seal transition-colors duration-200">
                     {debate.topic}
                   </p>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <span className="flex items-center gap-0.5 text-sm text-ink-400">
-                      <Eye size={13} />
+                  <div className="flex items-center gap-3 mt-1.5">
+                    <span className="flex items-center gap-1 text-[12px] text-ink-400">
+                      <Eye size={12} strokeWidth={1.5} />
                       {debate.spectators}
                     </span>
-                    <span className="flex items-center gap-0.5 text-sm text-bamboo">
-                      <span className="w-1.5 h-1.5 rounded-full bg-bamboo animate-pulse" />
+                    <span className="flex items-center gap-1 text-[12px] text-bamboo">
+                      <span className="w-1.5 h-1.5 rounded-full bg-bamboo animate-glow-pulse" />
                       第{debate.round}轮
                     </span>
                   </div>
@@ -61,37 +64,39 @@ export default function DesktopRightPanel() {
       </div>
 
       {/* 分隔线 */}
-      <div className="mx-4 border-t border-line/20" />
+      <div className="mx-4 border-t border-line/15" />
 
       {/* 热搜话题 */}
       <div className="p-4">
         <div className="flex items-center gap-2 mb-3">
-          <TrendingUp size={18} className="text-gold" />
-          <h3 className="text-base font-semibold text-ink-900">热搜话题</h3>
+          <div className="w-6 h-6 rounded-lg bg-gold/[0.07] flex items-center justify-center">
+            <TrendingUp size={14} className="text-gold" />
+          </div>
+          <h3 className="text-[15px] font-semibold text-ink-900">热搜话题</h3>
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-0.5">
           {trendingTopics.map((topic, i) => (
             <button
               key={topic}
               onClick={() => navigate('/verify', { state: { query: topic } })}
-              className="flex items-center gap-2 w-full px-2 py-2 rounded-lg text-left hover:bg-ink-100/50 transition-colors"
+              className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-left hover:bg-ink-100/40 transition-colors duration-200 group"
             >
-              <span className={`text-sm font-bold w-5 ${i < 3 ? 'text-seal' : 'text-ink-400'}`}>
+              <span className={`text-[13px] font-bold w-4 text-center ${i < 3 ? 'text-seal' : 'text-ink-400/60'}`}>
                 {i + 1}
               </span>
-              <span className="text-base text-ink-600 line-clamp-1">{topic}</span>
+              <span className="text-[14px] text-ink-600 line-clamp-1 group-hover:text-ink-900 transition-colors">{topic}</span>
             </button>
           ))}
         </div>
       </div>
 
       {/* 进入辩论大厅 */}
-      <div className="px-4 pb-6">
+      <div className="px-4 pb-5">
         <button
           onClick={() => navigate('/debate-lobby')}
-          className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-seal/8 text-seal text-base font-medium hover:bg-seal/12 transition-colors"
+          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-seal/[0.05] text-seal text-[14px] font-medium hover:bg-seal/[0.1] transition-colors duration-200 border border-seal/[0.08]"
         >
-          <Swords size={18} />
+          <Swords size={16} strokeWidth={1.6} />
           进入辩论大厅
         </button>
       </div>

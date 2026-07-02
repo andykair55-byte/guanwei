@@ -7,6 +7,26 @@ const getToken = (): string | null => localStorage.getItem('token')
 // 后端是否可用：未配置 API 地址时直接走 mock，不做探测
 let backendAvailable: boolean | null = import.meta.env.VITE_API_BASE_URL ? null : false
 
+// 统一错误响应格式
+interface ApiError {
+  code: number
+  message: string
+  details?: string
+}
+
+// 自定义 API 错误类
+export class ApiErrorClass extends Error {
+  code: number
+  details?: string
+
+  constructor(error: ApiError) {
+    super(error.message)
+    this.code = error.code
+    this.details = error.details
+    this.name = 'ApiError'
+  }
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -25,8 +45,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   })
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error.detail || `请求失败: ${response.status}`)
+    // 处理统一错误格式
+    const error: ApiError = await response.json().catch(() => ({
+      code: response.status,
+      message: `请求失败: ${response.status}`,
+    }))
+    throw new ApiErrorClass(error)
   }
 
   return response.json()

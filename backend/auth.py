@@ -56,3 +56,15 @@ def require_current_user(
             detail="请先登录"
         )
     return current_user
+
+
+def require_admin(
+    current_user: User = Depends(require_current_user)
+) -> User:
+    """要求管理员权限"""
+    if not getattr(current_user, 'is_admin', False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="需要管理员权限"
+        )
+    return current_user

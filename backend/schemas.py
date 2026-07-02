@@ -19,6 +19,7 @@ class UserResponse(UserBase):
     avatar: str
     points: int
     rank: str
+    is_admin: bool = False
     total_guesses: int
     correct_guesses: int
     created_at: datetime

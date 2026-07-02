@@ -25,6 +25,20 @@ MELON_TITLES = [
 def seed_database(db: Session):
     if db.query(User).count() > 0:
         return
+    # 管理员账号
+    admin_user = User(
+        username="admin",
+        nickname="管理员",
+        password_hash=get_password_hash("123"),
+        avatar="https://picsum.photos/seed/admin/80/80",
+        points=9999,
+        rank="见微先知",
+        is_admin=True,
+        total_guesses=0,
+        correct_guesses=0
+    )
+    db.add(admin_user)
+
     test_user = User(
         username="test",
         nickname="测试用户",
