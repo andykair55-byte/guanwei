@@ -10,10 +10,34 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import User
 import os
+import logging
 
-SECRET_KEY = os.getenv("SECRET_KEY", "jianwei-secret-key-change-in-production")
+logger = logging.getLogger(__name__)
+
+DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
+
+SECRET_KEY = os.getenv("SECRET_KEY", "")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
+
+if not DEV_MODE and not SECRET_KEY:
+    raise RuntimeError(
+        "生产环境必须配置 SECRET_KEY！\n"
+        "当前检测到 SECRET_KEY 未设置或为空，这在生产环境中是不允许的。\n"
+        "请设置 SECRET_KEY 环境变量，建议使用强随机密钥，例如：\n"
+        "  openssl rand -hex 32\n"
+        "  python -c \"import secrets; print(secrets.token_hex(32))\"\n"
+        "如果您正在开发环境中运行，请设置 DEV_MODE=true 以使用默认密钥。"
+    )
+
+if DEV_MODE and not SECRET_KEY:
+    SECRET_KEY = "jianwei-secret-key-change-in-production"
+    logger.warning(
+        "【警告】当前处于开发模式 (DEV_MODE=true)，正在使用默认 SECRET_KEY。\n"
+        "默认密钥仅适用于本地开发和测试，请勿在生产环境中使用。\n"
+        "生产环境请配置强随机密钥，可使用以下命令生成：\n"
+        "  openssl rand -hex 32"
+    )
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer(auto_error=False)

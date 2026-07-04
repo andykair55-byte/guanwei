@@ -1,6 +1,7 @@
 """WebSocket 事件管理器 - 实时推送 Pipeline 状态流转"""
 import json
 import logging
+import asyncio
 from typing import Dict, Set, Optional
 from fastapi import WebSocket
 
@@ -29,15 +30,15 @@ class PipelineWSManager:
                 del self.active_connections[pipeline_id]
         logger.info(f"WebSocket 连接断开: {pipeline_id}")
 
-    async def broadcast(self, pipeline_id: str, event: dict):
-        """向指定 Pipeline 的所有连接广播事件"""
+    async def broadcast_async(self, pipeline_id: str, event: dict):
+        """向指定 Pipeline 的所有连接广播事件（异步版本）"""
         if pipeline_id not in self.active_connections:
             return
 
-        message = json.dumps(event)
+        message = json.dumps(event, ensure_ascii=False)
         disconnected = []
 
-        for connection in self.active_connections[pipeline_id]:
+        for connection in list(self.active_connections[pipeline_id]):
             try:
                 await connection.send_text(message)
             except Exception as e:
@@ -49,6 +50,20 @@ class PipelineWSManager:
 
         if not self.active_connections[pipeline_id]:
             del self.active_connections[pipeline_id]
+
+    def broadcast(self, pipeline_id: str, event: dict):
+        """向指定 Pipeline 的所有连接广播事件（同步调用，fire-and-forget）
+
+        从同步上下文调用时，自动创建后台任务执行广播。
+        从异步上下文调用时，建议使用 broadcast_async 以获得更好的错误处理。
+        """
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            logger.warning("无运行中的事件循环，跳过 WebSocket 广播")
+            return
+
+        asyncio.create_task(self.broadcast_async(pipeline_id, event))
 
 
 ws_manager = PipelineWSManager()

@@ -7,9 +7,9 @@ import asyncio
 from typing import Literal, List, Optional
 from pydantic import BaseModel, Field
 
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, HTTPException
 from sqlalchemy.orm import Session
-from database import get_db
+from database import get_db, SessionLocal
 from pipeline.orchestrator import orchestrator
 from pipeline.commander import commander
 from pipeline.ws_manager import ws_manager
@@ -37,6 +37,7 @@ class VerifyResponse(BaseModel):
     result: dict | None = None
     error: str | None = None
     pipeline_id: str | None = None
+    status: str | None = None
 
 
 class ModerateRequest(BaseModel):
@@ -53,83 +54,176 @@ class ModerateResponse(BaseModel):
 
 PIPELINE_TIMEOUT = 120  # 秒
 
+
+async def run_pipeline_background(
+    pipeline_id: str,
+    content: str,
+    demo_crash_trigger: str | None = None,
+    crash_probability: float = 0.0,
+):
+    """后台执行 Pipeline"""
+    db = SessionLocal()
+    try:
+        run = db.query(PipelineRun).filter(PipelineRun.pipeline_id == pipeline_id).first()
+        if not run:
+            logger.warning(f"后台任务未找到 PipelineRun: {pipeline_id}")
+            return
+
+        run.status = "running"
+        db.commit()
+
+        events_collected = []
+
+        def event_callback(event):
+            event["pipeline_id"] = pipeline_id
+            events_collected.append(event)
+            ws_manager.broadcast(pipeline_id, event)
+
+        commander.register_event_callback(event_callback)
+
+        start_ts = time.time()
+
+        try:
+            result = await asyncio.wait_for(
+                orchestrator.run(
+                    content,
+                    demo_crash_trigger=demo_crash_trigger,
+                    crash_probability=crash_probability,
+                ),
+                timeout=PIPELINE_TIMEOUT,
+            )
+
+            duration_ms = int((time.time() - start_ts) * 1000)
+            run.duration_ms = duration_ms
+            run.event_log = json.dumps(events_collected, ensure_ascii=False)
+
+            if result.get("error"):
+                run.status = "failed"
+                run.error_message = result["error"]
+            else:
+                run.status = "success"
+                node_results = {}
+                for key in ["moderation_result", "collected_sources", "verified_sources", "analysis_result"]:
+                    if key in result:
+                        node_results[key] = "success"
+                run.node_results = json.dumps(node_results, ensure_ascii=False)
+
+            db.commit()
+
+            ws_manager.broadcast(pipeline_id, {
+                "type": "PIPELINE_COMPLETE",
+                "pipeline_id": pipeline_id,
+                "status": run.status,
+                "result": result if run.status == "success" else None,
+                "error": run.error_message if run.status == "failed" else None,
+            })
+
+        except asyncio.TimeoutError:
+            duration_ms = int((time.time() - start_ts) * 1000)
+            run.status = "timeout"
+            run.duration_ms = duration_ms
+            run.error_message = f"Pipeline 执行超时 ({PIPELINE_TIMEOUT}s)"
+            run.event_log = json.dumps(events_collected, ensure_ascii=False)
+            db.commit()
+
+            ws_manager.broadcast(pipeline_id, {
+                "type": "PIPELINE_FAILED",
+                "pipeline_id": pipeline_id,
+                "error": run.error_message,
+            })
+
+        except Exception as e:
+            duration_ms = int((time.time() - start_ts) * 1000)
+            run.status = "failed"
+            run.duration_ms = duration_ms
+            run.error_message = str(e)
+            run.event_log = json.dumps(events_collected, ensure_ascii=False)
+            db.commit()
+
+            ws_manager.broadcast(pipeline_id, {
+                "type": "PIPELINE_FAILED",
+                "pipeline_id": pipeline_id,
+                "error": str(e),
+            })
+
+        logger.info(f"后台 Pipeline 完成 [{pipeline_id}]: status={run.status}, duration={run.duration_ms}ms")
+
+    except Exception as e:
+        logger.exception(f"后台 Pipeline 任务异常 [{pipeline_id}]: {e}")
+        try:
+            run = db.query(PipelineRun).filter(PipelineRun.pipeline_id == pipeline_id).first()
+            if run:
+                run.status = "failed"
+                run.error_message = f"后台任务异常: {str(e)}"
+                db.commit()
+        except Exception:
+            pass
+    finally:
+        try:
+            db.close()
+        except Exception:
+            pass
+
+
 @router.post("/verify", response_model=VerifyResponse)
 async def verify(request: VerifyRequest, db: Session = Depends(get_db)):
-    """一键求证接口
+    """一键求证接口（异步模式）
+
+    提交 Pipeline 任务后立即返回，可通过 GET /pipeline/{id} 查询状态，
+    或通过 WebSocket 监听实时事件。
 
     执行完整的信息验证流程：
     1. 内容审核  2. 信息搜集  3. 来源验证  4. 深度分析
-    - 超时控制 120 秒
-    - 运行记录持久化到 pipeline_runs 表
     """
     pipeline_id = str(uuid.uuid4())
-    start_ts = time.time()
     logger.info(f"Verify request [{pipeline_id}]: {request.content[:100]}")
 
-    # 创建运行记录
     run = PipelineRun(
         pipeline_id=pipeline_id,
         input_content=request.content[:2000],
-        status="running",
+        status="pending",
     )
     db.add(run)
     db.commit()
 
-    events_collected: list = []
+    asyncio.create_task(run_pipeline_background(
+        pipeline_id=pipeline_id,
+        content=request.content,
+        demo_crash_trigger=request.demo_crash_trigger,
+        crash_probability=request.crash_probability,
+    ))
 
-    def event_callback(event):
-        event["pipeline_id"] = pipeline_id
-        events_collected.append(event)
-        ws_manager.broadcast(pipeline_id, event)
+    return VerifyResponse(
+        success=True,
+        result=None,
+        error=None,
+        pipeline_id=pipeline_id,
+        status="pending",
+    )
 
-    commander.register_event_callback(event_callback)
 
-    try:
-        result = await asyncio.wait_for(
-            orchestrator.run(
-                request.content,
-                demo_crash_trigger=request.demo_crash_trigger,
-                crash_probability=request.crash_probability,
-            ),
-            timeout=PIPELINE_TIMEOUT,
-        )
-    except asyncio.TimeoutError:
-        duration_ms = int((time.time() - start_ts) * 1000)
-        run.status = "timeout"
-        run.duration_ms = duration_ms
-        run.error_message = f"Pipeline 执行超时 ({PIPELINE_TIMEOUT}s)"
-        run.event_log = json.dumps(events_collected, ensure_ascii=False)
-        db.commit()
-        return VerifyResponse(success=False, error=run.error_message, pipeline_id=pipeline_id)
-    except Exception as e:
-        duration_ms = int((time.time() - start_ts) * 1000)
-        run.status = "failed"
-        run.duration_ms = duration_ms
-        run.error_message = str(e)
-        run.event_log = json.dumps(events_collected, ensure_ascii=False)
-        db.commit()
-        return VerifyResponse(success=False, error=str(e), pipeline_id=pipeline_id)
+@router.get("/pipeline/{pipeline_id}")
+def get_pipeline_status(pipeline_id: str, db: Session = Depends(get_db)):
+    """查询 Pipeline 运行状态"""
+    run = db.query(PipelineRun).filter(PipelineRun.pipeline_id == pipeline_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Pipeline not found")
 
-    duration_ms = int((time.time() - start_ts) * 1000)
-    run.duration_ms = duration_ms
-    run.event_log = json.dumps(events_collected, ensure_ascii=False)
-
-    if result.get("error"):
-        run.status = "failed"
-        run.error_message = result["error"]
-        db.commit()
-        return VerifyResponse(success=False, error=result["error"], pipeline_id=pipeline_id)
-
-    # 提取节点结果
     node_results = {}
-    for key in ["moderation_result", "collected_sources", "verified_sources", "analysis_result"]:
-        if key in result:
-            node_results[key] = "success"
-    run.node_results = json.dumps(node_results, ensure_ascii=False)
-    run.status = "success"
-    db.commit()
+    if run.node_results:
+        try:
+            node_results = json.loads(run.node_results)
+        except (json.JSONDecodeError, TypeError):
+            pass
 
-    return VerifyResponse(success=True, result=result, pipeline_id=pipeline_id)
+    return {
+        "pipeline_id": run.pipeline_id,
+        "status": run.status,
+        "duration_ms": run.duration_ms,
+        "error_message": run.error_message,
+        "node_results": node_results,
+        "created_at": run.created_at,
+    }
 
 
 @router.websocket("/ws/{pipeline_id}")

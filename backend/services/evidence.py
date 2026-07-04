@@ -5,9 +5,10 @@
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
+from fastapi import Depends
 from datetime import datetime
 
-from database import SessionLocal
+from database import SessionLocal, get_db
 from models import EvidenceChain, Report
 
 
@@ -129,6 +130,6 @@ class EvidenceService:
         }
 
 
-def get_evidence_service(db: Session) -> EvidenceService:
+def get_evidence_service(db: Session = Depends(get_db)) -> EvidenceService:
     """获取证据链服务实例"""
     return EvidenceService(db)

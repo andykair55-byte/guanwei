@@ -6,7 +6,9 @@ from typing import Dict, Any
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from fastapi import Depends
 
+from database import get_db
 from models import User, Melon, Guess, Evidence, PointsRecord
 
 
@@ -193,6 +195,6 @@ class MetricsService:
         return {rank: count for rank, count in ranks}
 
 
-def get_metrics_service(db: Session) -> MetricsService:
+def get_metrics_service(db: Session = Depends(get_db)) -> MetricsService:
     """获取监控指标服务实例"""
     return MetricsService(db)

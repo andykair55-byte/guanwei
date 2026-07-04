@@ -4,19 +4,64 @@ Redis 缓存服务层
 """
 import os
 import json
+import logging
 from typing import Optional, Any
 from datetime import datetime
 
-# Redis 连接（可选依赖）
+logger = logging.getLogger(__name__)
+
+DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
+
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+redis_client = None
+REDIS_AVAILABLE = False
+
 try:
     import redis
-    REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    redis_client = redis.from_url(REDIS_URL, decode_responses=True)
-    REDIS_AVAILABLE = True
 except ImportError:
     redis_client = None
     REDIS_AVAILABLE = False
-    print("Warning: Redis not available, caching disabled")
+    if not DEV_MODE:
+        raise RuntimeError(
+            "生产环境必须安装并配置 Redis！\n"
+            "当前检测到 redis 包未安装，这在生产环境中是不允许的。\n"
+            "请安装 redis 包：\n"
+            "  pip install redis\n"
+            "并设置 REDIS_URL 环境变量指向 Redis 服务，例如：\n"
+            "  REDIS_URL=redis://localhost:6379/0\n"
+            "如果您正在开发环境中运行，请设置 DEV_MODE=true 以允许无 Redis 降级运行。"
+        )
+    else:
+        logger.warning(
+            "【警告】当前处于开发模式 (DEV_MODE=true)，redis 包未安装，缓存功能已禁用。\n"
+            "生产环境必须安装并配置 Redis。"
+        )
+else:
+    try:
+        redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+        redis_client.ping()
+        REDIS_AVAILABLE = True
+        logger.info(f"Redis 连接已初始化：{REDIS_URL}")
+    except Exception as e:
+        redis_client = None
+        REDIS_AVAILABLE = False
+        if not DEV_MODE:
+            raise RuntimeError(
+                f"生产环境 Redis 连接失败！\n"
+                f"无法连接到 Redis 服务：{REDIS_URL}\n"
+                f"错误信息：{e}\n"
+                "请确保 Redis 服务已启动并正确配置 REDIS_URL 环境变量，例如：\n"
+                "  REDIS_URL=redis://localhost:6379/0\n"
+                "如果您正在开发环境中运行，请设置 DEV_MODE=true 以允许无 Redis 降级运行。"
+            )
+        else:
+            logger.warning(
+                f"【警告】当前处于开发模式 (DEV_MODE=true)，Redis 连接失败，缓存功能已禁用。\n"
+                f"Redis URL: {REDIS_URL}\n"
+                f"错误信息：{e}\n"
+                "生产环境必须确保 Redis 可用。"
+            )
 
 
 class CacheService:

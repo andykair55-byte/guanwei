@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from api.routes import router as api_router
 from database import Base, engine, SessionLocal
+from services.cache import redis_client, REDIS_AVAILABLE
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,6 +52,18 @@ app = FastAPI(
     version="1.0.0",
     description="信息验证与内容审核 API",
 )
+
+
+# === 速率限制初始化 ===
+
+@app.on_event("startup")
+async def startup():
+    if REDIS_AVAILABLE and redis_client:
+        from fastapi_limiter import FastAPILimiter
+        await FastAPILimiter.init(redis_client)
+        logging.info("速率限制器已初始化（Redis 后端）")
+    else:
+        logging.warning("Redis 不可用，速率限制器未启用")
 
 
 # === 全局异常处理器 ===
