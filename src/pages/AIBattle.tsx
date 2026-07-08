@@ -1,25 +1,18 @@
-import { useState, useEffect, useRef, type ElementType } from 'react'
+import { useState, useEffect, useRef, useCallback, type ElementType } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft, Send, Swords, Trophy, RotateCcw,
   Shield, BarChart3, Search, Target, Lightbulb, BookOpen, RefreshCw, Smile, Brain,
+  Mic, TrendingUp, Flame, Zap,
 } from 'lucide-react'
 import CharacterIcon from '../components/CharacterIcon'
+import DanmakuOverlay from '../components/DanmakuOverlay'
+import BetPanel from '../components/debate/BetPanel'
 import { getTopic, TOPICS, type ThinkingStep, type RoundScore } from '../services/debateArenaService'
+import { pickDanmaku, toQueueItems, type DanmakuQueueItem, type DanmakuTrigger } from '../services/danmakuService'
 import { getCharacter } from '../services/characters'
-import { useDeviceFrame } from '../contexts/DeviceFrameContext'
-
-function useIsDesktop() {
-  const { inDeviceFrame } = useDeviceFrame()
-  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768)
-  useEffect(() => {
-    if (inDeviceFrame) return
-    const handler = () => setIsDesktop(window.innerWidth >= 768)
-    window.addEventListener('resize', handler)
-    return () => window.removeEventListener('resize', handler)
-  }, [inDeviceFrame])
-  return inDeviceFrame ? false : isDesktop
-}
+import { usePlatform } from '../hooks/usePlatform'
+import { useAuthStore } from '../stores/authStore'
 
 // ===== Types =====
 
@@ -43,7 +36,7 @@ const THINKING_ICON_MAP: Record<string, ElementType> = {
 export default function AIBattle() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const isDesktop = useIsDesktop()
+  const { isWeb } = usePlatform()
   const opponentId = searchParams.get('negate') || 'xiezhi'
   const topicId = searchParams.get('topic') || 'college'
   const topic = getTopic(topicId) || TOPICS[0]
@@ -62,6 +55,16 @@ export default function AIBattle() {
   const [hasVoted, setHasVoted] = useState<'user' | 'ai' | null>(null)
   const [userVotes, setUserVotes] = useState(834 + Math.floor(Math.random() * 300))
   const [aiVotes, setAiVotes] = useState(912 + Math.floor(Math.random() * 300))
+  const [isRecording, setIsRecording] = useState(false)
+  const [userAdvantage, setUserAdvantage] = useState<'leading' | 'trailing' | 'tie'>('tie')
+
+  // 游戏化元素 state
+  const [viewerCount, setViewerCount] = useState(328 + Math.floor(Math.random() * 500))
+  const [edgePulse, setEdgePulse] = useState<'user' | 'ai' | null>(null)
+  const [danmakuItems, setDanmakuItems] = useState<DanmakuQueueItem[]>([])
+  const [danmakuEnabled, setDanmakuEnabled] = useState(true)
+  const danmakuIdRef = useRef(0)
+  const prevAdvantageRef = useRef<'leading' | 'trailing' | 'tie'>('tie')
 
   const chatEndRef = useRef<HTMLDivElement>(null)
   const TOTAL_ROUNDS = 4
@@ -69,6 +72,103 @@ export default function AIBattle() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [rounds, isAiThinking, aiThinkingSteps])
+
+  useEffect(() => {
+    if (rounds.length > 0) {
+      const lastRound = rounds[rounds.length - 1]
+      if (lastRound.score) {
+        if (lastRound.score.affirmScore > lastRound.score.negateScore) {
+          setUserAdvantage('leading')
+        } else if (lastRound.score.affirmScore < lastRound.score.negateScore) {
+          setUserAdvantage('trailing')
+        } else {
+          setUserAdvantage('tie')
+        }
+      }
+    }
+  }, [rounds])
+
+  // 观众数滚动：每 3-8 秒随机增减 1-5
+  useEffect(() => {
+    if (!battleStarted) return
+    const tick = () => {
+      const delta = Math.floor(Math.random() * 5) + 1
+      setViewerCount(v => v + (Math.random() > 0.4 ? delta : -delta))
+    }
+    const schedule = () => {
+      const delay = 3000 + Math.random() * 5000
+      return setTimeout(() => { tick(); timer = schedule() }, delay)
+    }
+    let timer = schedule()
+    return () => clearTimeout(timer)
+  }, [battleStarted])
+
+  // 边缘脉冲：优势方变化时闪现
+  useEffect(() => {
+    if (userAdvantage === prevAdvantageRef.current) return
+    prevAdvantageRef.current = userAdvantage
+    if (userAdvantage === 'leading') {
+      setEdgePulse('user')
+      setTimeout(() => setEdgePulse(null), 1500)
+    } else if (userAdvantage === 'trailing') {
+      setEdgePulse('ai')
+      setTimeout(() => setEdgePulse(null), 1500)
+    }
+  }, [userAdvantage])
+
+  // 弹幕触发函数
+  const spawnDanmaku = useCallback((trigger: DanmakuTrigger) => {
+    const templates = pickDanmaku(trigger, 3 + Math.floor(Math.random() * 3), opponent.id)
+    const items = toQueueItems(templates, 0)
+    setDanmakuItems(prev => [...prev, ...items])
+  }, [opponent.id])
+
+  const handleVoiceInput = useCallback(() => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert('当前浏览器不支持语音输入')
+      return
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'zh-CN'
+    recognition.continuous = false
+    recognition.interimResults = true
+
+    recognition.onstart = () => {
+      setIsRecording(true)
+      setCurrentInput('')
+    }
+
+    recognition.onresult = (event: any) => {
+      let interimTranscript = ''
+      let finalTranscript = ''
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript
+        } else {
+          interimTranscript += event.results[i][0].transcript
+        }
+      }
+
+      setCurrentInput(finalTranscript + interimTranscript)
+    }
+
+    recognition.onend = () => {
+      setIsRecording(false)
+    }
+
+    recognition.onerror = () => {
+      setIsRecording(false)
+    }
+
+    if (isRecording) {
+      recognition.stop()
+    } else {
+      recognition.start()
+    }
+  }, [isRecording])
 
   // Generate AI thinking steps based on character personality
   const generateThinkingSteps = (_round: number): ThinkingStep[] => {
@@ -197,8 +297,18 @@ export default function AIBattle() {
     setIsAiThinking(false)
     setRoundNumber(prev => prev + 1)
 
+    // 触发弹幕：根据得分结果选择不同弹幕池
+    if (score.winner === 'draw') {
+      spawnDanmaku('score-upset')
+    } else {
+      spawnDanmaku(score.winner === 'affirm' ? 'highlight' : 'taunt')
+    }
+    // 延迟再补充一轮通用弹幕
+    setTimeout(() => spawnDanmaku('speech'), 2000)
+
     if (round >= TOTAL_ROUNDS) {
       setBattleEnded(true)
+      setTimeout(() => spawnDanmaku('closing'), 500)
     }
   }
 
@@ -212,20 +322,44 @@ export default function AIBattle() {
     setHasVoted(null)
   }
 
+  // 下注回调：扣减用户积分（结算逻辑后续 Sprint 接入）
+  const handleBet = useCallback((side: 'affirm' | 'negate', amount: number) => {
+    useAuthStore.setState((state) => {
+      if (!state.user) return state
+      return { user: { ...state.user, points: Math.max(0, state.user.points - amount) } }
+    })
+    // side 暂存到闭包外由后续结算逻辑消费
+    void side
+  }, [])
+
   const totalUserScore = rounds.reduce((sum, r) => sum + (r.score?.affirmScore || 0), 0)
   const totalAiScore = rounds.reduce((sum, r) => sum + (r.score?.negateScore || 0), 0)
   const totalVotes = userVotes + aiVotes
   const userPercent = totalVotes > 0 ? Math.round((userVotes / totalVotes) * 100) : 50
 
   return (
-    <div className="flex flex-col min-h-full bg-paper-texture">
+    <div className="flex flex-col min-h-full bg-paper-texture relative">
+      {/* 优势脉冲 */}
+      {edgePulse && (
+        <div className={`fixed inset-0 pointer-events-none z-50 transition-opacity duration-500 ${
+          edgePulse === 'user'
+            ? 'shadow-[inset_0_0_80px_rgba(192,57,43,0.15)]'
+            : 'shadow-[inset_0_0_80px_rgba(6,182,212,0.15)]'
+        }`} />
+      )}
+      {/* 弹幕层 */}
+      <DanmakuOverlay
+        items={danmakuItems}
+        enabled={danmakuEnabled && battleStarted}
+        onItemComplete={(id) => setDanmakuItems(prev => prev.filter(i => i.id !== id))}
+      />
       {/* Header */}
-      <div className={`px-5 pt-4 pb-2 flex items-center gap-3 ${isDesktop ? 'max-w-4xl mx-auto w-full' : ''}`}>
+      <div className={`px-5 pt-4 pb-2 flex items-center gap-3 ${isWeb ? 'max-w-6xl mx-auto w-full' : ''}`}>
         <button onClick={() => navigate(-1)} className="p-1.5 -ml-1.5 rounded-lg hover:bg-paper-dark transition-colors active:scale-95">
           <ArrowLeft size={20} className="text-ink-700" />
         </button>
         <div className="flex-1 min-w-0">
-          <h1 className={`${isDesktop ? 'text-lg' : 'text-[15px]'} font-bold text-ink-900 truncate`}>{topic.title}</h1>
+          <h1 className={`${isWeb ? 'text-lg' : 'text-[15px]'} font-bold text-ink-900 truncate`}>{topic.title}</h1>
           <p className="text-[11px] text-ink-400">人机对决 · 你 vs {opponent.name}</p>
         </div>
         <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-surface shadow-card">
@@ -233,56 +367,146 @@ export default function AIBattle() {
         </div>
       </div>
 
-      <div className={`flex-1 px-5 pb-4 overflow-y-auto flex flex-col gap-3 ${isDesktop ? 'max-w-4xl mx-auto w-full' : ''}`}>
+      <div className={`flex-1 px-5 pb-4 overflow-y-auto flex flex-col gap-3 ${isWeb ? 'max-w-6xl mx-auto w-full' : ''}`}>
         {/* ===== VS Header ===== */}
-        <div className="bg-surface rounded-xl shadow-card p-4">
+        <div className="bg-surface rounded-2xl shadow-card p-4 border border-line/20">
           <div className="flex items-center gap-3">
             {/* User */}
-            <div className="flex-1 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-seal to-seal-light flex items-center justify-center mx-auto mb-1.5 shadow-lg shadow-seal/20">
-                <span className="text-white text-lg font-bold">我</span>
+            <div className="flex-1 text-center relative">
+              <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br from-seal to-seal-light flex items-center justify-center mx-auto mb-2 shadow-lg shadow-seal/20 transition-all duration-300 ${
+                userAdvantage === 'leading' ? 'ring-2 ring-seal animate-pulse' : ''
+              }`}>
+                <span className="text-white text-xl font-bold">我</span>
+                {userAdvantage === 'leading' && (
+                  <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-seal text-white flex items-center justify-center text-[8px] font-bold animate-bounce">
+                    <TrendingUp size={10} />
+                  </div>
+                )}
               </div>
               <p className="text-[13px] font-bold text-ink-900">你</p>
               <p className="text-[10px] text-ink-400">{topic.affirmLabel}</p>
               {rounds.length > 0 && (
-                <p className="text-[11px] font-bold mt-0.5 text-seal">{totalUserScore}分</p>
+                <div className="mt-1">
+                  <p className="text-[16px] font-bold text-seal">{totalUserScore}分</p>
+                  <div className={`text-[9px] font-medium mt-0.5 ${
+                    userAdvantage === 'leading' ? 'text-bamboo' :
+                    userAdvantage === 'trailing' ? 'text-seal' : 'text-ink-400'
+                  }`}>
+                    {userAdvantage === 'leading' ? '🎯 领先!' :
+                     userAdvantage === 'trailing' ? '🔥 落后!' : '⚖️ 持平'}
+                  </div>
+                </div>
               )}
             </div>
 
             {/* VS */}
             <div className="flex flex-col items-center gap-1">
-              <Swords size={20} className="text-ink-300" />
+              <div className="relative">
+                <Swords size={24} className="text-ink-300" />
+                <div className="absolute inset-0 bg-seal/20 blur-lg rounded-full animate-pulse" />
+              </div>
+              <span className="text-[9px] text-ink-400 font-medium">VS</span>
+              <div className="flex items-center gap-1">
+                {[...Array(4)].map((_, i) => (
+                  <div
+                    key={i}
+                    className={`w-1 h-1 rounded-full transition-all duration-300 ${
+                      i < roundNumber - 1 ? 'bg-seal' : i === roundNumber - 1 ? 'bg-seal animate-pulse' : 'bg-line/50'
+                    }`}
+                  />
+                ))}
+              </div>
             </div>
 
             {/* AI opponent */}
-            <div className="flex-1 text-center">
-              <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${opponent.visual.gradientFrom} ${opponent.visual.gradientTo} flex items-center justify-center mx-auto mb-1.5 shadow-lg ${opponent.visual.glowShadow}`}>
-                <CharacterIcon characterId={opponent.id} size={20} className="text-white" />
+            <div className="flex-1 text-center relative">
+              <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${opponent.visual.gradientFrom} ${opponent.visual.gradientTo} flex items-center justify-center mx-auto mb-2 shadow-lg ${opponent.visual.glowShadow} transition-all duration-300 ${
+                userAdvantage === 'trailing' ? 'ring-2 ring-cyan-500 animate-pulse' : ''
+              }`}>
+                <CharacterIcon characterId={opponent.id} size={22} className="text-white" />
+                {userAdvantage === 'trailing' && (
+                  <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-cyan-500 text-white flex items-center justify-center text-[8px] font-bold animate-bounce">
+                    <TrendingUp size={10} />
+                  </div>
+                )}
               </div>
               <p className="text-[13px] font-bold text-ink-900">{opponent.name}</p>
               <p className="text-[10px] text-ink-400">{topic.negateLabel}</p>
               {rounds.length > 0 && (
-                <p className={`text-[11px] font-bold mt-0.5 ${opponent.visual.textColor}`}>{totalAiScore}分</p>
+                <div className="mt-1">
+                  <p className={`text-[16px] font-bold ${opponent.visual.textColor}`}>{totalAiScore}分</p>
+                </div>
               )}
             </div>
           </div>
 
           {/* Score bar */}
           {rounds.length > 0 && (
-            <div className="mt-3">
-              <div className="h-3 rounded-full overflow-hidden flex bg-paper-dark">
+            <div className="mt-4">
+              <div className="flex items-center justify-between text-[10px] text-ink-400 mb-1.5">
+                <span>你的优势</span>
+                <span>{totalUserScore}:{totalAiScore}</span>
+                <span>{opponent.name}的优势</span>
+              </div>
+              <div className="h-3 rounded-full overflow-hidden flex bg-paper-dark/80 relative">
                 <div
-                  className="h-full bg-gradient-to-r from-seal to-seal-light transition-all duration-700"
+                  className={`h-full bg-gradient-to-r from-seal to-seal-light transition-all duration-700 ${
+                    userAdvantage === 'leading' ? 'animate-pulse' : ''
+                  }`}
                   style={{ width: `${totalUserScore + totalAiScore > 0 ? (totalUserScore / (totalUserScore + totalAiScore)) * 100 : 50}%` }}
                 />
                 <div
-                  className={`h-full bg-gradient-to-r ${opponent.visual.gradientFrom} ${opponent.visual.gradientTo} transition-all duration-700`}
+                  className={`h-full bg-gradient-to-r ${opponent.visual.gradientFrom} ${opponent.visual.gradientTo} transition-all duration-700 ${
+                    userAdvantage === 'trailing' ? 'animate-pulse' : ''
+                  }`}
                   style={{ width: `${totalUserScore + totalAiScore > 0 ? (totalAiScore / (totalUserScore + totalAiScore)) * 100 : 50}%` }}
                 />
+                <div className="absolute top-0 bottom-0 w-0.5 bg-white/50" style={{ left: '50%' }} />
+              </div>
+            </div>
+          )}
+
+          {/* Battle stats */}
+          {battleStarted && (
+            <div className="mt-3 pt-3 border-t border-line/20">
+              <div className="flex items-center justify-center gap-4 text-[10px] text-ink-400">
+                <div className="flex items-center gap-1">
+                  <Flame size={10} className="text-seal" />
+                  <span className="transition-all duration-300">{viewerCount} 人围观</span>
+                </div>
+                {rounds.length > 0 && (
+                  <div className="flex items-center gap-1">
+                    <Zap size={10} className="text-gold" />
+                    <span>精彩度 {Math.floor((totalUserScore + totalAiScore) / rounds.length)}/10</span>
+                  </div>
+                )}
+                <button
+                  onClick={() => setDanmakuEnabled(v => !v)}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full transition-all ${
+                    danmakuEnabled ? 'bg-seal/10 text-seal' : 'bg-line/20 text-ink-300'
+                  }`}
+                >
+                  <span>{danmakuEnabled ? '弹' : '关'}</span>
+                </button>
               </div>
             </div>
           )}
         </div>
+
+        {/* ===== Bet Panel（开战前下注） ===== */}
+        {!battleStarted && (
+          <div className="bg-surface rounded-2xl shadow-card p-4 border border-line/20">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[14px] font-semibold text-ink-900">下注预测</h3>
+              <span className="text-[11px] text-ink-400">赔率 1.8 · 每日上限 200</span>
+            </div>
+            <BetPanel
+              affirmLabel={topic.affirmLabel}
+              negateLabel={topic.negateLabel}
+              onBet={handleBet}
+            />
+          </div>
+        )}
 
         {/* ===== Battle Area ===== */}
         {!battleStarted ? (
@@ -421,13 +645,30 @@ export default function AIBattle() {
 
         {/* ===== Input Area ===== */}
         {battleStarted && !battleEnded && (
-          <div className="sticky bottom-0 bg-paper-texture pt-2 pb-2">
-            <div className="flex gap-2">
+          <div className="sticky bottom-0 bg-paper-texture/95 backdrop-blur-lg pt-3 pb-3 border-t border-line/20">
+            <div className="flex gap-2 items-end">
+              {/* Voice input */}
+              <button
+                onClick={handleVoiceInput}
+                disabled={isAiThinking}
+                className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all disabled:opacity-40 ${
+                  isRecording
+                    ? 'bg-seal text-white animate-pulse shadow-seal-glow'
+                    : 'bg-surface border border-line/30 text-ink-500 hover:bg-paper-dark'
+                }`}
+              >
+                {isRecording ? <Mic size={16} /> : <Mic size={16} />}
+                {isRecording && (
+                  <div className="absolute w-2 h-2 rounded-full bg-white animate-ping" />
+                )}
+              </button>
+
+              {/* Text input */}
               <textarea
                 value={currentInput}
                 onChange={e => setCurrentInput(e.target.value)}
                 placeholder={`阐述你的论点（${topic.affirmLabel}）……`}
-                className="flex-1 px-4 py-3 rounded-xl bg-surface border border-line/30 text-[13px] text-ink-900 placeholder:text-ink-300 resize-none focus:outline-none focus:ring-2 focus:ring-seal/30 min-h-[44px] max-h-[120px]"
+                className="flex-1 px-4 py-3 rounded-xl bg-surface border border-line/30 text-[14px] text-ink-900 placeholder:text-ink-400 resize-none focus:outline-none focus:ring-2 focus:ring-seal/30 focus:border-seal/30 min-h-[44px] max-h-[120px] transition-all"
                 rows={1}
                 disabled={isAiThinking}
                 onKeyDown={e => {
@@ -437,17 +678,21 @@ export default function AIBattle() {
                   }
                 }}
               />
+
+              {/* Send button */}
               <button
                 onClick={handleSubmit}
                 disabled={!currentInput.trim() || isAiThinking}
-                className="w-11 h-11 rounded-xl bg-seal text-white flex items-center justify-center active:scale-[0.95] transition-all disabled:opacity-40 disabled:active:scale-100 self-end shadow-seal-glow"
+                className="w-11 h-11 rounded-xl bg-seal text-white flex items-center justify-center active:scale-[0.95] transition-all disabled:opacity-40 disabled:active:scale-100 shadow-seal-glow hover:shadow-seal/30"
               >
                 <Send size={16} />
               </button>
             </div>
-            <p className="text-[9px] text-ink-300 text-center mt-1">
-              Enter 发送 · Shift+Enter 换行
-            </p>
+            <div className="flex items-center justify-center gap-4 mt-2">
+              <p className="text-[9px] text-ink-300">
+                {isRecording ? '🎤 正在录音...' : 'Enter 发送 · Shift+Enter 换行'}
+              </p>
+            </div>
           </div>
         )}
 
