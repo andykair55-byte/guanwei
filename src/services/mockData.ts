@@ -79,6 +79,21 @@ function generateRevealTime(): string {
   return date.toISOString()
 }
 
+const melonAuthors = [
+  { id: '娱乐揭秘君', nickname: '娱乐揭秘君', avatar: 'https://picsum.photos/seed/ca1/80/80', rank: '鉴瓜达人' },
+  { id: '真相猎人', nickname: '真相猎人', avatar: 'https://picsum.photos/seed/u1/80/80', rank: '鉴瓜大师' },
+  { id: '吃瓜达人', nickname: '吃瓜达人', avatar: 'https://picsum.photos/seed/u2/80/80', rank: '瓜田侦探' },
+  { id: '柯南附体', nickname: '柯南附体', avatar: 'https://picsum.photos/seed/u3/80/80', rank: '鉴瓜学徒' },
+  { id: '福尔摩斯', nickname: '福尔摩斯', avatar: 'https://picsum.photos/seed/u4/80/80', rank: '鉴瓜大师' },
+  { id: '八卦小子', nickname: '八卦小子', avatar: 'https://picsum.photos/seed/u5/80/80', rank: '瓜田新手' },
+  { id: '鉴证实录', nickname: '鉴证实录', avatar: 'https://picsum.photos/seed/u6/80/80', rank: '见微先知' },
+  { id: '理性吃瓜', nickname: '理性吃瓜', avatar: 'https://picsum.photos/seed/ca15/80/80', rank: '鉴瓜大师' },
+  { id: '视频侦探', nickname: '视频侦探', avatar: 'https://picsum.photos/seed/ca20/80/80', rank: '鉴瓜大师' },
+  { id: '辟谣小助手', nickname: '辟谣小助手', avatar: 'https://picsum.photos/seed/ca18/80/80', rank: '鉴瓜大师' },
+  { id: '实验达人', nickname: '实验达人', avatar: 'https://picsum.photos/seed/ca9/80/80', rank: '瓜田侦探' },
+  { id: 'AI鉴别师', nickname: 'AI鉴别师', avatar: 'https://picsum.photos/seed/ca11/80/80', rank: '鉴瓜大师' },
+]
+
 export function generateMelons(): Melon[] {
   return melonTemplates.map((tpl, i) => {
     const trueCount = randomInt(100, 5000)
@@ -86,6 +101,7 @@ export function generateMelons(): Melon[] {
     const totalParticipants = trueCount + falseCount
     const daysAgo = randomInt(0, 5)
     const createdAt = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString()
+    const author = melonAuthors[i % melonAuthors.length]
 
     return {
       id: `melon-${i + 1}`,
@@ -100,6 +116,11 @@ export function generateMelons(): Melon[] {
       revealTime: generateRevealTime(),
       status: 'pending',
       createdAt,
+      likeCount: randomInt(100, 5000),
+      commentCount: randomInt(10, 500),
+      evidenceCount: randomInt(5, 50),
+      isLiked: false,
+      author: { ...author },
     }
   })
 }
@@ -223,6 +244,8 @@ export function generateMockEvidence(melonId: string): Evidence[] {
       upvotes,
       downvotes,
       isBest: false,
+      // 前 2 条标记为 AI 辅助创作，用于演示来源标记
+      aiAssisted: i < 2,
       createdAt: new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString(),
     }
   })
@@ -270,16 +293,156 @@ const communityPosts: CommunityPost[] = [
   { id: 'cp22', type: 'help', title: '有人知道这个偏方治咳嗽到底有没有用吗', image: 'https://picsum.photos/seed/cp22/400/300', imageHeight: 155, authorName: '咳嗽一个月', authorAvatar: 'https://picsum.photos/seed/ca22/40/40', likes: 345, tags: ['求助', '生活科普'], createdAt: new Date(Date.now() - 79200000).toISOString() },
 ]
 
-export function getCommunityPosts(filter?: string): CommunityPost[] {
-  if (!filter || filter === '推荐') return communityPosts
-  if (filter === '关注') return communityPosts.slice(0, 8)
-  if (filter === '公益') return communityPosts.filter(p => p.type === 'charity')
-  if (filter === '求助') return communityPosts.filter(p => p.type === 'help')
-  if (filter === '热帖') return communityPosts.filter(p => p.type === 'hot')
-  return communityPosts
+export function getCommunityPosts(filter?: string, page = 0, pageSize = 9): { posts: CommunityPost[]; hasMore: boolean } {
+  let source = communityPosts
+  if (filter === '关注') source = communityPosts.slice(0, 8)
+  else if (filter === '公益') source = communityPosts.filter(p => p.type === 'charity')
+  else if (filter === '求助') source = communityPosts.filter(p => p.type === 'help')
+  else if (filter === '热帖') source = communityPosts.filter(p => p.type === 'hot')
+
+  const start = page * pageSize
+  const end = start + pageSize
+  // 循环取数据以模拟无限加载
+  const result: CommunityPost[] = []
+  for (let i = start; i < end; i++) {
+    const src = source[i % source.length]
+    result.push({
+      ...src,
+      id: `${src.id}_p${page}_${i}`,
+      likes: Math.floor(Math.random() * 5000) + 100,
+    })
+  }
+
+  return { posts: result, hasMore: true }
+}
+
+export function createCommunityPost(data: { title: string; content: string; image?: string; tags?: string[] }): CommunityPost {
+  const id = `cp${Date.now()}`
+  const post: CommunityPost = {
+    id,
+    type: 'normal',
+    title: data.title,
+    image: data.image || `https://picsum.photos/seed/${id}/400/300`,
+    imageHeight: 200,
+    authorName: '我',
+    authorAvatar: `https://picsum.photos/seed/me/40/40`,
+    likes: 0,
+    tags: data.tags || [],
+    createdAt: new Date().toISOString(),
+  }
+  communityPosts.unshift(post)
+  return post
 }
 
 // ===== 实锤报告 Mock 数据 =====
+
+export function formatCount(n: number): string {
+  if (n >= 10000) {
+    return (n / 10000).toFixed(1) + '万'
+  }
+  if (n >= 1000) {
+    return (n / 1000).toFixed(1) + 'k'
+  }
+  return n.toString()
+}
+
+export interface HotDebate {
+  id: number
+  topic: string
+  participants: number
+  roomId: string
+}
+
+export interface HotMelon {
+  id: number
+  title: string
+  views: number
+  isHot: boolean
+  category?: string
+  participants?: number
+  comments?: number
+  trending?: 'up' | 'down' | 'new' | 'stable' | 'rising' | 'hot'
+  author?: {
+    id: string
+    nickname: string
+    avatar: string
+    rank: string
+    points: number
+  }
+}
+
+export interface HotTopic {
+  id: number
+  tag: string
+  count: number
+  description?: string
+  trending?: 'new' | 'rising' | 'hot' | 'stable'
+  relatedTags?: string[]
+}
+
+export interface RecommendUser {
+  id: number
+  nickname: string
+  bio: string
+  initial: string
+  color: string
+  avatar?: string
+}
+
+export const hotDebates: HotDebate[] = [
+  { id: 1, topic: '短视频正在摧毁深度思考能力吗？', participants: 12000, roomId: 'room-melon' },
+  { id: 2, topic: '大学学历在AI时代还有价值吗？', participants: 8563, roomId: 'room-ai-value' },
+  { id: 3, topic: '远程办公是否降低了工作效率？', participants: 6421, roomId: 'room-remote' },
+  { id: 4, topic: '网红带货是不是新型传销？', participants: 5234, roomId: 'room-influencer' },
+  { id: 5, topic: '年轻人该不该躺平？', participants: 4123, roomId: 'room-lie-flat' },
+]
+
+export const hotMelons: HotMelon[] = [
+  {
+    id: 1, title: '某顶流明星隐婚生子，对象是圈外人士', views: 12000, isHot: true, category: '娱乐',
+    participants: 5623, comments: 890, trending: 'up',
+    author: { id: '娱乐揭秘君', nickname: '娱乐揭秘君', avatar: 'https://picsum.photos/seed/ca1/80/80', rank: '鉴瓜达人', points: 7800 },
+  },
+  {
+    id: 2, title: '苹果将于明年发布折叠屏 iPhone，供应链已确认', views: 8563, isHot: true, category: '科技',
+    participants: 5052, comments: 234, trending: 'up',
+    author: { id: '真相猎人', nickname: '真相猎人', avatar: 'https://picsum.photos/seed/u1/80/80', rank: '鉴瓜大师', points: 12580 },
+  },
+  {
+    id: 3, title: '央行将于下月降准 50 个基点，释放万亿流动性', views: 6421, isHot: false, category: '财经',
+    participants: 4100, comments: 445, trending: 'new',
+    author: { id: '财经观察', nickname: '财经观察', avatar: 'https://picsum.photos/seed/ca6/80/80', rank: '鉴瓜达人', points: 13400 },
+  },
+  {
+    id: 4, title: '某地发生 5.2 级地震，官方尚未发布伤亡报告', views: 5234, isHot: false, category: '社会热点',
+    participants: 7100, comments: 1230, trending: 'stable',
+    author: { id: 'AI鉴别师', nickname: 'AI鉴别师', avatar: 'https://picsum.photos/seed/ca11/80/80', rank: '鉴瓜大师', points: 19800 },
+  },
+  {
+    id: 5, title: '每天喝八杯水其实没有科学依据，可能反而有害', views: 4123, isHot: false, category: '生活科普',
+    participants: 6300, comments: 567, trending: 'new',
+    author: { id: '实验达人', nickname: '实验达人', avatar: 'https://picsum.photos/seed/ca9/80/80', rank: '瓜田侦探', points: 6800 },
+  },
+  {
+    id: 6, title: 'OpenAI 正在开发能实时视频通话的 GPT-5', views: 3800, isHot: false, category: '科技',
+    participants: 6500, comments: 780, trending: 'up',
+    author: { id: 'AI鉴别师', nickname: 'AI鉴别师', avatar: 'https://picsum.photos/seed/ca11/80/80', rank: '鉴瓜大师', points: 19800 },
+  },
+]
+
+export const hotTopics: HotTopic[] = [
+  { id: 1, tag: '某顶流塌房实锤', count: 123000, description: '多位狗仔爆料，证据链逐步浮出水面', trending: 'hot', relatedTags: ['娱乐圈', '塌房', '实锤'] },
+  { id: 2, tag: '短视频的危害', count: 87000, description: '深度思考能力正在被算法消解？', trending: 'rising', relatedTags: ['数字素养', '注意力', '算法'] },
+  { id: 3, tag: '大学早操该不该取消', count: 62000, description: '多所高校学生发起联名请愿', trending: 'new', relatedTags: ['校园', '学生权益', '作息'] },
+  { id: 4, tag: 'AI时代的就业焦虑', count: 51000, description: '文科生如何应对AI冲击', trending: 'hot', relatedTags: ['AI', '就业', '专业选择'] },
+  { id: 5, tag: '淄博烧烤还行吗', count: 38000, description: '半年后回访：热度褪去后的真相', trending: 'stable', relatedTags: ['网红城市', '消费', '旅游'] },
+]
+
+export const recommendUsers: RecommendUser[] = [
+  { id: 1, nickname: '真相观察员', bio: '求证达人', initial: '真', color: 'bg-red-50 text-red-600', avatar: 'https://picsum.photos/seed/user1/80/80' },
+  { id: 2, nickname: '思辨者', bio: '辩论高手', initial: '思', color: 'bg-blue-50 text-blue-600', avatar: 'https://picsum.photos/seed/user2/80/80' },
+  { id: 3, nickname: '喵喵研究所', bio: '科学科普博主', initial: '喵', color: 'bg-amber-50 text-amber-600', avatar: 'https://picsum.photos/seed/user3/80/80' },
+]
 
 export function generateMockReport(melonId: string, result: boolean): Report {
   return {

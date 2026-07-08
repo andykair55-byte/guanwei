@@ -64,6 +64,13 @@ export default function EvidenceCard({
           {evidence.direction ? '真' : '假'}
         </span>
 
+        {/* AI 辅助创作标记 */}
+        {evidence.aiAssisted && (
+          <span className="px-1.5 py-0.5 text-[10px] rounded bg-purple-50 text-purple-600 font-medium">
+            AI辅助
+          </span>
+        )}
+
         {/* 猜对/猜错标签 */}
         {showResult && (
           <span
