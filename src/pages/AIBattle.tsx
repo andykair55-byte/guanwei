@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft, Send, Swords, Trophy, RotateCcw,
   Shield, BarChart3, Search, Target, Lightbulb, BookOpen, RefreshCw, Smile, Brain,
-  Mic, TrendingUp, Flame, Zap,
+  Mic, TrendingUp, Flame, Zap, Check,
 } from 'lucide-react'
 import CharacterIcon from '../components/CharacterIcon'
 import DanmakuOverlay from '../components/DanmakuOverlay'
@@ -344,6 +344,15 @@ export default function AIBattle() {
   const totalVotes = userVotes + aiVotes
   const userPercent = totalVotes > 0 ? Math.round((userVotes / totalVotes) * 100) : 50
 
+  // 对战状态机：匹配→准备→辩论中→裁判评分→结算→完成
+  // 匹配(0) 对手已分配即完成；后续按本地状态推进
+  const PHASES = ['匹配', '准备', '辩论中', '裁判评分', '结算', '完成'] as const
+  const currentPhaseIndex = !battleStarted ? 1
+    : !battleEnded ? 2
+    : !showResult ? 3
+    : !hasVoted ? 4
+    : 5
+
   return (
     <div className="flex flex-col min-h-full bg-paper-texture relative">
       {/* 优势脉冲 */}
@@ -375,6 +384,29 @@ export default function AIBattle() {
       </div>
 
       <div className={`flex-1 px-5 pb-4 overflow-y-auto flex flex-col gap-3 ${isWeb ? 'max-w-6xl mx-auto w-full' : ''}`}>
+        {/* ===== 对战状态机步骤条 ===== */}
+        <div className="bg-surface rounded-2xl shadow-card border border-line/20 px-3 py-2">
+          <div className="flex items-center gap-1 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+            {PHASES.map((p, i) => {
+              const done = i < currentPhaseIndex
+              const active = i === currentPhaseIndex
+              return (
+                <div key={p} className="flex items-center gap-1 shrink-0">
+                  {i > 0 && (
+                    <div className={`w-4 h-px transition-colors motion-reduce:transition-none ${done ? 'bg-seal' : 'bg-ink-200'}`} />
+                  )}
+                  <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-[11px] transition-colors motion-reduce:transition-none ${
+                    active ? 'bg-seal text-white font-medium' : done ? 'text-seal' : 'text-ink-300'
+                  }`}>
+                    {done && <Check size={11} />}
+                    {p}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
         {/* ===== VS Header ===== */}
         <div className="bg-surface rounded-2xl shadow-card p-4 border border-line/20">
           <div className="flex items-center gap-3">
