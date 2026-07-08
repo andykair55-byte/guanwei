@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Users as UsersIcon, FileText, Zap, Cpu,
   ArrowLeft, Search, Trash2, Eye, Edit3, CheckCircle2, XCircle,
   Clock, AlertTriangle, RefreshCw, Shield, BarChart3, Activity,
-  ChevronRight, ChevronLeft, X, Plus, Minus, Loader2, Download,
+  ChevronRight, ChevronLeft, Plus, Minus, Loader2, Download,
   ScrollText, Server, History, LogOut, Lock
 } from 'lucide-react'
 
@@ -207,7 +207,7 @@ function DashboardTab() {
       api('/metrics/system'), api('/metrics/business'),
       api('/metrics/rank-distribution'), api('/admin/ops/health'),
     ]).then(([sys, biz, rank, ops]) => {
-      setSysMetrics(sys); setBizMetrics(biz); setRankDist(rank); setOpsHealth(ops)
+      setSysMetrics(sys); setBizMetrics(biz); setRankDist(rank as Record<string, number>); setOpsHealth(ops)
     }).catch(console.error).finally(() => setLoading(false))
   }, [])
 

@@ -17,7 +17,12 @@ const trendingTopics = [
   '隔夜水致癌真相',
 ]
 
-export default function DesktopRightPanel() {
+interface DesktopRightPanelProps {
+  onCollapse?: () => void
+  width?: number
+}
+
+export default function DesktopRightPanel(_props: DesktopRightPanelProps = {}) {
   const navigate = useNavigate()
 
   return (

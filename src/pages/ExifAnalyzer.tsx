@@ -249,7 +249,7 @@ export default function ExifAnalyzer() {
         ifd1: true,
         exif: true,
         interop: true,
-      })
+      } as any)
 
       const basicExif = parsed !== undefined && parsed !== null && Object.keys(parsed || {}).length > 3
 

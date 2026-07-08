@@ -216,6 +216,9 @@ export default function DebateRoomPage() {
     )
   }
 
+  // 兜底守卫：理论上前面的分支已处理 null 情况，此处保证后续 currentRoom 非空
+  if (!currentRoom) return null
+
   const onStageCount = currentRoom.seats.filter(s => s.status === 'occupied').length
   const removalThreshold = Math.ceil(onStageCount * currentRoom.rules.removalThreshold)
   const isEnded = currentRoom.status === 'ended'

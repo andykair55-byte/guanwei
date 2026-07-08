@@ -41,7 +41,7 @@ export default function EmotionDetector() {
   const [input, setInput] = useState('')
   const [result, setResult] = useState<EmotionAnalysisResult | null>(null)
   const [state, setState] = useState<AnalysisState>('idle')
-  const [expandedSections, setExpandedSections] = useState({ analysis: true, techniques: true, objective: true })
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ analysis: true, techniques: true, objective: true })
 
   const toggleSection = (key: string) => {
     setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }))

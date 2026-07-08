@@ -64,7 +64,6 @@ export default function AIBattle() {
   const [edgePulse, setEdgePulse] = useState<'user' | 'ai' | null>(null)
   const [danmakuItems, setDanmakuItems] = useState<DanmakuQueueItem[]>([])
   const [danmakuEnabled, setDanmakuEnabled] = useState(true)
-  const danmakuIdRef = useRef(0)
   const prevAdvantageRef = useRef<'leading' | 'trailing' | 'tie'>('tie')
 
   const chatEndRef = useRef<HTMLDivElement>(null)

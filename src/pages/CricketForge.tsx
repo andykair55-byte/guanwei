@@ -7,7 +7,7 @@
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ArrowLeft, Send, Sparkles, Shuffle, Palette, Zap,
+  ArrowLeft, Sparkles, Shuffle, Palette, Zap,
   ChevronRight, Swords, Eye,
 } from 'lucide-react'
 import { usePlatform } from '../hooks/usePlatform'

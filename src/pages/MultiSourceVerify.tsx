@@ -27,7 +27,7 @@ interface SourceResult {
   name: string
   icon: React.ComponentType<{ size?: number; className?: string }>
   credibility: number       // 1-5
-  stance: 'confirm' | 'deny' | 'neutral' | 'unrelated'
+  stance: 'confirm' | 'deny' | 'neutral' | 'unrelated' | 'mixed'
   summary: string
   quote: string
   url: string
@@ -213,6 +213,7 @@ const stanceConfig: Record<SourceResult['stance'], { label: string; icon: React.
   deny: { label: '否认', icon: XCircle, color: 'text-seal' },
   neutral: { label: '待定', icon: Clock, color: 'text-gold' },
   unrelated: { label: '无关', icon: AlertTriangle, color: 'text-ink-400' },
+  mixed: { label: '混合', icon: Globe, color: 'text-gold' },
 }
 
 const consensusConfig: Record<MultiSourceResult['consensus'], { label: string; color: string; bg: string; border: string }> = {

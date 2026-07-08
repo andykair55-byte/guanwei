@@ -1,13 +1,12 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Flame, Clock, Shield, ShieldCheck, HelpCircle,
-  MessageSquare, Eye, Swords, ChevronRight, Inbox,
+  Flame, Clock,
+  ChevronRight, Inbox,
 } from 'lucide-react'
 import { api } from '../services/api'
 import { transformMelonList } from '../utils/transform'
 import type { Melon, MelonCategory } from '../types'
-import { usePlatform } from '../hooks/usePlatform'
 
 const categories: ('全部' | MelonCategory)[] = [
   '全部', '科技', '社会热点', '生活科普', '财经', '娱乐',
@@ -154,13 +153,12 @@ function formatHeat(n: number): string {
 
 function MelonFieldPage() {
   const navigate = useNavigate()
-  const { isWeb } = usePlatform()
 
   const [melons, setMelons] = useState<Melon[]>([])
   const [selectedCategory, setSelectedCategory] = useState<typeof categories[number]>('全部')
   const [sortBy, setSortBy] = useState<'latest' | 'hot'>('hot')
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [, setError] = useState<string | null>(null)
 
   // voted state: melonId -> 'true' | 'false' | 'neutral'
   const [votes, setVotes] = useState<Record<string, 'true' | 'false' | 'neutral'>>({})
@@ -372,7 +370,6 @@ const MOCK_EVIDENCE: Record<string, Evidence[]> = {
 }
 
 function MelonGameCard({ melon, onOpenDetail }: MelonGameCardProps) {
-  const isHot = melon.totalParticipants > 5000
   const countdown = formatCountdown(melon.revealTime)
   const evidence = MOCK_EVIDENCE[melon.id] || [
     { id: `${melon.id}-e1`, content: '多方信源交叉印证中，等待更多证据', direction: 'true' as const, upvotes: 23 },

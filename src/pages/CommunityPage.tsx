@@ -24,7 +24,8 @@ function CommunityPage() {
   const { notchHeight } = useDeviceFrame()
   const isDesktop = useIsDesktop()
 
-  const posts = useMemo(() => getCommunityPosts(selectedTab), [selectedTab])
+  const postsData = useMemo(() => getCommunityPosts(selectedTab), [selectedTab])
+  const posts = postsData.posts
 
   // 移动端两列瀑布流
   const { leftCol, rightCol } = useMemo(() => {

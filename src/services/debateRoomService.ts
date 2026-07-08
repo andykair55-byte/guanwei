@@ -69,7 +69,7 @@ let judgmentsCache: Map<string, RoundJudgment[]> = new Map()
 let summaryCache: Map<string, DebateSummary> = new Map()
 let initialized = false
 
-function generateMockSeats(topic: typeof MOCK_TOPICS[0], status: 'waiting' | 'debating' | 'ended'): DebateSeat[] {
+function generateMockSeats(_topic: typeof MOCK_TOPICS[0], status: 'waiting' | 'debating' | 'ended'): DebateSeat[] {
   const seats: DebateSeat[] = []
   const sides: DebateSide[] = ['affirm', 'negate']
 
@@ -417,10 +417,12 @@ export const debateRoomService = {
         roomId,
         seatScores: result.seatScores.map(ss => ({
           ...ss,
+          userId: room.seats.find(s => s.index === ss.seatIndex)?.userId || '',
           nickname: room.seats.find(s => s.index === ss.seatIndex)?.nickname || '',
         })),
         fallacies: result.fallacies.map(f => ({
           ...f,
+          userId: room.seats.find(s => s.index === f.seatIndex)?.userId || '',
           nickname: room.seats.find(s => s.index === f.seatIndex)?.nickname || '',
         })),
         roundWinner: result.roundWinner,
@@ -436,7 +438,7 @@ export const debateRoomService = {
 
       // 存储评分
       const judgments = judgmentsCache.get(roomId) || []
-      judgments.push(judgment)
+      judgments.push(judgment!)
       judgmentsCache.set(roomId, judgments)
     }
 
@@ -455,7 +457,7 @@ export const debateRoomService = {
   },
 
   /** 投抬走票 */
-  async castRemovalVote(roomId: string, voterUserId: string, targetSeatIndex: number): Promise<{ removed: boolean; room: DebateRoom }> {
+  async castRemovalVote(roomId: string, _voterUserId: string, targetSeatIndex: number): Promise<{ removed: boolean; room: DebateRoom }> {
     initMockRooms()
     await delay(200)
     const room = roomsCache.find(r => r.id === roomId)

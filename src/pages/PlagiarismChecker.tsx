@@ -201,7 +201,7 @@ export default function PlagiarismChecker() {
   const [suspected, setSuspected] = useState('')
   const [result, setResult] = useState<PlagiarismResult | null>(null)
   const [state, setState] = useState<AnalysisState>('idle')
-  const [expandedSections, setExpandedSections] = useState({ detail: true, stats: true })
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ detail: true, stats: true })
 
   const toggleSection = (key: string) => {
     setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }))

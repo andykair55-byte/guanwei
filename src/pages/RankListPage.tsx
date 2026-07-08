@@ -11,6 +11,8 @@ export default function RankListPage() {
 
   const headerHeight = notchHeight > 0 ? notchHeight + 56 : 56
 
+  if (!user) return null
+
   return (
     <div className="min-h-screen bg-paper pb-20">
       {/* 头部 */}

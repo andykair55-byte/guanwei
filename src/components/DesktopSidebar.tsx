@@ -30,7 +30,12 @@ const toolItems: NavItem[] = [
   { path: '/settings/llm', label: 'LLM 设置', icon: Cpu },
 ]
 
-export default function DesktopSidebar() {
+interface DesktopSidebarProps {
+  collapsed?: boolean
+  onToggleCollapse?: () => void
+}
+
+export default function DesktopSidebar(_props: DesktopSidebarProps = {}) {
   const navigate = useNavigate()
   const location = useLocation()
   const user = useAuthStore(s => s.user)
