@@ -8,6 +8,7 @@ export interface User {
   totalGuesses: number;
   correctGuesses: number;
   badges: Badge[];
+  publishedCount?: number;  // 发布分析数（AI辅助创作统计）
   createdAt: string;
 }
 
@@ -31,6 +32,12 @@ export interface Melon {
   evidenceCount: number;  // 佐证数
   isLiked: boolean;       // 当前用户是否点赞
   createdAt: string;
+  author?: {
+    id: string;
+    nickname: string;
+    avatar: string;
+    rank?: string;
+  };
 }
 
 export type MelonCategory = '娱乐' | '科技' | '生活科普' | '社会热点' | '历史' | '财经';
@@ -48,6 +55,7 @@ export interface Evidence {
   upvotes: number;      // 点赞数
   downvotes: number;    // 踩数
   isBest: boolean;      // 是否最佳佐证
+  aiAssisted?: boolean; // AI辅助创作标记
   createdAt: string;
 }
 
@@ -110,7 +118,7 @@ export interface PointsRecord {
   id: string;
   userId: string;
   amount: number;
-  type: 'daily_login' | 'guess_correct' | 'invite' | 'content_quality' | 'exchange' | 'debate_entry' | 'debate_substitute' | 'debate_win' | 'debate_mvp';
+  type: 'daily_login' | 'guess_correct' | 'invite' | 'content_quality' | 'exchange' | 'debate_entry' | 'debate_substitute' | 'debate_win' | 'debate_mvp' | 'creation';
   description: string;
   createdAt: string;
 }
@@ -162,6 +170,7 @@ export interface EvidenceTimelineItem {
   title: string;
   summary: string;
   credibility: 1 | 2 | 3 | 4 | 5;
+  status?: 'confirmed' | 'disputed' | 'unverified';  // 节点状态：已证实/有争议/未证实
 }
 
 // 每日状态
