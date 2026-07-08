@@ -8,6 +8,7 @@ import {
 import CharacterIcon from '../components/CharacterIcon'
 import DanmakuOverlay from '../components/DanmakuOverlay'
 import BetPanel from '../components/debate/BetPanel'
+import DanmakuInput from '../components/debate/DanmakuInput'
 import { getTopic, TOPICS, type ThinkingStep, type RoundScore } from '../services/debateArenaService'
 import { pickDanmaku, toQueueItems, type DanmakuQueueItem, type DanmakuTrigger } from '../services/danmakuService'
 import { getCharacter } from '../services/characters'
@@ -332,6 +333,12 @@ export default function AIBattle() {
     void side
   }, [])
 
+  // 用户发送弹幕：转为队列项追加到弹幕层
+  const handleDanmakuSend = useCallback((text: string) => {
+    const items = toQueueItems([{ text, intensity: 1 }], 0)
+    setDanmakuItems(prev => [...prev, ...items])
+  }, [])
+
   const totalUserScore = rounds.reduce((sum, r) => sum + (r.score?.affirmScore || 0), 0)
   const totalAiScore = rounds.reduce((sum, r) => sum + (r.score?.negateScore || 0), 0)
   const totalVotes = userVotes + aiVotes
@@ -646,6 +653,10 @@ export default function AIBattle() {
         {/* ===== Input Area ===== */}
         {battleStarted && !battleEnded && (
           <div className="sticky bottom-0 bg-paper-texture/95 backdrop-blur-lg pt-3 pb-3 border-t border-line/20">
+            {/* 弹幕输入 */}
+            <div className="mb-2">
+              <DanmakuInput onSend={handleDanmakuSend} />
+            </div>
             <div className="flex gap-2 items-end">
               {/* Voice input */}
               <button
