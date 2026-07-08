@@ -5,7 +5,6 @@ import { useAuthStore } from '../stores/authStore'
 import { RANK_CONFIG, getRankProgress } from '../config/ranks'
 import RankBadge from '../components/RankBadge'
 import RankProgress from '../components/RankProgress'
-import { useDeviceFrame } from '../contexts/DeviceFrameContext'
 import type { LucideIcon } from 'lucide-react'
 
 const rankIconMap: Record<string, LucideIcon> = {
@@ -19,8 +18,6 @@ const badgeIconMap: Record<string, LucideIcon> = {
 
 export default function ProfilePage() {
   const { user, fetchStats, fetchPoints } = useAuthStore()
-  const { notchHeight } = useDeviceFrame()
-
   useEffect(() => {
     fetchStats()
     fetchPoints(0, 20)
@@ -41,15 +38,10 @@ export default function ProfilePage() {
 
   const progress = getRankProgress(user)
 
-  const notchPadding = notchHeight > 0 ? `${notchHeight + 8}px` : undefined
-
   return (
     <div className="min-h-full bg-paper-texture pb-6">
       {/* 用户信息卡 */}
-      <div
-        className="px-5 pb-4"
-        style={{ paddingTop: notchPadding || '20px' }}
-      >
+      <div className="px-5 pb-4 pt-5">
         <div className="flex items-center gap-4">
           <div className="relative">
             <img
@@ -94,10 +86,10 @@ export default function ProfilePage() {
       </div>
 
       {/* 数据统计 */}
-      <div className="px-5 grid grid-cols-3 gap-2.5 mb-3">
+      <div className="px-5 grid grid-cols-4 gap-2 mb-3">
         {[
           { value: user.points, label: '积分', color: 'text-seal' },
-          { value: user.totalGuesses, label: '参与次数', color: 'text-ink-900' },
+          { value: user.totalGuesses, label: '参与', color: 'text-ink-900' },
           {
             value: user.totalGuesses > 0
               ? `${Math.round((user.correctGuesses / user.totalGuesses) * 100)}%`
@@ -105,9 +97,10 @@ export default function ProfilePage() {
             label: '准确率',
             color: 'text-bamboo',
           },
+          { value: user.publishedCount ?? 0, label: '分析', color: 'text-purple-600' },
         ].map(stat => (
-          <div key={stat.label} className="bg-surface rounded-xl shadow-card p-4 text-center">
-            <div className={`text-[22px] font-bold ${stat.color}`}>{stat.value}</div>
+          <div key={stat.label} className="bg-surface rounded-xl shadow-card p-3 text-center">
+            <div className={`text-[18px] font-bold ${stat.color}`}>{stat.value}</div>
             <div className="text-[11px] text-ink-400 mt-1">{stat.label}</div>
           </div>
         ))}
