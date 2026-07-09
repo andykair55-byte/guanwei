@@ -5,18 +5,9 @@ import {
   Search, Globe, Eye, Link2, X,
 } from 'lucide-react'
 import { useDeviceFrame } from '../contexts/DeviceFrameContext'
+import { useIsDesktop } from '../hooks/useIsDesktop'
 
-function useIsDesktop() {
-  const { inDeviceFrame } = useDeviceFrame()
-  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768)
-  useEffect(() => {
-    if (inDeviceFrame) return
-    const handler = () => setIsDesktop(window.innerWidth >= 768)
-    window.addEventListener('resize', handler)
-    return () => window.removeEventListener('resize', handler)
-  }, [inDeviceFrame])
-  return inDeviceFrame ? false : isDesktop
-}
+
 
 interface SearchEngine {
   name: string

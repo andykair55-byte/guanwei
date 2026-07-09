@@ -7,18 +7,9 @@ import { TOPICS } from '../services/debateArenaService'
 import { ALL_CHARACTERS } from '../services/characters'
 import CharacterIcon from '../components/CharacterIcon'
 import { useDeviceFrame } from '../contexts/DeviceFrameContext'
+import { useIsDesktop } from '../hooks/useIsDesktop'
 
-function useIsDesktop() {
-  const { inDeviceFrame } = useDeviceFrame()
-  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768)
-  useEffect(() => {
-    if (inDeviceFrame) return
-    const handler = () => setIsDesktop(window.innerWidth >= 768)
-    window.addEventListener('resize', handler)
-    return () => window.removeEventListener('resize', handler)
-  }, [inDeviceFrame])
-  return inDeviceFrame ? false : isDesktop
-}
+
 
 export default function DebatesPage() {
   const navigate = useNavigate()

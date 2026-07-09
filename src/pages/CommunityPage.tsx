@@ -3,20 +3,11 @@ import { Search, Inbox } from 'lucide-react'
 import CommunityCard from '../components/CommunityCard'
 import { getCommunityPosts } from '../services/mockData'
 import { useDeviceFrame } from '../contexts/DeviceFrameContext'
+import { useIsDesktop } from '../hooks/useIsDesktop'
 
 const tabs = ['推荐', '关注', '公益', '求助', '热帖']
 
-function useIsDesktop() {
-  const { inDeviceFrame } = useDeviceFrame()
-  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768)
-  useEffect(() => {
-    if (inDeviceFrame) return
-    const handler = () => setIsDesktop(window.innerWidth >= 768)
-    window.addEventListener('resize', handler)
-    return () => window.removeEventListener('resize', handler)
-  }, [inDeviceFrame])
-  return inDeviceFrame ? false : isDesktop
-}
+
 
 function CommunityPage() {
   const [selectedTab, setSelectedTab] = useState('推荐')

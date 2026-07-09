@@ -15,18 +15,9 @@ import { getPhaseLabel } from '../types/debate'
 import { useDeviceFrame } from '../contexts/DeviceFrameContext'
 import type { DanmakuQueueItem } from '../services/danmakuService'
 import { pickDanmaku, toQueueItems } from '../services/danmakuService'
+import { useIsDesktop } from '../hooks/useIsDesktop'
 
-function useIsDesktop() {
-  const { inDeviceFrame } = useDeviceFrame()
-  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768)
-  useEffect(() => {
-    if (inDeviceFrame) return
-    const handler = () => setIsDesktop(window.innerWidth >= 768)
-    window.addEventListener('resize', handler)
-    return () => window.removeEventListener('resize', handler)
-  }, [inDeviceFrame])
-  return inDeviceFrame ? false : isDesktop
-}
+
 
 export default function DebateRoomPage() {
   const { roomId } = useParams<{ roomId: string }>()
