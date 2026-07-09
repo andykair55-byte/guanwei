@@ -1,27 +1,47 @@
 @import "tailwindcss";
 
-/* ===== 观微 设计系统 v3 — 白底·干净·高互动 ===== */
+/* ===== 观微 设计系统 v8 — Via × 小红书 × Notion 清新白底 ===== */
 @theme {
-  /* 文字层级 — 高对比黑灰 */
+  /* 文字层级 — 墨色深浅 */
+  --color-ink-950: #0a0f14;
   --color-ink-900: #0f1419;
-  --color-ink-700: #536471;
-  --color-ink-500: #8899a6;
-  --color-ink-400: #a0aab4;
-  --color-ink-faint: #c8d1d9;
+  --color-ink-800: #1a2332;
+  --color-ink-700: #2d3a47;
+  --color-ink-600: #4a5568;
+  --color-ink-500: #6b7a8a;
+  --color-ink-400: #8b98a5;
+  --color-ink-300: #b0bac4;
+  --color-ink-200: #d4dae0;
+  --color-ink-100: #edf0f3;
+  --color-ink-50: #f7f8fa;
 
   /* 背景层级 — 纯白体系 */
   --color-paper: #ffffff;
   --color-paper-dark: #f7f8fa;
   --color-paper-deep: #eef0f3;
 
-  /* 品牌红 — 保留朱砂 */
+  /* 品牌红 — 印章朱砂（事件/紧迫感/激活态） */
   --color-seal: #c0392b;
   --color-seal-light: #e74c3c;
   --color-seal-dark: #962d22;
+  --color-seal-glow: rgba(192, 57, 43, 0.15);
 
-  /* 正向/安全 */
-  --color-bamboo: #2d8f5e;
-  --color-bamboo-light: #3da96e;
+  /* 冷灰蓝 — 辅助色（替代原 bamboo 绿的结构性角色） */
+  --color-slate: #475569;
+  --color-slate-light: #64748b;
+  --color-slate-dark: #334155;
+  --color-slate-pale: #f1f5f9;
+
+  /* [deprecated] 像素风变量 — 侧边栏已改为白底极简风格，保留以备回退 */
+  /* --color-pixel-bg: #1a1d23; */
+  /* --color-pixel-border: #2a2d35; */
+  /* --color-pixel-surface: rgba(255, 255, 255, 0.08); */
+  /* --color-pixel-text: rgba(255, 255, 255, 0.75); */
+  /* --color-pixel-accent: #c0392b; */
+
+  /* 主色（组件通用引用） */
+  --color-primary: #c0392b;
+  --color-primary-light: #e74c3c;
 
   /* 警示/段位 */
   --color-gold: #c78c20;
@@ -42,12 +62,23 @@ html {
 body {
   margin: 0;
   background-color: #ffffff;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC",
-    "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  font-family: "Noto Sans SC", "PingFang SC", -apple-system, "Microsoft YaHei", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: #0f1419;
   line-height: 1.5;
+}
+
+/* 像素/数据字体 */
+.font-mono,
+.font-mono * {
+  font-family: "JetBrains Mono", "SF Mono", "Fira Code", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 中式标题衬线 */
+.font-serif-cn {
+  font-family: "Noto Serif SC", "Songti SC", "SimSun", serif;
 }
 
 #root {
@@ -225,15 +256,17 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ===== 纯净面板 (Google 风格) ===== */
+/* ===== 面板 — 白底极简风格 ===== */
 .panel-sidebar {
-  background: #ffffff;
+  background: #fafbfc;
+  border-right: 1px solid #f0f1f3;
 }
 .panel-right {
-  background: #ffffff;
+  background: #fafbfc;
+  border-left: 1px solid #f0f1f3;
 }
 
-/* ===== 导航激活指示条 ===== */
+/* ===== 导航激活指示条 — 朱砂红 ===== */
 .nav-item-active {
   position: relative;
 }
@@ -245,7 +278,7 @@ body {
   width: 3px;
   height: 0;
   border-radius: 0 3px 3px 0;
-  background: #c0392b;
+  background: var(--color-seal);
   transform: translateY(-50%);
   transition: height 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }

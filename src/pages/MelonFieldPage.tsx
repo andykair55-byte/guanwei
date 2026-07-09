@@ -1,9 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  Flame, Clock,
-  ChevronRight, Inbox,
-} from 'lucide-react'
+import { Inbox, Clock, Users, MessageSquare } from 'lucide-react'
 import { api } from '../services/api'
 import { transformMelonList } from '../utils/transform'
 import type { Melon, MelonCategory } from '../types'
@@ -12,9 +9,7 @@ const categories: ('全部' | MelonCategory)[] = [
   '全部', '科技', '社会热点', '生活科普', '财经', '娱乐',
 ]
 
-/* ------------------------------------------------------------------ */
-/*  Mock data — used when API fails or returns empty                    */
-/* ------------------------------------------------------------------ */
+/* ── Mock data ── */
 const MOCK_MELONS: Melon[] = [
   {
     id: 'mock-1',
@@ -126,19 +121,16 @@ const MOCK_MELONS: Melon[] = [
   },
 ]
 
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                            */
-/* ------------------------------------------------------------------ */
+/* ── Helpers ── */
 
-/** Format remaining time as "Xd" / "Xh" / "Xm" */
 function formatCountdown(revealTime: string): string {
   const diff = new Date(revealTime).getTime() - Date.now()
   if (diff <= 0) return '已揭晓'
   const hours = Math.floor(diff / 3600000)
   const minutes = Math.floor((diff % 3600000) / 60000)
-  if (hours >= 24) return `${Math.floor(hours / 24)}天${hours % 24}时`
-  if (hours > 0) return `${hours}时${minutes}分`
-  return `${minutes}分`
+  if (hours >= 24) return `${Math.floor(hours / 24)}d`
+  if (hours > 0) return `${hours}h`
+  return `${minutes}m`
 }
 
 function formatHeat(n: number): string {
@@ -147,23 +139,17 @@ function formatHeat(n: number): string {
   return String(n)
 }
 
-/* ------------------------------------------------------------------ */
-/*  Component                                                          */
-/* ------------------------------------------------------------------ */
+/* ── Component ── */
 
 function MelonFieldPage() {
   const navigate = useNavigate()
-
   const [melons, setMelons] = useState<Melon[]>([])
   const [selectedCategory, setSelectedCategory] = useState<typeof categories[number]>('全部')
   const [sortBy, setSortBy] = useState<'latest' | 'hot'>('hot')
   const [loading, setLoading] = useState(true)
   const [, setError] = useState<string | null>(null)
-
-  // voted state: melonId -> 'true' | 'false' | 'neutral'
   const [votes, setVotes] = useState<Record<string, 'true' | 'false' | 'neutral'>>({})
 
-  /* ---------- data fetching (kept intact) ---------- */
   const fetchMelons = useCallback(async (category?: string) => {
     try {
       setLoading(true)
@@ -176,7 +162,7 @@ function MelonFieldPage() {
       setMelons(transformed.length > 0 ? transformed : MOCK_MELONS)
     } catch (e) {
       console.error('获取瓜列表失败:', e)
-      setError(null) // silently fall back to mock data
+      setError(null)
       setMelons(MOCK_MELONS)
     } finally {
       setLoading(false)
@@ -187,7 +173,6 @@ function MelonFieldPage() {
     fetchMelons(selectedCategory)
   }, [selectedCategory, fetchMelons])
 
-  /* ---------- derived data ---------- */
   const filteredMelons = useMemo(() => {
     let list = selectedCategory === '全部'
       ? melons
@@ -205,10 +190,8 @@ function MelonFieldPage() {
     return list
   }, [melons, selectedCategory, sortBy])
 
-  /* ---------- vote handler (local only) ---------- */
   const handleVote = (melonId: string, choice: 'true' | 'false' | 'neutral') => {
     setVotes((prev) => {
-      // toggle off if already voted the same
       if (prev[melonId] === choice) {
         const next = { ...prev }
         delete next[melonId]
@@ -218,97 +201,90 @@ function MelonFieldPage() {
     })
   }
 
-  /* ---------- render ---------- */
   return (
     <div className="flex flex-col min-h-full bg-white">
-      {/* ====== Header ====== */}
-      <header className="px-6 pt-5 pb-3">
-        <div className="flex items-center justify-between">
+      {/* Header */}
+      <header className="px-6 pt-6 pb-4">
+        <div className="flex items-end justify-between mb-5">
           <div>
-            <h1 className="font-serif text-[22px] font-bold text-ink-900 tracking-tight">
-              瓜田
-            </h1>
-            <p className="text-[11px] text-ink-400 mt-0.5">
-              不信一家言，只认证据说话
-            </p>
+            <h1 className="text-[22px] font-semibold text-ink-900 tracking-tight">瓜田</h1>
+            <p className="text-[12px] text-ink-300 mt-1">不信一家言，只认证据说话</p>
+          </div>
+          <div className="flex items-center gap-3 text-[11px] text-ink-300">
+            <span>{filteredMelons.length} 条</span>
           </div>
         </div>
 
-        {/* 排序 Tab：最热 / 最新 */}
-        <div className="flex items-center gap-1 mt-3 mb-2.5">
-          {(['hot', 'latest'] as const).map((s) => {
-            const active = sortBy === s
-            return (
-              <button
-                key={s}
-                type="button"
-                onClick={() => setSortBy(s)}
-                aria-pressed={active}
-                className={`px-3 py-1 text-[13px] font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seal/40 focus-visible:rounded motion-reduce:transition-none ${
-                  active ? 'text-seal' : 'text-ink-400 hover:text-ink-600'
-                }`}
-              >
-                {s === 'hot' ? '最热' : '最新'}
-                {active && (
-                  <span className="block h-0.5 bg-seal rounded-full mt-1 motion-reduce:hidden" />
-                )}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Filter bar */}
-        <div className="flex gap-1.5 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+        {/* Filter pills — 统一灰阶，激活用 seal 红 */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
           {categories.map((cat) => {
             const active = selectedCategory === cat
             return (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`shrink-0 px-3.5 py-1.5 rounded-full text-[12px] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seal/40 motion-reduce:transition-none ${
-                  active
-                    ? 'bg-ink-900 text-white font-medium'
-                    : 'text-ink-400 hover:text-ink-600 font-normal'
-                }`}
+                className="shrink-0 px-4 py-1.5 rounded-full text-[13px] transition-all duration-200"
+                style={{
+                  background: active ? '#c0392b' : '#f5f6f8',
+                  color: active ? '#fff' : '#6b7a8a',
+                  fontWeight: active ? 500 : 400,
+                }}
               >
                 {cat}
               </button>
             )
           })}
+
+          {/* Sort tabs */}
+          <div className="ml-auto flex items-center gap-0.5">
+            {(['hot', 'latest'] as const).map((s) => {
+              const active = sortBy === s
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSortBy(s)}
+                  className="px-3 py-1.5 text-[12px] transition-colors duration-200"
+                  style={{
+                    color: active ? '#1a2332' : '#b0bac4',
+                    fontWeight: active ? 600 : 400,
+                  }}
+                >
+                  {s === 'hot' ? '最热' : '最新'}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </header>
 
-      {/* ====== Content ====== */}
+      {/* Content */}
       <main className="flex-1 px-5 pb-10">
-        {/* Loading skeleton */}
         {loading ? (
-          <div className="columns-2 md:columns-3 gap-4">
+          <div className="columns-2 md:columns-3 gap-5">
             {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="mb-5 break-inside-avoid rounded-[16px] overflow-hidden bg-white shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+              <div key={i} className="mb-5 break-inside-avoid rounded-2xl overflow-hidden bg-white" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
                 <div className="skeleton aspect-[16/10]" />
-                <div className="p-3.5 space-y-2.5">
-                  <div className="skeleton h-4 w-4/5 rounded" />
-                  <div className="space-y-1.5">
-                    <div className="skeleton h-7 w-full rounded-xl" />
-                    <div className="skeleton h-7 w-full rounded-xl" />
-                    <div className="skeleton h-7 w-3/4 rounded-xl" />
+                <div className="p-4 space-y-3">
+                  <div className="skeleton h-4 w-4/5 rounded-lg" />
+                  <div className="space-y-2">
+                    <div className="skeleton h-6 w-full rounded-full" />
+                    <div className="skeleton h-6 w-3/4 rounded-full" />
                   </div>
                 </div>
               </div>
             ))}
           </div>
-        ) : /* Empty state */
-        filteredMelons.length === 0 ? (
+        ) : filteredMelons.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24">
-            <div className="w-14 h-14 rounded-2xl bg-ink-100/50 flex items-center justify-center mb-4">
-              <Inbox size={24} className="text-ink-300" />
+            <div className="w-16 h-16 rounded-full bg-ink-50 flex items-center justify-center mb-4">
+              <Inbox size={24} className="text-ink-200" />
             </div>
             <p className="text-[13px] text-ink-400 font-medium">暂无该分类的内容</p>
             <p className="text-[11px] text-ink-300 mt-1">看看其他分类吧</p>
           </div>
         ) : (
-          /* ====== Masonry Card List ====== */
-          <div className="columns-2 md:columns-3 gap-4">
+          <div className="columns-2 md:columns-3 gap-5">
             {filteredMelons.map((melon) => (
               <MelonGameCard
                 key={melon.id}
@@ -326,10 +302,7 @@ function MelonFieldPage() {
   )
 }
 
-/* ==================================================================== */
-/*  MelonGameCard — evidence-based voting card                           */
-/* ==================================================================== */
-
+/* ── Evidence type ── */
 interface Evidence {
   id: string
   content: string
@@ -345,7 +318,6 @@ interface MelonGameCardProps {
   onDebate: () => void
 }
 
-/** Mock evidence per melon — in production this comes from the API */
 const MOCK_EVIDENCE: Record<string, Evidence[]> = {
   'mock-1': [
     { id: 'e1', content: '供应链人士透露柔性屏样品已通过测试', direction: 'true', upvotes: 342 },
@@ -372,7 +344,7 @@ const MOCK_EVIDENCE: Record<string, Evidence[]> = {
 function MelonGameCard({ melon, onOpenDetail }: MelonGameCardProps) {
   const countdown = formatCountdown(melon.revealTime)
   const evidence = MOCK_EVIDENCE[melon.id] || [
-    { id: `${melon.id}-e1`, content: '多方信源交叉印证中，等待更多证据', direction: 'true' as const, upvotes: 23 },
+    { id: `${melon.id}-e1`, content: '多方信源交叉印证中', direction: 'true' as const, upvotes: 23 },
     { id: `${melon.id}-e2`, content: '官方尚未回应', direction: 'false' as const, upvotes: 45 },
   ]
 
@@ -383,41 +355,63 @@ function MelonGameCard({ melon, onOpenDetail }: MelonGameCardProps) {
       className="group cursor-pointer mb-5 break-inside-avoid"
       onClick={onOpenDetail}
     >
-      <div className="bg-white rounded-[16px] overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.08)] transition-shadow duration-300">
-        {/* Cover */}
+      <div
+        className="rounded-2xl overflow-hidden transition-all duration-300"
+        style={{
+          background: '#fff',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)',
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04)'
+          e.currentTarget.style.transform = 'translateY(-2px)'
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)'
+          e.currentTarget.style.transform = 'translateY(0)'
+        }}
+      >
+        {/* Cover image */}
         <div className="relative aspect-[16/10] overflow-hidden">
           <img
             src={melon.coverImage}
             alt={melon.title}
             loading="lazy"
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+            width={600}
+            height={375}
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-          {/* Category */}
-          <span className="absolute top-3 left-3 px-2 py-[3px] rounded-full text-[9px] font-bold text-white/90 bg-black/40 backdrop-blur-md">
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+
+          {/* Category — 纯白文字，无背景色 */}
+          <span
+            className="absolute top-3 left-3 text-[10px] font-medium tracking-wide"
+            style={{ color: 'rgba(255,255,255,0.9)' }}
+          >
             {melon.category}
           </span>
-          {/* Heat + countdown */}
-          <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-            <span className="flex items-center gap-1 text-[10px] text-white/80 font-mono">
-              <Flame size={11} className="text-orange-300" />
-              {formatHeat(melon.totalParticipants)}
-            </span>
-            <span className="flex items-center gap-1 text-[10px] text-white/80 font-mono bg-black/30 px-2 py-0.5 rounded-full backdrop-blur-sm">
-              <Clock size={10} />
-              {countdown}
-            </span>
-          </div>
+
+          {/* Countdown */}
+          <span
+            className="absolute top-3 right-3 flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium"
+            style={{
+              background: 'rgba(0,0,0,0.35)',
+              color: 'rgba(255,255,255,0.9)',
+              backdropFilter: 'blur(4px)',
+            }}
+          >
+            <Clock size={10} strokeWidth={1.5} />
+            {countdown}
+          </span>
         </div>
 
         {/* Body */}
-        <div className="px-3.5 py-3">
+        <div className="px-4 pt-3.5 pb-3">
           {/* Title */}
-          <h3 className="text-[13px] font-medium text-ink-800 leading-[1.45] line-clamp-2 group-hover:text-seal transition-colors duration-200 mb-3">
+          <h3 className="text-[13px] font-medium leading-[1.5] line-clamp-2 text-ink-800 mb-3 group-hover:text-ink-900 transition-colors">
             {melon.title}
           </h3>
 
-          {/* Evidence list — 核心交互 */}
+          {/* Evidence — 纯灰阶，upvote 用 seal 红点缀 */}
           <div className="space-y-1.5">
             {evidence.slice(0, 3).map((ev) => {
               const isUpvoted = upvotedId === ev.id
@@ -428,30 +422,31 @@ function MelonGameCard({ melon, onOpenDetail }: MelonGameCardProps) {
                     e.stopPropagation()
                     setUpvotedId(isUpvoted ? null : ev.id)
                   }}
-                  className={`w-full flex items-start gap-2 px-2.5 py-2 rounded-xl text-left transition-all duration-200 ${
-                    isUpvoted
-                      ? ev.direction === 'true'
-                        ? 'bg-bamboo/8 ring-1 ring-bamboo/20'
-                        : 'bg-seal/8 ring-1 ring-seal/20'
-                      : 'bg-ink-50/80 hover:bg-ink-100/60'
-                  }`}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-left transition-all duration-200"
+                  style={{
+                    background: isUpvoted ? 'rgba(192, 57, 43, 0.06)' : '#f8f9fa',
+                  }}
                 >
                   {/* Direction dot */}
-                  <span className={`mt-0.5 w-1.5 h-1.5 rounded-full shrink-0 ${
-                    ev.direction === 'true' ? 'bg-bamboo' : 'bg-seal'
-                  }`} />
-                  {/* Evidence text */}
-                  <span className={`text-[11px] leading-[1.4] flex-1 ${
-                    isUpvoted ? 'text-ink-800 font-medium' : 'text-ink-600'
-                  } line-clamp-2`}>
+                  <span
+                    className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                    style={{
+                      background: isUpvoted ? '#c0392b' : '#d4dae0',
+                    }}
+                  />
+                  {/* Text */}
+                  <span
+                    className={`text-[11px] leading-[1.4] flex-1 line-clamp-1 ${isUpvoted ? 'font-medium text-ink-700' : 'text-ink-500'}`}
+                  >
                     {ev.content}
                   </span>
-                  {/* Upvote count */}
-                  <span className={`text-[10px] font-mono shrink-0 mt-0.5 ${
-                    isUpvoted
-                      ? ev.direction === 'true' ? 'text-bamboo' : 'text-seal'
-                      : 'text-ink-300'
-                  }`}>
+                  {/* Count */}
+                  <span
+                    className="text-[10px] font-mono flex-shrink-0"
+                    style={{
+                      color: isUpvoted ? '#c0392b' : '#d4dae0',
+                    }}
+                  >
                     {isUpvoted ? ev.upvotes + 1 : ev.upvotes}
                   </span>
                 </button>
@@ -459,14 +454,20 @@ function MelonGameCard({ melon, onOpenDetail }: MelonGameCardProps) {
             })}
           </div>
 
-          {/* Footer stats */}
-          <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-ink-100/30">
-            <span className="text-[10px] text-ink-300">
-              {melon.evidenceCount} 条佐证 · {formatHeat(melon.totalParticipants)} 人参与
-            </span>
-            <span className="text-[10px] text-seal font-medium flex items-center gap-0.5">
-              查看全部
-              <ChevronRight size={12} />
+          {/* Footer */}
+          <div className="flex items-center justify-between mt-3 pt-2.5" style={{ borderTop: '1px solid #f0f1f3' }}>
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1 text-[10px] text-ink-300">
+                <Users size={11} strokeWidth={1.5} />
+                {formatHeat(melon.totalParticipants)}
+              </span>
+              <span className="flex items-center gap-1 text-[10px] text-ink-300">
+                <MessageSquare size={11} strokeWidth={1.5} />
+                {melon.evidenceCount}
+              </span>
+            </div>
+            <span className="text-[11px] font-medium text-seal opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              查看 →
             </span>
           </div>
         </div>
