@@ -1,11 +1,10 @@
-import { useState, useCallback, useEffect } from 'react'
+﻿import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, RefreshCw, Search, Shield, Globe, Users,
   GraduationCap, FileCheck, ChevronDown, ChevronUp,
   ExternalLink, AlertTriangle, CheckCircle, XCircle, Clock,
 } from 'lucide-react'
-import { useDeviceFrame } from '../contexts/DeviceFrameContext'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 
 

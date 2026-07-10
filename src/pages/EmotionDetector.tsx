@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+﻿import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Shield, AlertTriangle, CheckCircle, XCircle,
@@ -6,7 +6,6 @@ import {
 } from 'lucide-react'
 import { analyzeEmotion, type EmotionAnalysisResult, type RiskLevel } from '../services/emotionAnalysis'
 import SmartInput from '../components/SmartInput'
-import { useDeviceFrame } from '../contexts/DeviceFrameContext'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 
 

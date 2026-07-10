@@ -1,10 +1,9 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Upload, ExternalLink, RefreshCw,
   Search, Globe, Eye, Link2, X,
 } from 'lucide-react'
-import { useDeviceFrame } from '../contexts/DeviceFrameContext'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Swords, Users, Zap, Flame, Clock, Star, ChevronRight,
@@ -6,7 +6,6 @@ import {
 import { TOPICS } from '../services/debateArenaService'
 import { ALL_CHARACTERS } from '../services/characters'
 import CharacterIcon from '../components/CharacterIcon'
-import { useDeviceFrame } from '../contexts/DeviceFrameContext'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 
 

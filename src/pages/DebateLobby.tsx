@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Coins, Swords } from 'lucide-react'
 import { useDebateStore } from '../stores/debateStore'
 import { useUserStore } from '../stores/userStore'
 import LobbyRoomCard from '../components/debate/LobbyRoomCard'
-import { useDeviceFrame } from '../contexts/DeviceFrameContext'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 
 

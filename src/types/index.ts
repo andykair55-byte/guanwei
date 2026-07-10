@@ -41,7 +41,7 @@ export interface Melon {
   };
 }
 
-export type MelonCategory = '娱乐' | '科技' | '生活科普' | '社会热点' | '历史' | '财经';
+export type MelonCategory = '娱乐' | '科技' | '生活科普' | '社会热点' | '历史' | '财经' | '校园' | '健康';
 
 // 佐证
 export interface Evidence {

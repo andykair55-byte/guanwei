@@ -53,16 +53,23 @@ export const AIBattle = lazy(() => import('../pages/AIBattle'))
 export const RoundTable = lazy(() => import('../pages/RoundTable'))
 export const DebateLobby = lazy(() => import('../pages/DebateLobby'))
 export const DebateRoomPage = lazy(() => import('../pages/DebateRoomPage'))
+export const AICreationPage = lazy(() => import('../pages/AICreationPage'))
 
 // 其他
 export const LLMSettingsPage = lazy(() => import('../pages/LLMSettingsPage'))
+export const SettingsPage = lazy(() => import('../pages/SettingsPage'))
 export const AdminPage = lazy(() => import('../pages/AdminPage'))
 export const AboutPage = lazy(() => import('../pages/AboutPage'))
 export const CricketForge = lazy(() => import('../pages/CricketForge'))
+export const AgentWorldPage = lazy(() => import('../pages/AgentWorldPage'))
 
 // 排行 / 积分
 export const RankListPage = lazy(() => import('../pages/RankListPage'))
 export const PointsHistoryPage = lazy(() => import('../pages/PointsHistoryPage'))
+
+// 消息 / 通知
+export const NotificationPage = lazy(() => import('../pages/NotificationPage'))
+export const MessagePage = lazy(() => import('../pages/MessagePage'))
 
 // ============================================================
 // 路由表 — 所有路由集中定义
@@ -101,6 +108,7 @@ export const layoutRoutes: RouteConfig[] = [
   { path: '/ai-arena/:topicId', platform: 'both' },
   { path: '/ai-battle',        platform: 'both' },
   { path: '/round-table',      platform: 'both' },
+  { path: '/ai-creation',      platform: 'both' },
 
   // 工具
   { path: '/tools/exif',           platform: 'both' },
@@ -110,7 +118,12 @@ export const layoutRoutes: RouteConfig[] = [
   { path: '/tools/plagiarism',     platform: 'both' },
   { path: '/tools/multi-source',   platform: 'both' },
 
+  // 消息 / 通知
+  { path: '/notifications',    platform: 'web'  },
+  { path: '/messages',         platform: 'web'  },
+
   // 设置/其他
+  { path: '/settings',         platform: 'both' },
   { path: '/settings/llm',     platform: 'both' },
   { path: '/admin',            platform: 'both' },
   { path: '/about',            platform: 'both' },
@@ -120,11 +133,12 @@ export const layoutRoutes: RouteConfig[] = [
 /** 布局外的独立路由（如 /share 不需要 Layout） */
 export const standaloneRoutes: RouteConfig[] = [
   { path: '/share', platform: 'both' },
+  { path: '/agent-world', platform: 'web' },
 ]
 
 /** 各平台默认跳转路径 */
 export const fallbackPaths: Record<Platform, string> = {
-  web: '/community',
+  web: '/melon',
   mobile: '/hot',
 }
 

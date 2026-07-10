@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Upload, Camera, MapPin, Clock, Shield, AlertTriangle,
@@ -6,7 +6,6 @@ import {
   Aperture, Eye, RefreshCw, Info,
 } from 'lucide-react'
 import * as exifr from 'exifr'
-import { useDeviceFrame } from '../contexts/DeviceFrameContext'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 
 

@@ -1,29 +1,11 @@
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { Flame, ChevronRight, BarChart3, Search, Database, BookOpen, ClipboardCheck, FileText, Zap } from 'lucide-react'
+import { Flame, ChevronRight, BarChart3, Zap } from 'lucide-react'
 
 const hotDebates = [
-  {
-    id: 'debate-1',
-    topic: '大学学历在AI时代还有价值吗？',
-    proCount: 328,
-    conCount: 284,
-    status: '进行中',
-  },
-  {
-    id: 'debate-2',
-    topic: '短视频正在摧毁深度思考能力',
-    proCount: 892,
-    conCount: 756,
-    status: '进行中',
-  },
-  {
-    id: 'debate-3',
-    topic: '远程办公比坐班更高效',
-    proCount: 156,
-    conCount: 132,
-    status: '进行中',
-  },
+  { id: 'debate-1', topic: '大学学历在AI时代还有价值吗？', proCount: 328, conCount: 284 },
+  { id: 'debate-2', topic: '短视频正在摧毁深度思考能力', proCount: 892, conCount: 756 },
+  { id: 'debate-3', topic: '远程办公比坐班更高效', proCount: 156, conCount: 132 },
 ]
 
 const platformStats = {
@@ -33,30 +15,17 @@ const platformStats = {
 }
 
 const agentStatuses = [
-  { name: '研究员', status: '搜索资料中', progress: 72, icon: Search },
-  { name: '记忆管家', status: '记忆检索中', progress: 66, icon: Database },
-  { name: '教师', status: '整理资料中', progress: 58, icon: BookOpen },
-  { name: '审阅员', status: '检查中', progress: 20, icon: ClipboardCheck },
-  { name: '总结员', status: '待命中', progress: 0, icon: FileText },
+  { name: '研究员', status: '搜索资料中', progress: 72 },
+  { name: '记忆管理员', status: '整理记忆中', progress: 66 },
+  { name: '教师', status: '生成讲解中', progress: 58 },
+  { name: '审阅员', status: '检查内容中', progress: 20 },
 ]
 
 interface DesktopRightPanelProps {
-  onCollapse?: () => void
-  width?: number
+  collapsed?: boolean
 }
 
-function ProgressBar({ value }: { value: number }) {
-  return (
-    <div className="h-[3px] rounded-full overflow-hidden" style={{ background: '#f0f1f3' }}>
-      <div
-        className="h-full rounded-full transition-all duration-500 ease-out"
-        style={{ width: `${value}%`, background: '#d4dae0' }}
-      />
-    </div>
-  )
-}
-
-export default function DesktopRightPanel({ width = 220 }: DesktopRightPanelProps = {}) {
+export default function DesktopRightPanel({ collapsed = false }: DesktopRightPanelProps) {
   const navigate = useNavigate()
   const [tick, setTick] = useState(0)
 
@@ -67,142 +36,140 @@ export default function DesktopRightPanel({ width = 220 }: DesktopRightPanelProp
 
   const formatNumber = (num: number) => num.toLocaleString()
 
+  if (collapsed) {
+    return (
+      <aside className="w-full h-full flex flex-col bg-white border-l border-[#ececec] items-center py-5 gap-2">
+        <button
+          onClick={() => navigate('/debate-lobby')}
+          title="热点辩论"
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-[#888] hover:bg-[#fef7f6] hover:text-[#c0392b] transition-all"
+        >
+          <Flame size={17} strokeWidth={1.75} />
+        </button>
+        <button
+          title="平台数据"
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-[#888] hover:bg-[#f5f5f5] hover:text-[#333] transition-all"
+        >
+          <BarChart3 size={17} strokeWidth={1.75} />
+        </button>
+        <button
+          title="智能体状态"
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-[#888] hover:bg-[#f5f5f5] hover:text-[#333] transition-all"
+        >
+          <Zap size={17} strokeWidth={1.75} />
+        </button>
+      </aside>
+    )
+  }
+
   return (
-    <aside
-      className="flex-shrink-0 h-full overflow-y-auto scrollbar-none p-4 space-y-4"
-      style={{ width, background: '#fff', borderLeft: '1px solid #f0f1f3' }}
-    >
-      {/* Hot debates */}
+    <aside className="w-full flex-shrink-0 h-full overflow-y-auto scrollbar-thin border-l border-[#ececec] px-5 py-6 space-y-7 bg-white">
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-1.5">
-            <Flame size={12} className="text-ink-300" strokeWidth={1.5} />
-            <h3 className="text-[11px] font-medium text-ink-400">热点辩论</h3>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Flame size={16} className="text-[#c0392b]" strokeWidth={2} />
+            <h3 className="text-[13px] font-bold text-[#111] tracking-tight">热点辩论</h3>
           </div>
           <button
             onClick={() => navigate('/debate-lobby')}
-            className="flex items-center gap-0.5 text-[10px] text-ink-300 hover:text-ink-500 transition-colors"
+            className="flex items-center gap-0.5 text-[12px] text-[#999] hover:text-[#333] transition-colors"
           >
-            更多 <ChevronRight size={10} />
+            更多 <ChevronRight size={12} />
           </button>
         </div>
 
-        <div className="space-y-2">
-          {hotDebates.slice(0, 2).map((debate, i) => {
-            const total = debate.proCount + debate.conCount
-            const proPercent = total > 0 ? (debate.proCount / total) * 100 : 50
-            return (
-              <button
-                key={debate.id}
-                onClick={() => navigate(`/debate-room/${debate.id}`)}
-                className="w-full text-left group rounded-xl p-3 transition-colors hover:bg-white"
-              >
-                <div className="flex items-start gap-2">
-                  <span className="text-[11px] font-medium text-ink-200 w-4 flex-shrink-0 mt-0.5 font-mono">
-                    {i + 1}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] text-ink-600 font-medium line-clamp-2 leading-relaxed group-hover:text-ink-800 transition-colors">
-                      {debate.topic}
-                    </p>
-                    <div className="flex items-center gap-1.5 mt-2">
-                      <span className="text-[9px] text-ink-300 font-mono">
-                        {formatNumber(debate.proCount)}
-                      </span>
-                      <div className="flex-1">
-                        <ProgressBar value={proPercent} />
-                      </div>
-                      <span className="text-[9px] text-ink-300 font-mono">
-                        {formatNumber(debate.conCount)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </button>
-            )
-          })}
+        <div className="space-y-1">
+          {hotDebates.map((debate) => (
+            <button
+              key={debate.id}
+              onClick={() => navigate(`/debate-room/${debate.id}`)}
+              className="w-full text-left group p-3.5 rounded-xl hover:bg-[#fafafa] transition-colors"
+            >
+              <p className="text-[13px] text-[#333] leading-snug group-hover:text-[#111] transition-colors line-clamp-2 mb-2.5 font-medium">
+                {debate.topic}
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-[#fef7f6] text-[#c0392b]">
+                  正方 {debate.proCount}
+                </span>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-[#f5f5f5] text-[#666]">
+                  反方 {debate.conCount}
+                </span>
+              </div>
+            </button>
+          ))}
         </div>
 
         <button
           onClick={() => navigate('/debate-lobby')}
-          className="w-full mt-2 py-2 text-[11px] font-medium rounded-xl transition-all hover:bg-white text-ink-500"
-          style={{ border: '1px solid #f0f1f3' }}
+          className="w-full mt-5 py-2.5 text-white text-[13px] font-semibold rounded-xl bg-[#111] hover:bg-[#333] transition-colors shadow-sm"
         >
           参与辩论
         </button>
       </section>
 
-      {/* Platform stats */}
+      <div className="h-px bg-[#f0f0f0]" />
+
       <section>
-        <div className="flex items-center gap-1.5 mb-3">
-          <BarChart3 size={12} className="text-ink-300" strokeWidth={1.5} />
-          <h3 className="text-[11px] font-medium text-ink-400">今日数据</h3>
+        <div className="flex items-center gap-2 mb-4">
+          <BarChart3 size={16} className="text-[#555]" strokeWidth={1.75} />
+          <h3 className="text-[13px] font-bold text-[#111] tracking-tight">平台数据</h3>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <div className="text-center p-3 rounded-xl bg-white">
-            <p className="text-[9px] text-ink-300">新增用户</p>
-            <p className="text-[15px] font-semibold text-ink-700 mt-1 font-mono">{formatNumber(platformStats.todayNewUsers)}</p>
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="bg-[#fafafa] p-3.5 rounded-xl">
+            <p className="text-[10px] text-[#999] mb-1 font-medium">今日求证</p>
+            <p className="text-[20px] font-bold text-[#111] font-mono tracking-tight">{formatNumber(platformStats.todayNewUsers)}</p>
           </div>
-          <div className="text-center p-3 rounded-xl bg-white">
-            <p className="text-[9px] text-ink-300">待验证</p>
-            <p className="text-[15px] font-semibold text-ink-700 mt-1 font-mono">{formatNumber(platformStats.pendingContent)}</p>
+          <div className="bg-[#fafafa] p-3.5 rounded-xl">
+            <p className="text-[10px] text-[#999] mb-1 font-medium">今日辩论</p>
+            <p className="text-[20px] font-bold text-[#111] font-mono tracking-tight">{formatNumber(platformStats.todayDebates)}</p>
           </div>
-        </div>
-        <div className="text-center p-3 rounded-xl bg-white mt-2">
-          <p className="text-[9px] text-ink-300">辩论参与</p>
-          <p className="text-[15px] font-semibold text-ink-700 mt-1 font-mono">{formatNumber(platformStats.todayDebates)}</p>
+          <div className="col-span-2 bg-[#fafafa] p-3.5 rounded-xl">
+            <p className="text-[10px] text-[#999] mb-1 font-medium">待验证内容</p>
+            <p className="text-[20px] font-bold text-[#111] font-mono tracking-tight">{formatNumber(platformStats.pendingContent)}</p>
+          </div>
         </div>
       </section>
 
-      {/* Agent status */}
+      <div className="h-px bg-[#f0f0f0]" />
+
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-1.5">
-            <Zap size={12} className="text-ink-300" strokeWidth={1.5} />
-            <h3 className="text-[11px] font-medium text-ink-400">智能体</h3>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Zap size={16} className="text-[#555]" strokeWidth={1.75} />
+            <h3 className="text-[13px] font-bold text-[#111] tracking-tight">智能体状态</h3>
           </div>
-          <span className="text-[9px] font-mono text-ink-200">
-            {agentStatuses.filter(a => a.progress > 0).length}/{agentStatuses.length}
-          </span>
         </div>
 
-        <div className="space-y-2.5">
+        <div className="space-y-1">
           {agentStatuses.map((agent) => {
-            const Icon = agent.icon
             const jitter = tick % 2 === 0 ? 0 : Math.random() * 4 - 2
             const displayProgress = agent.progress > 0 ? Math.min(100, Math.max(0, agent.progress + jitter)) : 0
             return (
-              <div key={agent.name} className="flex items-center gap-2.5">
-                <div
-                  className="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: '#f0f1f3' }}
-                >
-                  <Icon size={12} className="text-ink-400" strokeWidth={1.5} />
+              <div key={agent.name} className="flex items-center gap-3 p-3 rounded-xl hover:bg-[#fafafa] transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-[#111] flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <span className="text-[9px] font-bold text-white">{agent.name[0]}</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-medium text-ink-500 truncate">{agent.name}</p>
-                    {agent.progress > 0 && (
-                      <span className="text-[9px] font-mono text-ink-300">
-                        {Math.round(displayProgress)}%
-                      </span>
-                    )}
+                  <div className="flex items-center justify-between mb-0.5">
+                    <p className="text-[12px] font-semibold text-[#222] truncate">{agent.name}</p>
+                    <span className="text-[10px] font-mono text-[#999] flex-shrink-0 ml-2 font-medium">
+                      {Math.round(displayProgress)}%
+                    </span>
                   </div>
-                  <ProgressBar value={displayProgress} />
+                  <p className="text-[10px] text-[#999] truncate mb-1.5">{agent.status}</p>
+                  <div className="h-1 bg-[#f0f0f0] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[#111] rounded-full transition-all duration-700 ease-out"
+                      style={{ width: `${displayProgress}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             )
           })}
         </div>
-
-        <button
-          onClick={() => navigate('/agent-world')}
-          className="w-full mt-3 py-2 text-[11px] font-medium rounded-xl transition-all hover:bg-white text-ink-400 flex items-center justify-center gap-1"
-          style={{ border: '1px solid #f0f1f3' }}
-        >
-          Agent 世界
-        </button>
       </section>
     </aside>
   )

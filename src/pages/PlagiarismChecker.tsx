@@ -1,10 +1,9 @@
-import { useState, useCallback, useEffect } from 'react'
+﻿import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, RefreshCw, FileText, BarChart3, AlertTriangle,
   CheckCircle, ChevronDown, ChevronUp, Copy, ArrowRight,
 } from 'lucide-react'
-import { useDeviceFrame } from '../contexts/DeviceFrameContext'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 
 

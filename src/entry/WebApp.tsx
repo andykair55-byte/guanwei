@@ -37,14 +37,22 @@ import {
   DebateLobby,
   DebateRoomPage,
   LLMSettingsPage,
+  SettingsPage,
   AdminPage,
   AboutPage,
   CricketForge,
   RankListPage,
   PointsHistoryPage,
+  AgentWorldPage,
+  NotificationPage,
+  MessagePage,
 } from '../router/routes'
 
-// 路径 → 组件映射表
+// 独立路由 → 组件映射
+const standaloneMap: Record<string, React.LazyExoticComponent<React.ComponentType<any>>> = {
+  '/share': ShareRedirect as any,
+  '/agent-world': AgentWorldPage,
+}
 const pageMap: Record<string, React.LazyExoticComponent<React.ComponentType<any>>> = {
   '/melon': MelonFieldPage,
   '/melon/:id': MelonDetailPage,
@@ -74,10 +82,13 @@ const pageMap: Record<string, React.LazyExoticComponent<React.ComponentType<any>
   '/tools/timeline': TimelineBuilder,
   '/tools/plagiarism': PlagiarismChecker,
   '/tools/multi-source': MultiSourceVerify,
+  '/settings': SettingsPage,
   '/settings/llm': LLMSettingsPage,
   '/admin': AdminPage,
   '/about': AboutPage,
   '/cricket-forge': CricketForge,
+  '/notifications': NotificationPage,
+  '/messages': MessagePage,
 }
 
 function PageLoader() {
@@ -100,9 +111,11 @@ export default function WebApp() {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* 独立路由（无 Layout） */}
-            {myStandaloneRoutes.map(r => (
-              <Route key={r.path} path={r.path} element={<ShareRedirect />} />
-            ))}
+            {myStandaloneRoutes.map(r => {
+              const Comp = standaloneMap[r.path]
+              if (!Comp) return null
+              return <Route key={r.path} path={r.path} element={<Comp />} />
+            })}
 
             {/* 布局路由 */}
             <Route element={<WebLayout />}>
