@@ -119,6 +119,7 @@ export const layoutRoutes: RouteConfig[] = [
   { path: '/tools/timeline',       platform: 'both' },
   { path: '/tools/plagiarism',     platform: 'both' },
   { path: '/tools/multi-source',   platform: 'both' },
+  { path: '/tools/emotion',        platform: 'both' },
 
   // 消息 / 通知
   { path: '/notifications',    platform: 'web'  },

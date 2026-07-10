@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { MessageCircle, Sparkles, Swords, Network } from 'lucide-react'
 import { api } from '../services/api'
 import { transformMelonList } from '../utils/transform'
-import type { Melon } from '../types'
+import type { Melon, MelonCategory } from '../types'
 
 const MOCK_MELONS: Melon[] = [
   {
@@ -104,7 +104,7 @@ const RANDOM_TITLES = [
   '基因编辑婴儿：科学伦理的红线在哪里？',
 ]
 
-const RANDOM_CATEGORIES = ['科技', '社会热点', '生活科普', '财经', '娱乐', '校园', '健康']
+const RANDOM_CATEGORIES: MelonCategory[] = ['科技', '社会热点', '生活科普', '财经', '娱乐', '校园', '健康']
 const RANDOM_AUTHORS = ['量子猫', '深空观察', '数据猎人', '真相猎手', '逻辑控', '知识矿工', '理性之声', '质疑者']
 const TIME_LABELS = ['刚刚', '5分钟前', '30分钟前', '1小时前', '3小时前', '6小时前']
 
@@ -118,7 +118,7 @@ function generateRandomMelon(index: number): Melon {
   return {
     id: `random-${index}-${Date.now()}`, title, description: '',
     coverImage: `https://picsum.photos/seed/melon${index + 10}/400/260`, category,
-    difficulty: randomInt(1, 3), trueCount: randomInt(30, 200), falseCount: randomInt(50, 400),
+    difficulty: randomInt(1, 3) as 1 | 2 | 3, trueCount: randomInt(30, 200), falseCount: randomInt(50, 400),
     totalParticipants: randomInt(100, 600),
     revealTime: new Date(Date.now() + randomInt(1, 48) * 3600 * 1000).toISOString(),
     status: 'pending', likeCount: randomInt(20, 300), commentCount: randomInt(30, 500),
@@ -165,6 +165,7 @@ function MelonCard({ melon, author, index }: { melon: Melon; author: typeof AUTH
 }
 
 export default function MelonFieldPage() {
+  const navigate = useNavigate()
   const [melons, setMelons] = useState<Melon[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('推荐')
   const [loading, setLoading] = useState(true)
@@ -272,17 +273,17 @@ export default function MelonFieldPage() {
 
       <div className="flex-shrink-0 border-t border-ink-100/50 px-6 py-3 bg-white">
         <div className="flex items-center justify-center gap-10">
-          <button className="flex items-center gap-2 text-[13px] text-ink-500 hover:text-seal-600 transition-colors font-medium">
+          <button onClick={() => navigate('/verify')} className="flex items-center gap-2 text-[13px] text-ink-500 hover:text-seal-600 transition-colors font-medium">
             <Sparkles size={16} strokeWidth={2} />
             <span>AI求证</span>
           </button>
           <div className="w-px h-4 bg-ink-100" />
-          <button className="flex items-center gap-2 text-[13px] text-ink-500 hover:text-ink-900 transition-colors font-medium">
+          <button onClick={() => navigate('/debates')} className="flex items-center gap-2 text-[13px] text-ink-500 hover:text-ink-900 transition-colors font-medium">
             <Swords size={16} strokeWidth={2} />
             <span>辩论对决</span>
           </button>
           <div className="w-px h-4 bg-ink-100" />
-          <button className="flex items-center gap-2 text-[13px] text-ink-500 hover:text-blue-500 transition-colors font-medium">
+          <button onClick={() => navigate('/hot')} className="flex items-center gap-2 text-[13px] text-ink-500 hover:text-blue-500 transition-colors font-medium">
             <Network size={16} strokeWidth={2} />
             <span>知识图谱</span>
           </button>

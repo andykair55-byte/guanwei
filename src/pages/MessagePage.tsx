@@ -21,14 +21,6 @@ interface Conversation {
   messages: Message[]
 }
 
-const AVATAR_BG = ['#111', '#c0392b', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899']
-
-function getAvatarBg(name: string) {
-  let hash = 0
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  return AVATAR_BG[Math.abs(hash) % AVATAR_BG.length]
-}
-
 const INITIAL_CONVERSATIONS: Conversation[] = [
   {
     id: 'c1', name: '事实猎人', avatar: '事', avatarBg: '#10b981',

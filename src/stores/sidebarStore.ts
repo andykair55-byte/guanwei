@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { Leaf, Users, Clock, Briefcase, Gamepad2, Settings, Search, FileText, Image, Calendar, Shield, Info } from 'lucide-react'
+import { Leaf, Users, Clock, Briefcase, Gamepad2, Settings, Search, FileText, Image, Calendar, Shield, Info, MessageSquare } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 export interface SidebarNavItem {
@@ -19,8 +19,9 @@ export const ALL_NAV_ITEMS: SidebarNavItem[] = [
   { id: 'agent-world', path: '/agent-world', label: '工作间', icon: 'Briefcase', isDefault: true },
   { id: 'entertainment', path: '/entertainment', label: '娱乐', icon: 'Gamepad2', isDefault: true },
   { id: 'settings', path: '/settings/llm', label: '设置', icon: 'Settings', isDefault: true },
+  { id: 'verify', path: '/verify', label: '求证', icon: 'Search', isDefault: true },
+  { id: 'debates', path: '/debates', label: '辩论', icon: 'MessageSquare', isDefault: true },
   // 可添加项
-  { id: 'verify', path: '/verify', label: '求证', icon: 'Search', isDefault: false },
   { id: 'tools/exif', path: '/tools/exif', label: 'EXIF分析', icon: 'Image', isDefault: false },
   { id: 'tools/timeline', path: '/tools/timeline', label: '时间线构建', icon: 'Calendar', isDefault: false },
   { id: 'notes', path: '/notes', label: '笔记', icon: 'FileText', isDefault: false },
@@ -30,7 +31,7 @@ export const ALL_NAV_ITEMS: SidebarNavItem[] = [
 
 // icon 名称到组件的映射
 export const ICON_MAP: Record<string, LucideIcon> = {
-  Leaf, Users, Clock, Briefcase, Gamepad2, Settings, Search, FileText, Image, Calendar, Shield, Info,
+  Leaf, Users, Clock, Briefcase, Gamepad2, Settings, Search, FileText, Image, Calendar, Shield, Info, MessageSquare,
 }
 
 interface SidebarStore {
@@ -46,7 +47,7 @@ const DEFAULT_ENABLED = ALL_NAV_ITEMS.filter(item => item.isDefault).map(item =>
 
 export const useSidebarStore = create<SidebarStore>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       enabledItems: DEFAULT_ENABLED,
       addItem: (id) => set((state) => {
         if (state.enabledItems.includes(id)) return state

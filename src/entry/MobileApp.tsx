@@ -41,6 +41,7 @@ import {
   AboutPage,
   RankListPage,
   PointsHistoryPage,
+  EmotionDetector,
 } from '../router/routes'
 
 // 路径 → 组件映射表（Mobile 不含 CricketForge）
@@ -76,6 +77,7 @@ const pageMap: Record<string, React.LazyExoticComponent<React.ComponentType<any>
   '/settings/llm': LLMSettingsPage,
   '/admin': AdminPage,
   '/about': AboutPage,
+  '/tools/emotion': EmotionDetector,
 }
 
 function PageLoader() {

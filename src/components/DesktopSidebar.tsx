@@ -1,4 +1,3 @@
-import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Leaf, ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'

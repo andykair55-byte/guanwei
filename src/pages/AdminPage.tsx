@@ -800,7 +800,7 @@ function PipelineHistory() {
     try {
       const d = await api<any>(`/admin/pipeline/runs/${pid}`)
       setDetail(d)
-    } catch { console.error }
+    } catch (e) { console.error(e) }
   }
 
   const statusBadge = (s: string) => ({
