@@ -78,13 +78,13 @@ export default function DesktopRightPanel({ collapsed = false }: DesktopRightPan
   }
 
   return (
-    <aside className="w-full flex-shrink-0 h-full overflow-y-auto scrollbar-thin border-l border-[#ececec] px-5 py-6 space-y-7 bg-white">
+    <aside className="w-full flex-shrink-0 h-full overflow-y-auto scrollbar-thin border-l border-[#ececec] px-5 py-6 space-y-8 bg-white">
       {/* 热点摘要 */}
       <section>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
-            <Flame size={16} className="text-[#c0392b]" strokeWidth={2} />
-            <h3 className="text-[13px] font-bold text-[#111] tracking-tight">热点摘要</h3>
+            <Flame size={17} className="text-[#c0392b]" strokeWidth={2} />
+            <h3 className="text-[15px] font-bold text-[#111] tracking-tight">热点摘要</h3>
           </div>
           <button
             onClick={() => navigate('/hot')}
@@ -94,24 +94,24 @@ export default function DesktopRightPanel({ collapsed = false }: DesktopRightPan
           </button>
         </div>
 
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           {hotEvents.map((event, idx) => (
             <button
               key={event.id}
               onClick={() => navigate(`/hot/${event.id}`)}
-              className="w-full text-left group p-3.5 rounded-xl hover:bg-[#fafafa] transition-colors"
+              className="w-full text-left group p-4 rounded-xl hover:bg-[#fafafa] transition-colors"
             >
-              <div className="flex items-start gap-2">
-                <span className="text-[11px] font-bold text-[#ccc] group-hover:text-[#c0392b] transition-colors mt-px flex-shrink-0 w-4">
+              <div className="flex items-start gap-2.5">
+                <span className="text-[12px] font-bold text-[#ccc] group-hover:text-[#c0392b] transition-colors mt-0.5 flex-shrink-0 w-4">
                   {idx + 1}
                 </span>
-                <p className="text-[13px] text-[#333] leading-snug group-hover:text-[#111] transition-colors line-clamp-2 font-medium flex-1">
+                <p className="text-[14px] text-[#333] leading-snug group-hover:text-[#111] transition-colors line-clamp-2 font-medium flex-1">
                   {event.title}
                 </p>
               </div>
-              <div className="flex items-center gap-1 mt-1.5 pl-6">
-                <Flame size={10} className="text-[#c0392b]" />
-                <span className="text-[10px] text-[#999] font-medium">{formatHeat(event.heat)}</span>
+              <div className="flex items-center gap-1.5 mt-2 pl-6">
+                <Flame size={11} className="text-[#c0392b]" />
+                <span className="text-[11px] text-[#999] font-medium">{formatHeat(event.heat)}</span>
               </div>
             </button>
           ))}
@@ -122,10 +122,10 @@ export default function DesktopRightPanel({ collapsed = false }: DesktopRightPan
 
       {/* 推荐瓜 */}
       <section>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
-            <Sparkles size={16} className="text-[#c0392b]" strokeWidth={1.75} />
-            <h3 className="text-[13px] font-bold text-[#111] tracking-tight">推荐瓜</h3>
+            <Sparkles size={17} className="text-[#c0392b]" strokeWidth={1.75} />
+            <h3 className="text-[15px] font-bold text-[#111] tracking-tight">推荐瓜</h3>
           </div>
           <button
             onClick={() => navigate('/melon')}
@@ -135,19 +135,19 @@ export default function DesktopRightPanel({ collapsed = false }: DesktopRightPan
           </button>
         </div>
 
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           {recommendedMelons.map((melon) => {
             const config = guessConfig[melon.guess]
             return (
               <button
                 key={melon.id}
                 onClick={() => navigate(`/melon/${melon.id}`)}
-                className="w-full text-left group p-3.5 rounded-xl hover:bg-[#fafafa] transition-colors"
+                className="w-full text-left group p-4 rounded-xl hover:bg-[#fafafa] transition-colors"
               >
-                <p className="text-[13px] text-[#333] leading-snug group-hover:text-[#111] transition-colors line-clamp-2 mb-2 font-medium">
+                <p className="text-[14px] text-[#333] leading-snug group-hover:text-[#111] transition-colors line-clamp-2 mb-2 font-medium">
                   {melon.title}
                 </p>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${config.bg} ${config.color}`}>
+                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${config.bg} ${config.color}`}>
                   {config.label}
                 </span>
               </button>
@@ -160,16 +160,16 @@ export default function DesktopRightPanel({ collapsed = false }: DesktopRightPan
 
       {/* 创作提示 */}
       <section>
-        <div className="flex items-center gap-2 mb-4">
-          <Lightbulb size={16} className="text-[#c0392b]" strokeWidth={1.75} />
-          <h3 className="text-[13px] font-bold text-[#111] tracking-tight">创作提示</h3>
+        <div className="flex items-center gap-2 mb-5">
+          <Lightbulb size={17} className="text-[#c0392b]" strokeWidth={1.75} />
+          <h3 className="text-[15px] font-bold text-[#111] tracking-tight">创作提示</h3>
         </div>
 
-        <div className="bg-[#fafafa] rounded-xl p-4">
-          <p key={tipIndex} className="text-[12px] text-[#555] leading-relaxed animate-fade-in-up">
+        <div className="bg-[#fafafa] rounded-xl p-5">
+          <p key={tipIndex} className="text-[13px] text-[#555] leading-relaxed animate-fade-in-up">
             {creativeTips[tipIndex]}
           </p>
-          <div className="flex items-center gap-1 mt-3">
+          <div className="flex items-center gap-1.5 mt-4">
             {creativeTips.map((_, i) => (
               <div
                 key={i}

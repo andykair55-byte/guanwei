@@ -606,8 +606,8 @@ export function getCommunityPosts(filter?: string, page = 0, pageSize = 9): { po
     const src = source[i % source.length]
     result.push({
       ...src,
-      id: `${src.id}_p${page}_${i}`,
-      likes: Math.floor(Math.random() * 5000) + 100,
+      id: page === 0 ? src.id : `${src.id}_p${page}_${i}`,
+      likes: page === 0 ? src.likes : Math.floor(Math.random() * 5000) + 100,
     })
   }
 

@@ -128,7 +128,7 @@ export default function MelonDetailPage() {
 
   useEffect(() => { fetchMelonDetail() }, [fetchMelonDetail])
 
-  // 注入页面上下文给trae宝
+  // 注入页面上下文给小薇
   usePageContext(
     melon ? { type: 'melon', title: melon.title, content: melon.description } : null
   )

@@ -1,10 +1,10 @@
 import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { useTraeBotStore, type PageContext } from '../stores/traeBotStore'
+import { useXiaoWeiStore, type PageContext } from '../stores/xiaoWeiStore'
 
-// 在内容页面调用，注入页面上下文给trae宝
+// 在内容页面调用，注入页面上下文给小薇
 export function usePageContext(context: Omit<PageContext, 'url'> | null) {
-  const setPageContext = useTraeBotStore(s => s.setPageContext)
+  const setPageContext = useXiaoWeiStore(s => s.setPageContext)
   const location = useLocation()
 
   useEffect(() => {

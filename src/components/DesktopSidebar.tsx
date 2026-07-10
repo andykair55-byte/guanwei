@@ -88,35 +88,42 @@ export default function DesktopSidebar({ collapsed = false }: DesktopSidebarProp
       </div>
 
       <nav className="px-3 flex-shrink-0">
-        {navItems.map((item) => {
-          const isActive = isNavActive(item.path)
-          const Icon = ICON_MAP[item.icon]
-          return (
-            <button
-              key={item.id}
-              onClick={() => navigate(item.path)}
-              className={`relative flex items-center gap-3 w-full px-3.5 py-2.5 rounded-xl text-[14px] transition-all duration-200 mb-0.5 ${
-                isActive
-                  ? 'bg-seal-50 text-seal-600 font-medium shadow-sm'
-                  : 'text-ink-500 hover:bg-paper-50 hover:text-ink-900 font-normal'
-              }`}
-            >
-              <Icon size={18} strokeWidth={isActive ? 2.25 : 1.75} />
-              <span>{item.label}</span>
-              {isActive && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-seal-600 rounded-r-full" />
-              )}
-            </button>
-          )
-        })}
+        {(() => {
+          let lastGroup: number | null = null
+          return navItems.map((item) => {
+            const isActive = isNavActive(item.path)
+            const Icon = ICON_MAP[item.icon]
+            const showDivider = lastGroup !== null && item.group !== lastGroup
+            lastGroup = item.group
+            return (
+              <div key={item.id}>
+                {showDivider && <div className="h-px bg-ink-100/60 mx-3.5 my-2" />}
+                <button
+                  onClick={() => navigate(item.path)}
+                  className={`relative flex items-center gap-3 w-full px-3.5 py-3 rounded-xl text-[15px] transition-all duration-200 ${
+                    isActive
+                      ? 'bg-seal-50 text-seal-600 font-medium shadow-sm'
+                      : 'text-ink-500 hover:bg-paper-50 hover:text-ink-900 font-normal'
+                  }`}
+                >
+                  <Icon size={20} strokeWidth={isActive ? 2.25 : 1.75} />
+                  <span>{item.label}</span>
+                  {isActive && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-seal-600 rounded-r-full" />
+                  )}
+                </button>
+              </div>
+            )
+          })
+        })()}
       </nav>
 
       <div className="px-3 pb-5 pt-3 flex-shrink-0 border-t border-ink-100/50 mt-auto">
         <button
-          className="flex items-center gap-2 w-full px-3.5 py-2 mb-2 rounded-xl text-[12px] text-ink-300 hover:text-ink-500 hover:bg-paper-50 transition-all duration-200"
+          className="flex items-center gap-2 w-full px-3.5 py-2 mb-2 rounded-xl text-[13px] text-ink-300 hover:text-ink-500 hover:bg-paper-50 transition-all duration-200"
           title="自定义导航项"
         >
-          <SlidersHorizontal size={14} strokeWidth={1.75} />
+          <SlidersHorizontal size={15} strokeWidth={1.75} />
           <span>编辑导航</span>
         </button>
         {user ? (
@@ -124,7 +131,7 @@ export default function DesktopSidebar({ collapsed = false }: DesktopSidebarProp
             onClick={() => navigate('/profile')}
             className="w-full group"
           >
-            <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-paper-50 transition-colors">
+            <div className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-paper-50 transition-colors">
               <div className="w-10 h-10 rounded-full bg-ink-900 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                   <circle cx="12" cy="8" r="4" fill="#fafafa" />
@@ -134,37 +141,32 @@ export default function DesktopSidebar({ collapsed = false }: DesktopSidebarProp
                 </svg>
               </div>
               <div className="flex-1 min-w-0 text-left">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-[13px] font-semibold text-ink-800 truncate leading-tight">
-                    {user.nickname || '学习者'}
-                  </p>
-                  <span className="text-[10px] text-ink-400 font-bold flex-shrink-0 bg-paper-100 px-1.5 py-0.5 rounded-md">
-                    Lv.18
-                  </span>
-                </div>
-                <div className="mt-1.5 flex items-center gap-2">
-                  <div className="flex-1 h-1 bg-paper-100 rounded-full overflow-hidden">
+                <p className="text-[14px] font-semibold text-ink-800 truncate leading-tight">
+                  {user.nickname || '学习者'}
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="flex-1 h-1.5 bg-paper-100 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-ink-900 rounded-full transition-all duration-500"
                       style={{ width: `${progressPercent}%` }}
                     />
                   </div>
-                  <span className="text-[10px] text-ink-400 font-mono flex-shrink-0 font-medium">
+                  <span className="text-[11px] text-ink-400 font-mono flex-shrink-0 font-medium">
                     {currentPoints}
                   </span>
                 </div>
               </div>
-              <ChevronDown size={14} className="text-ink-200 flex-shrink-0 group-hover:text-ink-400 transition-colors" />
+              <ChevronDown size={15} className="text-ink-200 flex-shrink-0 group-hover:text-ink-400 transition-colors" />
             </div>
           </button>
         ) : (
-          <div className="flex items-center gap-3 px-3 py-2.5">
+          <div className="flex items-center gap-3 px-3 py-3">
             <div className="w-10 h-10 rounded-full bg-paper-100 flex items-center justify-center flex-shrink-0">
-              <span className="text-[12px] text-ink-300 font-medium">?</span>
+              <span className="text-[13px] text-ink-300 font-medium">?</span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium text-ink-300">未登录</p>
-              <div className="mt-1.5 h-1 bg-paper-100 rounded-full" />
+              <p className="text-[14px] font-medium text-ink-300">未登录</p>
+              <div className="mt-2 h-1.5 bg-paper-100 rounded-full" />
             </div>
           </div>
         )}

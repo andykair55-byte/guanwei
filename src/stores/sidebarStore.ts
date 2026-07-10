@@ -7,26 +7,30 @@ export interface SidebarNavItem {
   id: string
   path: string
   label: string
-  icon: string // icon name, 用字符串存储，在组件中映射
-  isDefault: boolean // 是否为默认显示项
+  icon: string
+  isDefault: boolean
+  group: 1 | 2 | 3 // 分组：1=核心 2=工具 3=休闲
 }
 
-// 所有可用导航项
+// 所有可用导航项 — 按 3-3-2 分组排列
 export const ALL_NAV_ITEMS: SidebarNavItem[] = [
-  { id: 'melon', path: '/melon', label: '瓜田', icon: 'Leaf', isDefault: true },
-  { id: 'community', path: '/community', label: '社区', icon: 'Users', isDefault: true },
-  { id: 'hot', path: '/hot', label: '时间线', icon: 'Clock', isDefault: true },
-  { id: 'agent-world', path: '/agent-world', label: '工作间', icon: 'Briefcase', isDefault: true },
-  { id: 'entertainment', path: '/entertainment', label: '娱乐', icon: 'Gamepad2', isDefault: true },
-  { id: 'settings', path: '/settings/llm', label: '设置', icon: 'Settings', isDefault: true },
-  { id: 'verify', path: '/verify', label: '求证', icon: 'Search', isDefault: true },
-  { id: 'debates', path: '/debates', label: '辩论', icon: 'MessageSquare', isDefault: true },
-  // 可添加项
-  { id: 'tools/exif', path: '/tools/exif', label: 'EXIF分析', icon: 'Image', isDefault: false },
-  { id: 'tools/timeline', path: '/tools/timeline', label: '时间线构建', icon: 'Calendar', isDefault: false },
-  { id: 'notes', path: '/notes', label: '笔记', icon: 'FileText', isDefault: false },
-  { id: 'admin', path: '/admin', label: '管理', icon: 'Shield', isDefault: false },
-  { id: 'about', path: '/about', label: '关于', icon: 'Info', isDefault: false },
+  // ── 核心 ──
+  { id: 'melon', path: '/melon', label: '瓜田', icon: 'Leaf', isDefault: true, group: 1 },
+  { id: 'community', path: '/community', label: '社区', icon: 'Users', isDefault: true, group: 1 },
+  { id: 'hot', path: '/hot', label: '时间线', icon: 'Clock', isDefault: true, group: 1 },
+  // ── 工具 ──
+  { id: 'verify', path: '/verify', label: '求证', icon: 'Search', isDefault: true, group: 2 },
+  { id: 'agent-world', path: '/agent-world', label: '工作间', icon: 'Briefcase', isDefault: true, group: 2 },
+  { id: 'debates', path: '/debates', label: '辩论', icon: 'MessageSquare', isDefault: true, group: 2 },
+  // ── 休闲 ──
+  { id: 'entertainment', path: '/entertainment', label: '娱乐', icon: 'Gamepad2', isDefault: true, group: 3 },
+  { id: 'settings', path: '/settings/llm', label: '设置', icon: 'Settings', isDefault: true, group: 3 },
+  // ── 可添加项（归入工具箱） ──
+  { id: 'tools/exif', path: '/tools/exif', label: 'EXIF分析', icon: 'Image', isDefault: false, group: 2 },
+  { id: 'tools/timeline', path: '/tools/timeline', label: '时间线构建', icon: 'Calendar', isDefault: false, group: 2 },
+  { id: 'notes', path: '/notes', label: '笔记', icon: 'FileText', isDefault: false, group: 2 },
+  { id: 'admin', path: '/admin', label: '管理', icon: 'Shield', isDefault: false, group: 3 },
+  { id: 'about', path: '/about', label: '关于', icon: 'Info', isDefault: false, group: 3 },
 ]
 
 // icon 名称到组件的映射
