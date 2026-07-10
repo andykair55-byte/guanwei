@@ -7,6 +7,7 @@ import { generateMockEvidence, generateMockReport } from '../services/mockData'
 import CommentSection from '../components/CommentSection'
 import VerificationNoteSection from '../components/VerificationNoteSection'
 import { usePlatform } from '../hooks/usePlatform'
+import { usePageContext } from '../hooks/usePageContext'
 import type { Melon, Report, Evidence } from '../types'
 
 // 基于 melonId 生成稳定的"投稿人"信息（API 暂未返回 creator 详情）
@@ -126,6 +127,11 @@ export default function MelonDetailPage() {
   }, [melonId])
 
   useEffect(() => { fetchMelonDetail() }, [fetchMelonDetail])
+
+  // 注入页面上下文给trae宝
+  usePageContext(
+    melon ? { type: 'melon', title: melon.title, content: melon.description } : null
+  )
 
   const handleShare = async () => {
     try {

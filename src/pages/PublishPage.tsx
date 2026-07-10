@@ -45,6 +45,18 @@ export default function PublishPage() {
         </button>
       </header>
 
+      {/* AI辅助创作引导 */}
+      <div className="px-5 py-2.5 bg-seal-50/40 border-b border-ink-50 flex items-center justify-between">
+        <span className="text-[13px] text-ink-500">需要AI辅助创作？</span>
+        <button
+          onClick={() => navigate('/agent-world')}
+          className="flex items-center gap-1 text-[13px] font-medium text-seal-600 hover:text-seal-500 transition-colors"
+        >
+          去工作间
+          <ChevronRight size={14} />
+        </button>
+      </div>
+
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto w-full">
           <div className="p-5">

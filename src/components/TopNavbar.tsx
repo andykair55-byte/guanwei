@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Search, Bell, Mail, PenSquare } from 'lucide-react'
+import { Search, Bell, Mail } from 'lucide-react'
 
 export default function TopNavbar() {
   const navigate = useNavigate()
@@ -12,7 +12,7 @@ export default function TopNavbar() {
 
   return (
     <header className="h-[56px] flex items-center bg-white/98 backdrop-blur-md border-b border-ink-100/50 flex-shrink-0 z-50 px-7">
-      <div className="flex-1 max-w-xl">
+      <div className="flex-1 max-w-2xl">
         <div
           className={`flex items-center gap-2.5 px-4 py-2 rounded-xl transition-all duration-200 ${
             searchFocused
@@ -33,16 +33,6 @@ export default function TopNavbar() {
       </div>
 
       <div className="flex items-center gap-1 ml-6">
-        <button
-          onClick={() => navigate('/publish')}
-          className="flex items-center gap-1.5 px-4 py-2 bg-ink-900 text-white rounded-xl text-[13px] font-semibold hover:bg-ink-700 transition-colors shadow-sm"
-        >
-          <PenSquare size={14} strokeWidth={2} />
-          <span>发布</span>
-        </button>
-
-        <div className="w-px h-5 bg-ink-100 mx-2.5" />
-
         <button
           onClick={() => navigate('/notifications')}
           className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${

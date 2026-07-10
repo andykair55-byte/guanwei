@@ -4,11 +4,10 @@
  * - Detects logical fallacies (滑坡论证, 偷换概念, 人身攻击, 循环论证, 稻草人谬误)
  * - Identifies highlights and weak points per debater
  * - Provides a one-line judge comment per round
- * - Groq API (llama-3.3-70b-versatile) with mock fallback
+ * - LLM API (via callLLM) with mock fallback
  */
 
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY as string | undefined
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
+import { callLLM } from '../stores/llmStore'
 
 // ===== Types =====
 
@@ -164,11 +163,9 @@ function generateMockJudge(input: JudgeInput): JudgeResult {
   }
 }
 
-// ===== Groq API Judge =====
+// ===== LLM API Judge =====
 
 async function judgeRoundViaAPI(input: JudgeInput): Promise<JudgeResult> {
-  if (!GROQ_API_KEY) throw new Error('No API key')
-
   const speechesText = input.speeches
     .map(s => {
       const sideLabel = s.side === 'affirm' ? `正方(${input.affirmLabel})` : `反方(${input.negateLabel})`
@@ -203,30 +200,16 @@ ${speechesText}
   "judgeComment": "一句话点评"
 }`
 
-  const res = await fetch(GROQ_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${GROQ_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        {
-          role: 'system',
-          content: '你是辩论赛专业评委，只输出JSON，不输出任何其他内容。评分要客观公正，逻辑谬误检测要严谨。',
-        },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.3,
-      max_tokens: 800,
-    }),
-    signal: AbortSignal.timeout(12000),
-  })
-
-  if (!res.ok) throw new Error('API error')
-  const data = await res.json()
-  const text = data.choices?.[0]?.message?.content?.trim() || ''
+  const text = (await callLLM(
+    [
+      {
+        role: 'system',
+        content: '你是辩论赛专业评委，只输出JSON，不输出任何其他内容。评分要客观公正，逻辑谬误检测要严谨。',
+      },
+      { role: 'user', content: userPrompt },
+    ],
+    { maxTokens: 800, temperature: 0.3 }
+  )).trim()
 
   // Parse JSON from response
   const jsonMatch = text.match(/\{[\s\S]*\}/)
@@ -268,7 +251,7 @@ ${speechesText}
 
 /**
  * Judge a single debate round.
- * Tries Groq API first; falls back to mock scoring on any failure.
+ * Tries LLM API first; falls back to mock scoring on any failure.
  */
 export async function judgeRound(input: JudgeInput): Promise<JudgeResult> {
   try {

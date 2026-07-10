@@ -27,6 +27,7 @@ export interface Melon {
   revealTime: string;     // 开奖时间 ISO
   status: 'pending' | 'revealed';
   result?: boolean;       // 开奖后：true=真, false=假
+  trueProbability?: number; // 真实概率（0-100，用于猜真假参考）
   report?: Report;        // 开奖后的实锤报告
   likeCount: number;      // 点赞数
   commentCount: number;   // 评论数

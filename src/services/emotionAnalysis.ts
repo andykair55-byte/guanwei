@@ -1,6 +1,8 @@
+import { callLLM } from '../stores/llmStore'
+
 /**
  * 情绪操控检测引擎
- * 双模式：Groq API（需 VITE_GROQ_API_KEY）/ 本地规则引擎（零依赖 fallback）
+ * 双模式：LLM API（需配置 API Key）/ 本地规则引擎（零依赖 fallback）
  */
 
 // ===== 类型定义 =====
@@ -23,7 +25,7 @@ export interface EmotionAnalysisResult {
   keyPhrases: string[]
 }
 
-// ===== Groq API 分析 =====
+// ===== LLM API 分析 =====
 
 const SYSTEM_PROMPT = `你是一位专业的修辞分析师，擅长识别文本中的情绪操控手法。
 
@@ -74,36 +76,16 @@ const SYSTEM_PROMPT = `你是一位专业的修辞分析师，擅长识别文本
 
 重要：只返回 JSON，不要有其他文字。`
 
-async function analyzeWithGroq(text: string): Promise<EmotionAnalysisResult> {
-  const apiKey = import.meta.env.VITE_GROQ_API_KEY as string
-  if (!apiKey) throw new Error('No Groq API key')
+async function analyzeWithLLM(text: string): Promise<EmotionAnalysisResult> {
+  const content = await callLLM(
+    [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: `请分析以下文本中的情绪操控手法：\n\n${text}` },
+    ],
+    { maxTokens: 4000, temperature: 0.3 }
+  )
 
-  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: `请分析以下文本中的情绪操控手法：\n\n${text}` },
-      ],
-      temperature: 0.3,
-      max_tokens: 4000,
-      response_format: { type: 'json_object' },
-    }),
-  })
-
-  if (!response.ok) {
-    const err = await response.text()
-    throw new Error(`Groq API error: ${err}`)
-  }
-
-  const data = await response.json()
-  const content = data.choices?.[0]?.message?.content
-  if (!content) throw new Error('Empty response from Groq')
+  if (!content) throw new Error('Empty response from LLM')
 
   const parsed = JSON.parse(content)
   return normalizeResult(parsed)
@@ -240,14 +222,11 @@ export async function analyzeEmotion(text: string): Promise<EmotionAnalysisResul
   // 模拟网络延迟
   await new Promise(r => setTimeout(r, 600 + Math.random() * 800))
 
-  // 优先尝试 Groq API
-  const hasGroqKey = !!import.meta.env.VITE_GROQ_API_KEY
-  if (hasGroqKey) {
-    try {
-      return await analyzeWithGroq(text)
-    } catch (e) {
-      console.warn('Groq API 失败，降级到本地分析:', e)
-    }
+  // 优先尝试 LLM API
+  try {
+    return await analyzeWithLLM(text)
+  } catch (e) {
+    console.warn('LLM 失败，降级到本地分析:', e)
   }
 
   // Fallback 到本地规则引擎

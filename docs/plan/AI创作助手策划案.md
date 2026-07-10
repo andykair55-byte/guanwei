@@ -1,9 +1,19 @@
 # 观微「AI 创作助手」策划案
 
-> 版本：v1.0
+> 版本：v1.1（架构审查后调整：路由从 /create 改为 /agent-world，合并入工作间）
 > 状态：产品策划 + 技术规格
 > 优先级：P0（产品活路）
 > 最后更新：2026-07
+>
+> **架构审查调整说明（v1.1）**：
+> - 本模块已合并入「工作间」（`/agent-world`），工作间以AI创作为主、工具为辅
+> - 路由从 `/create` 改为 `/agent-world`，从 standalone 改为 layout（带侧边栏），platform 改为 web
+> - 用户进入工作间直接看到创作界面
+> - 顶部"发布"按钮改为搜索栏，发布入口收敛到工作间内部
+> - LLM求证嵌入创作流程（声明检测→标记→一键核查）
+> - 发布目标：瓜田佐证或社区帖子
+> - LLM不可用时降级为3个预设模板（事件分析/观点论述/对比评测）
+> - 详细工作间设计见 `工作间策划案.md`
 
 ---
 
@@ -73,20 +83,20 @@
 ```
 src/
   pages/
-    CreatePage.tsx                    -- 【新增】创作主页面：编辑器+AI辅助面板
+    AgentWorldPage.tsx               -- 【新增】工作间主页面：编辑器+AI辅助面板（原CreatePage.tsx，路由 /agent-world）
   components/
     create/
       StructuredEditor.tsx           -- 【新增】结构化编辑器（非块编辑器，是带引导的富文本）
       AISkeletonPanel.tsx            -- 【新增】AI骨架生成面板（侧栏）
       StyleProfileCard.tsx           -- 【新增】写作风格档案卡片
-      ClaimVerifier.tsx              -- 【新增】声明核查组件（内联在编辑器中）
+      ClaimVerifier.tsx              -- 【新增】声明核查组件（内联在编辑器中，LLM求证嵌入）
       QualityPreview.tsx             -- 【新增】发布前质量预览
-      PublishTargetSelector.tsx      -- 【新增】发布目标选择（瓜田/社区/笔记）
+      PublishTargetSelector.tsx      -- 【新增】发布目标选择（瓜田佐证/社区帖子）
   services/
     creationService.ts              -- 【新增】创作辅助AI服务（统一LLM调用入口）
     styleProfileService.ts          -- 【新增】写作风格分析服务
   stores/
-    creationStore.ts                -- 【新增】创作状态zustand store
+    creationStore.ts                -- 【新增】创作状态zustand store（localStorage每3秒自动保存草稿）
 ```
 
 ### 3.2 后端API路径
@@ -215,7 +225,6 @@ Step 4: 质量预览与发布
   用户确认后选择发布目标：
     - 发布为瓜田佐证
     - 发布为社区帖子
-    - 保存为笔记（私密）
 ```
 
 ### 4.2 写作风格档案（Style Profile）
@@ -330,7 +339,7 @@ ClaimVerifier检测到这是一个需要证据支撑的声明
 
 | 任务 | 交付物 | 验证方式 |
 |------|--------|---------|
-| 创建CreatePage.tsx路由和基础布局 | 页面可访问 | /create 路由可达 |
+| 创建AgentWorldPage.tsx路由和基础布局 | 页面可访问 | /agent-world 路由可达，layout带侧边栏，进入即见创作界面 |
 | 实现StructuredEditor.tsx | 结构化编辑器可用 | 能输入标题、逐段写作 |
 | 实现creationService.ts骨架生成 | AI返回骨架 | 输入主题→看到骨架 |
 | 骨架编辑交互（接受/修改/删除/排序） | 骨架可调整 | 用户可自定义骨架 |

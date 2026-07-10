@@ -1,26 +1,8 @@
 import React from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import {
-  Leaf, Users, Clock, PenSquare, Briefcase, Settings,
-  ChevronDown,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { Leaf, ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
-
-interface NavItem {
-  path: string
-  label: string
-  icon: LucideIcon
-}
-
-const navItems: NavItem[] = [
-  { path: '/melon', label: '瓜田', icon: Leaf },
-  { path: '/community', label: '社区', icon: Users },
-  { path: '/hot', label: '时间线', icon: Clock },
-  { path: '/publish', label: '发布', icon: PenSquare },
-  { path: '/agent-world', label: '工作间', icon: Briefcase },
-  { path: '/settings/llm', label: '设置', icon: Settings },
-]
+import { useSidebarStore, ICON_MAP, ALL_NAV_ITEMS } from '../stores/sidebarStore'
 
 interface DesktopSidebarProps {
   collapsed?: boolean
@@ -30,13 +12,13 @@ export default function DesktopSidebar({ collapsed = false }: DesktopSidebarProp
   const navigate = useNavigate()
   const location = useLocation()
   const user = useAuthStore(s => s.user)
+  const enabledItems = useSidebarStore(s => s.enabledItems)
+  const navItems = enabledItems
+    .map(id => ALL_NAV_ITEMS.find(item => item.id === id))
+    .filter(Boolean) as typeof ALL_NAV_ITEMS
 
   const isNavActive = (path: string) => {
-    if (path === '/melon') return location.pathname === '/melon' || location.pathname.startsWith('/melon/')
-    if (path === '/community') return location.pathname === '/community' || location.pathname.startsWith('/community/')
-    if (path === '/hot') return location.pathname === '/hot' || location.pathname.startsWith('/hot/')
-    if (path === '/agent-world') return location.pathname === '/agent-world' || location.pathname.startsWith('/agent-world')
-    return location.pathname.startsWith(path)
+    return location.pathname === path || location.pathname.startsWith(path + '/')
   }
 
   const currentPoints = user?.points ?? 620
@@ -53,10 +35,10 @@ export default function DesktopSidebar({ collapsed = false }: DesktopSidebarProp
         <nav className="flex flex-col gap-1 flex-shrink-0">
           {navItems.map((item) => {
             const isActive = isNavActive(item.path)
-            const Icon = item.icon
+            const Icon = ICON_MAP[item.icon]
             return (
               <button
-                key={item.path + item.label}
+                key={item.id}
                 onClick={() => navigate(item.path)}
                 title={item.label}
                 className={`relative w-10 h-10 flex items-center justify-center rounded-xl transition-all duration-200 ${
@@ -109,10 +91,10 @@ export default function DesktopSidebar({ collapsed = false }: DesktopSidebarProp
       <nav className="px-3 flex-shrink-0">
         {navItems.map((item) => {
           const isActive = isNavActive(item.path)
-          const Icon = item.icon
+          const Icon = ICON_MAP[item.icon]
           return (
             <button
-              key={item.path + item.label}
+              key={item.id}
               onClick={() => navigate(item.path)}
               className={`relative flex items-center gap-3 w-full px-3.5 py-2.5 rounded-xl text-[14px] transition-all duration-200 mb-0.5 ${
                 isActive
@@ -130,7 +112,14 @@ export default function DesktopSidebar({ collapsed = false }: DesktopSidebarProp
         })}
       </nav>
 
-      <div className="px-3 pb-5 pt-4 flex-shrink-0 border-t border-ink-100/50 mt-auto">
+      <div className="px-3 pb-5 pt-3 flex-shrink-0 border-t border-ink-100/50 mt-auto">
+        <button
+          className="flex items-center gap-2 w-full px-3.5 py-2 mb-2 rounded-xl text-[12px] text-ink-300 hover:text-ink-500 hover:bg-paper-50 transition-all duration-200"
+          title="自定义导航项"
+        >
+          <SlidersHorizontal size={14} strokeWidth={1.75} />
+          <span>编辑导航</span>
+        </button>
         {user ? (
           <button
             onClick={() => navigate('/profile')}

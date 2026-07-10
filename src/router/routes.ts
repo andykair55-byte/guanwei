@@ -62,6 +62,7 @@ export const AdminPage = lazy(() => import('../pages/AdminPage'))
 export const AboutPage = lazy(() => import('../pages/AboutPage'))
 export const CricketForge = lazy(() => import('../pages/CricketForge'))
 export const AgentWorldPage = lazy(() => import('../pages/AgentWorldPage'))
+export const EntertainmentHallPage = lazy(() => import('../pages/EntertainmentHallPage'))
 
 // 排行 / 积分
 export const RankListPage = lazy(() => import('../pages/RankListPage'))
@@ -109,10 +110,11 @@ export const layoutRoutes: RouteConfig[] = [
   { path: '/ai-battle',        platform: 'both' },
   { path: '/round-table',      platform: 'both' },
   { path: '/ai-creation',      platform: 'both' },
+  { path: '/agent-world',      platform: 'web' },
+  { path: '/entertainment',    platform: 'web' },
 
   // 工具
   { path: '/tools/exif',           platform: 'both' },
-  { path: '/tools/emotion',        platform: 'both' },
   { path: '/tools/reverse-image',  platform: 'both' },
   { path: '/tools/timeline',       platform: 'both' },
   { path: '/tools/plagiarism',     platform: 'both' },
@@ -133,7 +135,6 @@ export const layoutRoutes: RouteConfig[] = [
 /** 布局外的独立路由（如 /share 不需要 Layout） */
 export const standaloneRoutes: RouteConfig[] = [
   { path: '/share', platform: 'both' },
-  { path: '/agent-world', platform: 'web' },
 ]
 
 /** 各平台默认跳转路径 */

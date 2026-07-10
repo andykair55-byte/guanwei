@@ -28,7 +28,6 @@ import {
   TimelineBuilder,
   PlagiarismChecker,
   MultiSourceVerify,
-  EmotionDetector,
   DebateArena,
   AIArena,
   DebatesPage,
@@ -46,12 +45,12 @@ import {
   AgentWorldPage,
   NotificationPage,
   MessagePage,
+  EntertainmentHallPage,
 } from '../router/routes'
 
 // 独立路由 → 组件映射
 const standaloneMap: Record<string, React.LazyExoticComponent<React.ComponentType<any>>> = {
   '/share': ShareRedirect as any,
-  '/agent-world': AgentWorldPage,
 }
 const pageMap: Record<string, React.LazyExoticComponent<React.ComponentType<any>>> = {
   '/melon': MelonFieldPage,
@@ -76,8 +75,8 @@ const pageMap: Record<string, React.LazyExoticComponent<React.ComponentType<any>
   '/ai-arena/:topicId': AIArena,
   '/ai-battle': AIBattle,
   '/round-table': RoundTable,
+  '/agent-world': AgentWorldPage,
   '/tools/exif': ExifAnalyzer,
-  '/tools/emotion': EmotionDetector,
   '/tools/reverse-image': ReverseImageSearch,
   '/tools/timeline': TimelineBuilder,
   '/tools/plagiarism': PlagiarismChecker,
@@ -89,6 +88,7 @@ const pageMap: Record<string, React.LazyExoticComponent<React.ComponentType<any>
   '/cricket-forge': CricketForge,
   '/notifications': NotificationPage,
   '/messages': MessagePage,
+  '/entertainment': EntertainmentHallPage,
 }
 
 function PageLoader() {

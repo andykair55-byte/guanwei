@@ -1,6 +1,8 @@
+import { callLLM } from '../stores/llmStore'
+
 /**
  * AI Summary Service for Debate Arena
- * Generates comprehensive debate summaries with MVP selection and winner declaration
+ * Generates comprehensive summaries with MVP selection and winner declaration
  */
 
 export interface SummaryInput {
@@ -41,82 +43,43 @@ export interface SummaryResult {
   summaryText: string
 }
 
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions'
-const GROQ_MODEL = 'llama-3.3-70b-versatile'
-const TEMPERATURE = 0.4
-const TIMEOUT_MS = 15000
-
 /**
- * Generate debate summary using Groq API with mock fallback
+ * Generate debate summary using LLM API with mock fallback
  */
 export async function generateSummary(input: SummaryInput): Promise<SummaryResult> {
-  const apiKey = import.meta.env.VITE_GROQ_API_KEY
-  
-  if (!apiKey) {
-    console.warn('Groq API key not found, using mock summary')
-    return generateMockSummary(input)
-  }
-
   try {
-    return await generateGroqSummary(input, apiKey)
+    return await generateLLMSummary(input)
   } catch (error) {
-    console.error('Groq API failed, falling back to mock summary:', error)
+    console.error('LLM failed, falling back to mock summary:', error)
     return generateMockSummary(input)
   }
 }
 
 /**
- * Generate summary using Groq API
+ * Generate summary using LLM API
  */
-async function generateGroqSummary(input: SummaryInput, apiKey: string): Promise<SummaryResult> {
+async function generateLLMSummary(input: SummaryInput): Promise<SummaryResult> {
   const systemPrompt = buildSystemPrompt()
   const userPrompt = buildUserPrompt(input)
 
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
+  const content = await callLLM(
+    [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ],
+    { temperature: 0.4 }
+  )
 
-  try {
-    const response = await fetch(GROQ_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: GROQ_MODEL,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: TEMPERATURE,
-        response_format: { type: 'json_object' }
-      }),
-      signal: controller.signal
-    })
-
-    clearTimeout(timeoutId)
-
-    if (!response.ok) {
-      throw new Error(`Groq API error: ${response.status} ${response.statusText}`)
-    }
-
-    const data = await response.json()
-    const content = data.choices?.[0]?.message?.content
-
-    if (!content) {
-      throw new Error('No content in Groq response')
-    }
-
-    const parsed = JSON.parse(content)
-    return validateAndTransformResponse(parsed, input)
-  } catch (error) {
-    clearTimeout(timeoutId)
-    throw error
+  if (!content) {
+    throw new Error('No content in LLM response')
   }
+
+  const parsed = JSON.parse(content)
+  return validateAndTransformResponse(parsed, input)
 }
 
 /**
- * Build system prompt for Groq API
+ * Build system prompt for LLM API
  */
 function buildSystemPrompt(): string {
   return `You are an expert debate analyst and summarizer. Your task is to analyze a complete debate and provide a comprehensive summary.
@@ -190,7 +153,7 @@ Please analyze this debate and provide your summary in the required JSON format.
 }
 
 /**
- * Validate and transform Groq API response
+ * Validate and transform LLM API response
  */
 function validateAndTransformResponse(parsed: any, _input: SummaryInput): SummaryResult {
   // Validate required fields

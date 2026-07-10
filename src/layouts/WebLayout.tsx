@@ -4,19 +4,21 @@ import { PanelLeftClose, PanelRightClose, PanelLeftOpen, PanelRightOpen } from '
 import DesktopSidebar from '../components/DesktopSidebar'
 import DesktopRightPanel from '../components/DesktopRightPanel'
 import TopNavbar from '../components/TopNavbar'
+import TraeBot from '../components/TraeBot'
 
 const LEFT_WIDTH_EXPANDED = 232
 const LEFT_WIDTH_COLLAPSED = 64
 const RIGHT_WIDTH_EXPANDED = 300
 const RIGHT_WIDTH_COLLAPSED = 52
 
-const IMMERSIVE_ROUTES = ['/publish', '/notifications', '/messages']
-const NO_TOPNAV_ROUTES = ['/publish']
+const IMMERSIVE_ROUTES = ['/notifications', '/messages']
+const NO_TOPNAV_ROUTES: string[] = []
 
 export default function WebLayout() {
   const location = useLocation()
   const isImmersive = IMMERSIVE_ROUTES.some(r => location.pathname.startsWith(r))
   const hideTopNav = NO_TOPNAV_ROUTES.some(r => location.pathname.startsWith(r))
+  const hideTraeBot = isImmersive || location.pathname.startsWith('/agent-world') || location.pathname.startsWith('/entertainment')
 
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [rightCollapsed, setRightCollapsed] = useState(false)
@@ -169,12 +171,14 @@ export default function WebLayout() {
       {!isImmersive && rightCollapsed && (
         <button
           onClick={toggleRight}
-          className="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 w-5 h-14 bg-white border border-r-0 border-[#e0e0e0] rounded-l-md items-center justify-center hover:border-[#c0392b] hover:text-[#c0392b] z-40 shadow-sm transition-colors"
+          className="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 w-5 h-14 bg-white border border-r-0 border-[#e0e0e0] rounded-l items-center justify-center hover:border-[#c0392b] hover:text-[#c0392b] z-40 shadow-sm transition-colors"
           title="展开右侧面板"
         >
           <PanelRightOpen size={12} className="text-[#888]" />
         </button>
       )}
+
+      {!hideTraeBot && <TraeBot />}
     </div>
   )
 }
