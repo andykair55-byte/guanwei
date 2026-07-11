@@ -17,9 +17,7 @@ import {
   getRespectClosing,
   ALL_CHARACTERS,
 } from './characters'
-
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY as string | undefined
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
+import { callLLM } from '../stores/llmStore'
 
 // ===== Types =====
 
@@ -369,8 +367,6 @@ async function generateSpeech(
   otherCharName: string,
   roundNum: number,
 ): Promise<string> {
-  if (!GROQ_API_KEY) throw new Error('No API key')
-
   const historyText = history.map(h =>
     `${h.name}（第${h.round}轮）：${h.content}`
   ).join('\n')
@@ -386,27 +382,14 @@ ${history.length > 0 ? `辩论记录：\n${historyText}\n` : ''}
 - 80-150 字，简洁有力
 - 纯文本，不用 markdown 格式`
 
-  const res = await fetch(GROQ_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${GROQ_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: char.systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: char.temperature,
-      max_tokens: 250,
-    }),
-    signal: AbortSignal.timeout(12000),
-  })
-
-  if (!res.ok) throw new Error('API error')
-  const data = await res.json()
-  return data.choices?.[0]?.message?.content?.trim() || ''
+  const content = await callLLM(
+    [
+      { role: 'system', content: char.systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    { maxTokens: 250, temperature: char.temperature }
+  )
+  return content.trim()
 }
 
 /** AI 评委打分 */
@@ -417,8 +400,6 @@ async function judgeRoundViaAPI(
   affirmName: string,
   negateName: string,
 ): Promise<RoundScore> {
-  if (!GROQ_API_KEY) throw new Error('No API key')
-
   const prompt = `你是一位辩论赛评委。请为以下回合打分。
 
 辩题：${topic}
@@ -433,27 +414,13 @@ async function judgeRoundViaAPI(
 严格按以下JSON格式回复，不要有其他内容：
 {"affirm": 分数, "negate": 分数, "reason": "点评"}`
 
-  const res = await fetch(GROQ_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${GROQ_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
-      messages: [
-        { role: 'system', content: '你是辩论赛评委，只输出JSON，不输出其他内容。' },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.3,
-      max_tokens: 100,
-    }),
-    signal: AbortSignal.timeout(8000),
-  })
-
-  if (!res.ok) throw new Error('API error')
-  const data = await res.json()
-  const text = data.choices?.[0]?.message?.content?.trim() || ''
+  const text = await callLLM(
+    [
+      { role: 'system', content: '你是辩论赛评委，只输出JSON，不输出其他内容。' },
+      { role: 'user', content: prompt },
+    ],
+    { maxTokens: 100, temperature: 0.3 }
+  )
 
   // Parse JSON from response
   const jsonMatch = text.match(/\{[\s\S]*\}/)

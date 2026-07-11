@@ -11,6 +11,7 @@ import {
   ChevronRight, Swords, Eye,
 } from 'lucide-react'
 import { usePlatform } from '../hooks/usePlatform'
+import { callLLM } from '../stores/llmStore'
 
 // ===== 预设模板 =====
 
@@ -113,30 +114,17 @@ export default function CricketForge() {
     handlePresetSelect(random)
   }, [handlePresetSelect])
 
-  // AI 润色 prompt（调用 Groq）
+  // AI 润色 prompt
   const handleEnhancePrompt = useCallback(async () => {
     if (!prompt.trim()) return
     setIsGenerating(true)
 
-    const apiKey = import.meta.env.VITE_GROQ_API_KEY
-    if (!apiKey) {
-      setIsGenerating(false)
-      return
-    }
-
     try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [
-            {
-              role: 'system',
-              content: `你是一个辩论选手人设优化师。用户会给你一段蛐蛐的人设描述，你需要把它扩展成完整的辩论 system prompt。
+      const enhanced = await callLLM(
+        [
+          {
+            role: 'system',
+            content: `你是一个辩论选手人设优化师。用户会给你一段蛐蛐的人设描述，你需要把它扩展成完整的辩论 system prompt。
 
 要求：
 - 保留用户描述的核心人格和说话风格
@@ -146,20 +134,12 @@ export default function CricketForge() {
 - 添加辩论节奏规则（每轮必须回应对手上一轮论点）
 - 总长度 200-400 字
 - 直接输出 prompt，不要加任何前缀说明`,
-            },
-            { role: 'user', content: prompt },
-          ],
-          temperature: 0.7,
-          max_tokens: 600,
-        }),
-        signal: AbortSignal.timeout(15000),
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        const enhanced = data.choices?.[0]?.message?.content?.trim()
-        if (enhanced) setPrompt(enhanced)
-      }
+          },
+          { role: 'user', content: prompt },
+        ],
+        { maxTokens: 600, temperature: 0.7 }
+      )
+      if (enhanced.trim()) setPrompt(enhanced.trim())
     } catch {
       // fallback: 保持原 prompt 不变
     } finally {

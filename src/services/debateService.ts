@@ -1,10 +1,9 @@
 /**
  * Debate service — AI argument polishing & dispute report generation.
- * Uses Groq API when available, falls back to local templates.
+ * Uses callLLM() for AI features, falls back to local templates.
  */
 
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY as string | undefined
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions'
+import { callLLM } from '../stores/llmStore'
 
 // ===== Types =====
 
@@ -43,32 +42,16 @@ const POLISH_SYSTEM = `你是一个辩论语言润色助手。用户会给你一
  * Polish a user's argument using AI, or local fallback.
  */
 export async function polishArgument(raw: string): Promise<string> {
-  if (GROQ_API_KEY) {
-    try {
-      const res = await fetch(GROQ_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [
-            { role: 'system', content: POLISH_SYSTEM },
-            { role: 'user', content: raw },
-          ],
-          temperature: 0.5,
-          max_tokens: 300,
-        }),
-        signal: AbortSignal.timeout(8000),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        const polished = data.choices?.[0]?.message?.content?.trim()
-        if (polished) return polished
-      }
-    } catch { /* fallback */ }
-  }
+  try {
+    const polished = await callLLM(
+      [
+        { role: 'system', content: POLISH_SYSTEM },
+        { role: 'user', content: raw },
+      ],
+      { maxTokens: 300, temperature: 0.5 }
+    )
+    if (polished.trim()) return polished.trim()
+  } catch { /* fallback */ }
 
   // Local fallback — simple structural improvement
   return localPolish(raw)
@@ -112,48 +95,32 @@ export async function generateDisputeReport(
   trueArgs: DebateArgument[],
   falseArgs: DebateArgument[],
 ): Promise<DisputeReport> {
-  const debateText = `话题：${melonTitle}\n\n【真方论据】\n${trueArgs.map((a, i) => `${i + 1}. ${a.content}（${a.votes}票）`).join('\n')}\n\n【假方论据】\n${falseArgs.map((a, i) => `${i + 1}. ${a.content}（${a.votes}票}`).join('\n')}`
+  const debateText = `话题：${melonTitle}\n\n【真方论据】\n${trueArgs.map((a, i) => `${i + 1}. ${a.content}（${a.votes}票）`).join('\n')}\n\n【假方论据】\n${falseArgs.map((a, i) => `${i + 1}. ${a.content}（${a.votes}票`).join('\n')}`
 
-  if (GROQ_API_KEY) {
-    try {
-      const res = await fetch(GROQ_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [
-            { role: 'system', content: REPORT_SYSTEM },
-            { role: 'user', content: debateText },
-          ],
-          temperature: 0.4,
-          max_tokens: 600,
-        }),
-        signal: AbortSignal.timeout(10000),
-      })
-      if (res.ok) {
-        const data = await res.json()
-        const content = data.choices?.[0]?.message?.content?.trim()
-        if (content) {
-          // Try to parse JSON from the response
-          const jsonMatch = content.match(/\{[\s\S]*\}/)
-          if (jsonMatch) {
-            const parsed = JSON.parse(jsonMatch[0])
-            return {
-              summary: parsed.summary || '',
-              trueSideStrengths: parsed.trueSideStrengths || [],
-              falseSideStrengths: parsed.falseSideStrengths || [],
-              weakPoints: parsed.weakPoints || [],
-              verdict: parsed.verdict || '',
-              confidence: parsed.confidence ?? 50,
-            }
-          }
+  try {
+    const content = await callLLM(
+      [
+        { role: 'system', content: REPORT_SYSTEM },
+        { role: 'user', content: debateText },
+      ],
+      { maxTokens: 600, temperature: 0.4 }
+    )
+    if (content) {
+      // Try to parse JSON from the response
+      const jsonMatch = content.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0])
+        return {
+          summary: parsed.summary || '',
+          trueSideStrengths: parsed.trueSideStrengths || [],
+          falseSideStrengths: parsed.falseSideStrengths || [],
+          weakPoints: parsed.weakPoints || [],
+          verdict: parsed.verdict || '',
+          confidence: parsed.confidence ?? 50,
         }
       }
-    } catch { /* fallback */ }
-  }
+    }
+  } catch { /* fallback */ }
 
   // Local fallback report
   return localReport(melonTitle, trueArgs, falseArgs)

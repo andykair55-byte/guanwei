@@ -12,6 +12,7 @@ import DanmakuInput from '../components/debate/DanmakuInput'
 import { getTopic, TOPICS, type ThinkingStep, type RoundScore } from '../services/debateArenaService'
 import { pickDanmaku, toQueueItems, type DanmakuQueueItem, type DanmakuTrigger } from '../services/danmakuService'
 import { getCharacter } from '../services/characters'
+import { callLLM } from '../stores/llmStore'
 import { usePlatform } from '../hooks/usePlatform'
 import { useAuthStore } from '../stores/authStore'
 
@@ -206,42 +207,24 @@ export default function AIBattle() {
     return charStyles[0]
   }
 
-  // Call Groq API for AI response
+  // 生成 AI 辩手回复
   const generateAiResponse = async (userArgument: string, round: number): Promise<string> => {
-    const apiKey = import.meta.env.VITE_GROQ_API_KEY
-    if (!apiKey) {
-      return getMockResponse(round)
-    }
-
     const historyText = rounds.map(r =>
       `用户（第${r.round}轮）：${r.userContent}\n${opponent.name}（第${r.round}轮）：${r.aiContent}`
     ).join('\n')
 
     try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [
-            { role: 'system', content: opponent.systemPrompt },
-            {
-              role: 'user',
-              content: `辩题：${topic.title}\n你的立场：${topic.negateLabel}\n\n${rounds.length > 0 ? `辩论记录：\n${historyText}\n` : ''}用户刚刚说：${userArgument}\n\n请反驳用户的论点。保持你的人设风格，80-150字，纯文本。`,
-            },
-          ],
-          temperature: opponent.temperature,
-          max_tokens: 250,
-        }),
-        signal: AbortSignal.timeout(12000),
-      })
-
-      if (!res.ok) return getMockResponse(round)
-      const data = await res.json()
-      return data.choices?.[0]?.message?.content?.trim() || getMockResponse(round)
+      const content = await callLLM(
+        [
+          { role: 'system', content: opponent.systemPrompt },
+          {
+            role: 'user',
+            content: `辩题：${topic.title}\n你的立场：${topic.negateLabel}\n\n${rounds.length > 0 ? `辩论记录：\n${historyText}\n` : ''}用户刚刚说：${userArgument}\n\n请反驳用户的论点。保持你的人设风格，80-150字，纯文本。`,
+          },
+        ],
+        { maxTokens: 250, temperature: opponent.temperature }
+      )
+      return content.trim() || getMockResponse(round)
     } catch {
       return getMockResponse(round)
     }
