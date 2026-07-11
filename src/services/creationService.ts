@@ -5,11 +5,14 @@ export interface SkeletonInput {
   topic: string
   stance: string
   targetReader: string
+  fragments?: Array<{ type: string; content: string; sourceTitle?: string }>
 }
 
 export type PresetType = 'event' | 'opinion' | 'comparison'
 
-const SYSTEM_PROMPT = `你是一位专业的内容创作助手。根据用户提供的主题、立场和目标读者，生成一个结构化的写作骨架。
+const SYSTEM_PROMPT = `你是一位专业的内容创作助手。根据用户提供的主题、立场、目标读者和已收集的素材碎片，生成一个结构化的写作骨架。
+
+如果有素材碎片，请优先基于这些碎片组织文章结构，充分利用用户已收集的信息。
 
 返回严格的 JSON 格式（不要 markdown 代码块）：
 {
@@ -61,7 +64,14 @@ export function getPresetTemplate(type: PresetType, input: SkeletonInput) {
 }
 
 export async function generateSkeleton(input: SkeletonInput): Promise<{ title: string; sections: SkeletonSection[] }> {
-  const userPrompt = `主题：${input.topic}\n立场：${input.stance}\n目标读者：${input.targetReader || '一般读者'}`
+  let userPrompt = `主题：${input.topic}\n立场：${input.stance}\n目标读者：${input.targetReader || '一般读者'}`
+
+  if (input.fragments && input.fragments.length > 0) {
+    const fragSummary = input.fragments
+      .map((f, i) => `[${i + 1}] (${f.type}) ${f.content}${f.sourceTitle ? ` — 来源：${f.sourceTitle}` : ''}`)
+      .join('\n')
+    userPrompt += `\n\n已收集的素材碎片（共${input.fragments.length}条）：\n${fragSummary}\n\n请基于以上素材组织文章结构，充分利用这些信息。`
+  }
 
   const response = await callLLM([
     { role: 'system', content: SYSTEM_PROMPT },
@@ -83,4 +93,63 @@ export async function generateSkeleton(input: SkeletonInput): Promise<{ title: s
       accepted: false,
     })),
   }
+}
+
+// ===== 声明提取（用于一键求证） =====
+
+export interface ExtractedClaim {
+  id: string
+  text: string
+  type: 'fact' | 'statistic' | 'quote' | 'prediction'
+  confidence: number // 0-1, LLM 对该声明的确信度
+}
+
+const CLAIM_SYSTEM_PROMPT = `你是一位专业的事实核查助手。从用户提供的文本中提取需要事实核查的声明。
+
+只提取包含具体事实、数据、引用或可验证信息的声明。不要提取观点、感受或修辞。
+
+返回严格的 JSON 格式：
+{
+  "claims": [
+    {
+      "text": "原文中的声明句",
+      "type": "fact|statistic|quote|prediction",
+      "confidence": 0.8
+    }
+  ]
+}
+
+如果文本中没有需要核查的声明，返回 {"claims": []}。最多返回5条最关键的声明。`
+
+export async function extractClaims(content: string): Promise<ExtractedClaim[]> {
+  if (!content.trim() || content.trim().length < 20) return []
+
+  const response = await callLLM([
+    { role: 'system', content: CLAIM_SYSTEM_PROMPT },
+    { role: 'user', content: content.slice(0, 3000) },
+  ], { maxTokens: 1024, temperature: 0.3 })
+
+  const jsonMatch = response.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) return []
+
+  try {
+    const parsed = JSON.parse(jsonMatch[0])
+    return (parsed.claims || []).map((c: any, i: number) => ({
+      id: `claim-${Date.now()}-${i}`,
+      text: c.text || '',
+      type: c.type || 'fact',
+      confidence: c.confidence ?? 0.5,
+    }))
+  } catch {
+    return []
+  }
+}
+
+/** 核查单条声明，返回结论文本 */
+export async function verifyClaim(text: string): Promise<string> {
+  const response = await callLLM([
+    { role: 'system', content: '你是一位事实核查员。对以下声明进行核查，用一句话给出结论（可信/存疑/无法验证），然后用1-2句话简要说明原因。' },
+    { role: 'user', content: `请核查：${text}` },
+  ], { maxTokens: 200, temperature: 0.3 })
+  return response.trim()
 }

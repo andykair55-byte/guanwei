@@ -1,12 +1,27 @@
 import { create } from 'zustand'
 import type { User, Badge, PointsRecord } from '../types'
 
+export interface UserCreation {
+  id: string
+  title: string
+  type: 'evidence' | 'post'
+  publishedAt: number
+  views: number
+  likes: number
+  impactCount: number
+  melonId?: string
+  content: string
+}
+
 interface UserState {
   user: User
   pointsRecords: PointsRecord[]
+  creations: UserCreation[]
 
   // 添加积分
   addPoints: (amount: number, type: PointsRecord['type'], description: string) => void
+  // 发布创作（记录 + 加积分）
+  publishCreation: (c: { title: string; type: 'evidence' | 'post'; melonId?: string; content: string }) => UserCreation
 }
 
 const mockBadges: Badge[] = [
@@ -36,6 +51,7 @@ const mockUser: User = {
 export const useUserStore = create<UserState>((set, get) => ({
   user: mockUser,
   pointsRecords: mockPointsRecords,
+  creations: [],
 
   addPoints: (amount: number, type: PointsRecord['type'], description: string) => {
     const newRecord: PointsRecord = {
@@ -50,5 +66,23 @@ export const useUserStore = create<UserState>((set, get) => ({
       user: { ...state.user, points: state.user.points + amount },
       pointsRecords: [newRecord, ...state.pointsRecords],
     }))
+  },
+
+  publishCreation: (c) => {
+    const creation: UserCreation = {
+      ...c,
+      id: `creation-${Date.now()}`,
+      publishedAt: Date.now(),
+      views: 0,
+      likes: 0,
+      impactCount: 0,
+    }
+    set((state) => ({
+      creations: [creation, ...state.creations],
+      user: { ...state.user, publishedCount: (state.user.publishedCount || 0) + 1 },
+    }))
+    // 发布佐证奖励 +5 积分
+    get().addPoints(5, 'creation', `发布${c.type === 'evidence' ? '佐证' : '帖子'}：${c.title}`)
+    return creation
   },
 }))

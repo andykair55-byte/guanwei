@@ -16,6 +16,7 @@ export interface CreationDraft {
   title: string
   content: string
   skeleton: SkeletonSection[] | null
+  melonId: string
   lastSaved: number
 }
 
@@ -40,6 +41,7 @@ const emptyDraft: CreationDraft = {
   title: '',
   content: '',
   skeleton: null,
+  melonId: '',
   lastSaved: 0,
 }
 

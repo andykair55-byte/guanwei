@@ -385,11 +385,32 @@ export default function MelonDetailPage() {
                   </span>
                   <button
                     type="button"
-                    onClick={() => navigate(`/create?melonId=${melon.id}&title=${encodeURIComponent(melon.title)}`)}
+                    onClick={() => {
+                      // 将佐证数据存入 sessionStorage，供工作间读取
+                      try {
+                        const evidenceForWorkspace = evidences.slice(0, 5).map(ev => ({
+                          id: ev.id,
+                          content: ev.content,
+                          userNickname: ev.userNickname,
+                          direction: ev.direction,
+                        }))
+                        sessionStorage.setItem(
+                          `melon-evidence-${melon.id}`,
+                          JSON.stringify(evidenceForWorkspace)
+                        )
+                      } catch { /* ignore quota errors */ }
+                      const params = new URLSearchParams({
+                        melonId: melon.id,
+                        title: melon.title,
+                        description: melon.description,
+                        evidenceCount: String(evidences.length),
+                      })
+                      navigate(`/agent-world?${params.toString()}`)
+                    }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-seal text-white text-[12px] font-medium hover:bg-seal/90 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seal/40 motion-reduce:transition-none"
                   >
                     <PenLine size={13} />
-                    写分析
+                    来分析一下
                   </button>
                 </div>
               </div>
