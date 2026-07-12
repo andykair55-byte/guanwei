@@ -8,10 +8,18 @@ export interface LLMConfig {
   provider: 'groq' | 'openai' | 'deepseek' | 'custom'
 }
 
+export interface SearchConfig {
+  provider: 'mock' | 'tavily' | 'serpapi'
+  apiKey: string
+}
+
 interface LLMStore {
   config: LLMConfig
   setConfig: (config: Partial<LLMConfig>) => void
   testConnection: () => Promise<{ success: boolean; message: string }>
+  searchConfig: SearchConfig
+  setSearchConfig: (config: Partial<SearchConfig>) => void
+  testSearchConnection: () => Promise<{ success: boolean; message: string }>
 }
 
 const PROVIDER_DEFAULTS: Record<string, { baseUrl: string; model: string }> = {
@@ -29,6 +37,11 @@ export const useLLMStore = create<LLMStore>()(
         baseUrl: PROVIDER_DEFAULTS.groq.baseUrl,
         model: PROVIDER_DEFAULTS.groq.model,
         provider: 'groq',
+      },
+
+      searchConfig: {
+        provider: 'mock' as const,
+        apiKey: '',
       },
 
       setConfig: (partial) => {
@@ -73,6 +86,43 @@ export const useLLMStore = create<LLMStore>()(
           const data = await res.json()
           const reply = data.choices?.[0]?.message?.content?.trim() || ''
           return { success: true, message: `连接成功！模型回复: ${reply}` }
+        } catch (e) {
+          return { success: false, message: `网络错误: ${e instanceof Error ? e.message : String(e)}` }
+        }
+      },
+
+      setSearchConfig: (partial) => set((state) => ({
+        searchConfig: { ...state.searchConfig, ...partial }
+      })),
+
+      testSearchConnection: async () => {
+        const { searchConfig } = get()
+        if (searchConfig.provider === 'mock') {
+          return { success: true, message: '使用示例搜索数据，无需API Key' }
+        }
+        if (!searchConfig.apiKey) {
+          return { success: false, message: '请先填写搜索API Key' }
+        }
+        try {
+          if (searchConfig.provider === 'tavily') {
+            const res = await fetch('https://api.tavily.com/search', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                api_key: searchConfig.apiKey,
+                query: 'test',
+                max_results: 1,
+              }),
+            })
+            if (!res.ok) return { success: false, message: `Tavily API错误: HTTP ${res.status}` }
+            return { success: true, message: 'Tavily连接成功！' }
+          }
+          if (searchConfig.provider === 'serpapi') {
+            const res = await fetch(`https://serpapi.com/search?q=test&api_key=${searchConfig.apiKey}&engine=google`)
+            if (!res.ok) return { success: false, message: `SerpAPI错误: HTTP ${res.status}` }
+            return { success: true, message: 'SerpAPI连接成功！' }
+          }
+          return { success: false, message: '未知的搜索provider' }
         } catch (e) {
           return { success: false, message: `网络错误: ${e instanceof Error ? e.message : String(e)}` }
         }

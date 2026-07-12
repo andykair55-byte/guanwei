@@ -11,14 +11,14 @@ const LEFT_WIDTH_COLLAPSED = 64
 const RIGHT_WIDTH_EXPANDED = 300
 const RIGHT_WIDTH_COLLAPSED = 52
 
-const IMMERSIVE_ROUTES = ['/notifications', '/messages']
+const IMMERSIVE_ROUTES = ['/notifications', '/messages', '/agent-world']
 const NO_TOPNAV_ROUTES: string[] = []
 
 export default function WebLayout() {
   const location = useLocation()
   const isImmersive = IMMERSIVE_ROUTES.some(r => location.pathname.startsWith(r))
   const hideTopNav = NO_TOPNAV_ROUTES.some(r => location.pathname.startsWith(r))
-  const hideTraeBot = isImmersive || location.pathname.startsWith('/agent-world') || location.pathname.startsWith('/entertainment')
+  const hideTraeBot = isImmersive || location.pathname.startsWith('/entertainment')
 
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [rightCollapsed, setRightCollapsed] = useState(false)
@@ -115,11 +115,11 @@ export default function WebLayout() {
       )}
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        {!hideTopNav && <TopNavbar />}
+        {!hideTopNav && !isImmersive && <TopNavbar />}
 
         <div className="flex-1 flex min-h-0 overflow-hidden">
-          <main className={`flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin ${isImmersive ? 'bg-white' : 'bg-white'}`}>
-            <div className="animate-page-enter min-h-full h-full">
+          <main className={`flex-1 ${isImmersive ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden scrollbar-thin'} bg-white`}>
+            <div className={`animate-page-enter ${isImmersive ? 'h-full' : 'min-h-full'}`}>
               <Outlet />
             </div>
           </main>
