@@ -48,6 +48,7 @@ import {
   EntertainmentHallPage,
   AICreationPage,
   EmotionDetector,
+  JudgeFeedPage,
 } from '../router/routes'
 
 // 独立路由 → 组件映射
@@ -93,6 +94,7 @@ const pageMap: Record<string, React.LazyExoticComponent<React.ComponentType<any>
   '/entertainment': EntertainmentHallPage,
   '/ai-creation': AICreationPage,
   '/tools/emotion': EmotionDetector,
+  '/judge': JudgeFeedPage,
 }
 
 function PageLoader() {

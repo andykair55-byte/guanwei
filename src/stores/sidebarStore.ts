@@ -21,7 +21,7 @@ export const ALL_NAV_ITEMS: SidebarNavItem[] = [
   // ── 工具 ──
   { id: 'verify', path: '/verify', label: '求证', icon: 'Search', isDefault: true, group: 2 },
   { id: 'agent-world', path: '/agent-world', label: '工作间', icon: 'Briefcase', isDefault: true, group: 2 },
-  { id: 'debates', path: '/debates', label: '辩论', icon: 'MessageSquare', isDefault: true, group: 2 },
+  { id: 'debates', path: '/debates', label: '辩论', icon: 'MessageSquare', isDefault: false, group: 2 },
   // ── 休闲 ──
   { id: 'entertainment', path: '/entertainment', label: '娱乐', icon: 'Gamepad2', isDefault: true, group: 3 },
   { id: 'settings', path: '/settings/llm', label: '设置', icon: 'Settings', isDefault: true, group: 3 },

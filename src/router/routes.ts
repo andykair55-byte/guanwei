@@ -63,6 +63,7 @@ export const AboutPage = lazy(() => import('../pages/AboutPage'))
 export const CricketForge = lazy(() => import('../pages/CricketForge'))
 export const AgentWorldPage = lazy(() => import('../pages/AgentWorldPage'))
 export const EntertainmentHallPage = lazy(() => import('../pages/EntertainmentHallPage'))
+export const JudgeFeedPage = lazy(() => import('../pages/JudgeFeedPage'))
 
 // 排行 / 积分
 export const RankListPage = lazy(() => import('../pages/RankListPage'))
@@ -112,6 +113,7 @@ export const layoutRoutes: RouteConfig[] = [
   { path: '/ai-creation',      platform: 'both' },
   { path: '/agent-world',      platform: 'web' },
   { path: '/entertainment',    platform: 'web' },
+  { path: '/judge',            platform: 'web' },
 
   // 工具
   { path: '/tools/exif',           platform: 'both' },
