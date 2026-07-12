@@ -1,15 +1,15 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Share2, Heart, MessageSquare, Bookmark, Flame, HandHeart, HelpCircle } from 'lucide-react'
-import { getCommunityPosts, type CommunityPost } from '../services/mockData'
+import { getCommunityPostById, getFeaturedPostContent } from '../services/mockData'
 import CommentSection from '../components/CommentSection'
 import VerificationNoteSection from '../components/VerificationNoteSection'
 import { usePlatform } from '../hooks/usePlatform'
 
 const typeTagConfig = {
-  hot: { icon: Flame, label: '热帖', bg: 'bg-seal/90', text: 'text-white' },
-  charity: { icon: HandHeart, label: '公益', bg: 'bg-bamboo/90', text: 'text-white' },
-  help: { icon: HelpCircle, label: '求助', bg: 'bg-gold/90', text: 'text-white' },
+  hot: { icon: Flame, label: '热帖', bg: 'bg-red-500/90', text: 'text-white' },
+  charity: { icon: HandHeart, label: '公益', bg: 'bg-green-500/90', text: 'text-white' },
+  help: { icon: HelpCircle, label: '求助', bg: 'bg-amber-500/90', text: 'text-white' },
   normal: null,
 }
 
@@ -42,12 +42,29 @@ export default function CommunityDetailPage() {
   const [showCopied, setShowCopied] = useState(false)
   const [noteTab, setNoteTab] = useState<'notes' | 'comments'>('notes')
 
+  // 使用 getCommunityPostById 查找帖子（兼容硬编码id和普通id）
   const post = useMemo(() => {
-    const all = getCommunityPosts()
-    return all.posts.find((p: CommunityPost) => p.id === id)
+    if (!id) return undefined
+    return getCommunityPostById(id)
   }, [id])
 
-  if (!post) {
+  // 获取帖子的完整内容（硬编码帖子有特殊内容）
+  const postContent = useMemo(() => {
+    if (!id) return null
+    const featured = getFeaturedPostContent(id)
+    if (featured) return featured
+    // 普通帖子用默认内容
+    if (post) {
+      return {
+        content: post.title + '\n\n欢迎在下方评论区分享你的看法和经历，一起参与讨论。',
+        comments: Math.floor(post.likes * 0.3),
+        collects: Math.floor(post.likes * 0.6),
+      }
+    }
+    return null
+  }, [id, post])
+
+  if (!post || !postContent) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-paper-texture">
         <div className="w-16 h-16 rounded-xl bg-paper-dark flex items-center justify-center mb-4">
@@ -64,7 +81,7 @@ export default function CommunityDetailPage() {
   const tag = typeTagConfig[post.type]
   const TagIcon = tag?.icon
 
-  // 仅求证求助类（辟谣贴）显示求证笔记区，普通帖/公益/热帖只显示评论
+  // 仅求助类显示求证笔记区，普通帖/公益/热帖只显示评论
   const showVerificationNote = post.type === 'help'
 
   const handleShare = async () => {
@@ -133,24 +150,8 @@ export default function CommunityDetailPage() {
 
         {/* 正文 */}
         <div className="px-5 pb-3">
-          <div className="text-[15px] text-ink-800 leading-[1.8] space-y-4">
-            <p>{post.title}</p>
-            {showVerificationNote ? (
-              <>
-                <p>
-                  近日，该话题在社交平台引发热议。多位网友分享了自己的看法和经历，
-                  相关讨论持续升温。以下是目前已知的信息梳理，欢迎大家在评论区补充。
-                </p>
-                <p>
-                  如果你也有相关线索或证据，欢迎在下方贡献求证笔记，帮助大家更好地了解事件全貌。
-                  每条笔记都需要提供来源链接，经社区审核后展示。
-                </p>
-              </>
-            ) : (
-              <p>
-                欢迎在下方评论区分享你的看法和经历，一起参与讨论。
-              </p>
-            )}
+          <div className="text-[15px] text-ink-800 leading-[1.8] space-y-4 whitespace-pre-line">
+            {postContent.content}
           </div>
 
           {/* 话题标签 */}
@@ -178,7 +179,7 @@ export default function CommunityDetailPage() {
           </button>
           <button className="flex items-center gap-1.5 text-[14px] font-semibold text-ink-600 hover:text-ink-900 transition-colors">
             <MessageSquare size={18} />
-            讨论
+            {formatCount(postContent.comments)}
           </button>
           <button
             onClick={() => setBookmarked(!bookmarked)}
@@ -187,6 +188,7 @@ export default function CommunityDetailPage() {
             }`}
           >
             <Bookmark size={18} className={bookmarked ? 'fill-gold' : ''} />
+            {formatCount(postContent.collects)}
           </button>
         </div>
 

@@ -614,6 +614,81 @@ export function getCommunityPosts(filter?: string, page = 0, pageSize = 9): { po
   return { posts: result, hasMore: true }
 }
 
+// 推荐页硬编码的3条帖子（与设计图一致）
+const featuredPosts: CommunityPost[] = [
+  {
+    id: '1',
+    type: 'hot',
+    title: '高考！紧张的情绪真的也日了这种事...',
+    image: 'https://picsum.photos/seed/college/400/300',
+    imageHeight: 200,
+    authorName: '娱乐嗨将官',
+    authorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=entertainment',
+    likes: 1800,
+    tags: ['娱乐', '热帖'],
+    createdAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: '2',
+    type: 'normal',
+    title: '今天去爬上看日出，大家帮忙判断一下真伪',
+    image: 'https://picsum.photos/seed/sunrise/400/300',
+    imageHeight: 200,
+    authorName: '路人甲',
+    authorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=passerby',
+    likes: 128,
+    tags: ['生活'],
+    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: '3',
+    type: 'charity',
+    title: '山区小学的孩子们需要这些物资，求转发',
+    image: 'https://picsum.photos/seed/mountain/400/300',
+    imageHeight: 200,
+    authorName: '暖心公益',
+    authorAvatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=charity',
+    likes: 513,
+    tags: ['公益'],
+    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+  },
+]
+
+// 硬编码帖子的完整内容（用于详情页）
+const featuredPostContents: Record<string, { content: string; comments: number; collects: number }> = {
+  '1': {
+    content: '每年这个时候，都会想起当年高考的日子。紧张、期待，还有一点点的小确幸。分享一下我的故事...\n\n记得高考前一天晚上，我翻来覆去睡不着，脑子里全是公式和古诗文。第二天进考场的时候，手心全是汗。但是当真正拿起笔的那一刻，反而平静了下来。\n\n希望今年的考生们都能发挥出自己的水平，考上理想的大学！加油！',
+    comments: 3700,
+    collects: 1200,
+  },
+  '2': {
+    content: '凌晨四点爬上山顶，等待日出的那一刻真的太美了！但不确定这是不是P图，求大佬帮忙看看~\n\n我用手机拍的，原图直出没有滤镜。太阳刚出来的时候整个天空都是橙红色的，特别壮观。\n\n有懂摄影的朋友帮忙鉴定一下吗？',
+    comments: 256,
+    collects: 856,
+  },
+  '3': {
+    content: '我们正在为山区小学筹集学习用品和生活物资，您的每一次转发都可能改变一个孩子的未来...\n\n目前急需的物资：\n- 冬季棉衣（适合6-12岁儿童）\n- 课外读物（绘本、故事书等）\n- 文具用品（书包、铅笔、本子）\n- 体育器材（跳绳、毽子、篮球）\n\n如果您有闲置的物品想要捐赠，请私信联系我们。感谢每一位爱心人士！',
+    comments: 1000,
+    collects: 3400,
+  },
+}
+
+export function getCommunityPostById(id: string): CommunityPost | undefined {
+  // 先从硬编码推荐帖中查找
+  const featured = featuredPosts.find(p => p.id === id)
+  if (featured) return featured
+  // 再从社区帖子中查找
+  return communityPosts.find(p => p.id === id)
+}
+
+export function getFeaturedPosts(): CommunityPost[] {
+  return featuredPosts
+}
+
+export function getFeaturedPostContent(id: string): { content: string; comments: number; collects: number } | undefined {
+  return featuredPostContents[id]
+}
+
 export function createCommunityPost(data: { title: string; content: string; image?: string; tags?: string[] }): CommunityPost {
   const id = `cp${Date.now()}`
   const post: CommunityPost = {

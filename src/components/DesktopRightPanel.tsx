@@ -1,7 +1,8 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { Flame, ChevronRight, Sparkles, Lightbulb } from 'lucide-react'
+import { Flame, ChevronRight, Sparkles, Lightbulb, ArrowUp, ArrowDown, Bot } from 'lucide-react'
 
+// ── 通用数据 ──────────────────────────────────────
 const hotEvents = [
   { id: 'hot-1', title: '某地暴雨引发城市内涝', heat: 8923 },
   { id: 'hot-2', title: 'AI生成内容版权归属引争议', heat: 7256 },
@@ -35,13 +36,170 @@ const formatHeat = (num: number) => {
   return num.toLocaleString()
 }
 
+// ── 瓜田专属数据 ──────────────────────────────────────
+const melonDebates = [
+  { id: 1, title: '大学学历在AI时代还有价值吗？', pro: 328, con: 284, status: '进行中' },
+  { id: 2, title: '短视频正在摧毁深度思考能力', pro: 892, con: 756, status: '进行中' },
+  { id: 3, title: '远程办公比坐班更高效', pro: 156, con: 132, status: '进行中' },
+]
+
+const platformStats = [
+  { label: '今日新增求证', value: '1,328' },
+  { label: '今日辩论参与', value: '2,847' },
+  { label: '待验证内容', value: '156' },
+]
+
+const agentStatusList = [
+  { id: 1, name: '研究员Agent', status: '搜索资料中...', progress: 72, color: 'from-emerald-400 to-emerald-600' },
+  { id: 2, name: '记忆管理员Agent', status: '整理记忆中...', progress: 66, color: 'from-emerald-400 to-teal-500' },
+  { id: 3, name: '教师Agent', status: '生成讲解中...', progress: 58, color: 'from-teal-400 to-emerald-500' },
+  { id: 4, name: '审阅员Agent', status: '检查内容中...', progress: 20, color: 'from-emerald-300 to-emerald-500' },
+]
+
 interface DesktopRightPanelProps {
   collapsed?: boolean
 }
 
+// ── 瓜田专属右侧边栏 ──────────────────────────────────────
+function MelonRightPanel() {
+  const navigate = useNavigate()
+
+  return (
+    <aside className="w-full flex-shrink-0 h-full overflow-y-auto scrollbar-thin border-l border-[#ececec] px-5 py-6 space-y-6 bg-white">
+      {/* 热点辩论 */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-base">🔥</span>
+            <h3 className="text-[15px] font-bold text-[#111] tracking-tight">热点辩论</h3>
+          </div>
+          <button
+            onClick={() => navigate('/debates')}
+            className="flex items-center gap-0.5 text-[12px] text-[#999] hover:text-emerald-500 transition-colors"
+          >
+            更多 <ChevronRight size={12} />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {melonDebates.map((debate) => (
+            <button
+              key={debate.id}
+              onClick={() => navigate('/debates')}
+              className="w-full text-left group p-3 rounded-xl hover:bg-emerald-50/50 transition-colors border border-transparent hover:border-emerald-100"
+            >
+              <p className="text-[13px] text-[#333] leading-snug group-hover:text-[#111] transition-colors line-clamp-2 font-medium mb-2">
+                {debate.title}
+              </p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-0.5 text-emerald-500">
+                    <ArrowUp size={11} strokeWidth={2.5} />
+                    <span className="text-[11px] font-semibold">{debate.pro}</span>
+                  </div>
+                  <div className="flex items-center gap-0.5 text-red-500">
+                    <ArrowDown size={11} strokeWidth={2.5} />
+                    <span className="text-[11px] font-semibold">{debate.con}</span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-orange-50 text-orange-500">
+                  {debate.status}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* 参与辩论按钮 */}
+        <button
+          onClick={() => navigate('/debate-lobby')}
+          className="w-full mt-4 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-[13px] font-semibold rounded-xl transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+        >
+          参与辩论
+        </button>
+      </section>
+
+      <div className="h-px bg-[#f0f0f0]" />
+
+      {/* 平台数据 */}
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-base">📊</span>
+          <h3 className="text-[15px] font-bold text-[#111] tracking-tight">平台数据</h3>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {platformStats.map((stat, idx) => (
+            <div
+              key={stat.label}
+              className={`p-3 rounded-xl bg-gradient-to-br ${
+                idx === 0 ? 'from-emerald-50 to-white' :
+                idx === 1 ? 'from-teal-50 to-white' :
+                'col-span-2 from-gray-50 to-white'
+              } border border-gray-100`}
+            >
+              <div className="text-[18px] font-bold text-gray-800 mb-1">{stat.value}</div>
+              <div className="text-[11px] text-gray-500">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="h-px bg-[#f0f0f0]" />
+
+      {/* 智能体状态 */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-base">🤖</span>
+            <h3 className="text-[15px] font-bold text-[#111] tracking-tight">智能体状态</h3>
+          </div>
+          <button
+            onClick={() => navigate('/agent-world')}
+            className="flex items-center gap-0.5 text-[12px] text-[#999] hover:text-emerald-500 transition-colors"
+          >
+            查看全部 <ChevronRight size={12} />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          {agentStatusList.map((agent) => (
+            <div
+              key={agent.id}
+              className="p-3 rounded-xl bg-gray-50/50 border border-gray-100"
+            >
+              <div className="flex items-center gap-2.5 mb-2">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center flex-shrink-0">
+                  <Bot size={14} className="text-emerald-600" strokeWidth={2} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[12px] font-semibold text-gray-800 truncate">{agent.name}</div>
+                  <div className="text-[10px] text-gray-500 truncate">{agent.status}</div>
+                </div>
+              </div>
+              {/* 进度条 */}
+              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className={`h-full bg-gradient-to-r ${agent.color} rounded-full transition-all duration-500`}
+                  style={{ width: `${agent.progress}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </aside>
+  )
+}
+
+// ── 主组件 ──────────────────────────────────────
 export default function DesktopRightPanel({ collapsed = false }: DesktopRightPanelProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const [tipIndex, setTipIndex] = useState(0)
+
+  // 判断是否在瓜田页面（仅 /melon 列表页，不含详情页）
+  const isMelonPage = location.pathname === '/melon'
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -75,6 +233,11 @@ export default function DesktopRightPanel({ collapsed = false }: DesktopRightPan
         </button>
       </aside>
     )
+  }
+
+  // 瓜田页面显示专属内容
+  if (isMelonPage) {
+    return <MelonRightPanel />
   }
 
   return (

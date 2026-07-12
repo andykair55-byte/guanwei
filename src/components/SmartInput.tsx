@@ -241,11 +241,6 @@ export default function SmartInput({
           {submitLabel}
         </button>
       )}
-
-      {/* Privacy note */}
-      <p className="text-[9px] text-ink-300 text-center">
-        所有操作由你主动触发 · 图片 OCR 在浏览器本地完成 · 不会后台读取剪贴板
-      </p>
     </div>
   )
 }
