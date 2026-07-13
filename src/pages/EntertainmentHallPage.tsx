@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import {
-  Bot, Swords, Users, Gamepad2, Scale, MessageSquare,
-  ChevronRight, Zap, Crown, Shield, Mic, Sparkles,
-  Flame, Star, Trophy, Play,
+  Bot, Swords, Users, Gamepad2, Scale,
+  Shield, Sparkles,
+  Star, Trophy, Play,
 } from 'lucide-react'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 
@@ -54,79 +54,55 @@ export default function EntertainmentHallPage() {
   const isDesktop = useIsDesktop()
 
   const categories: Category[] = [
-    // ── 🎭 表演类 ──
+    // ── 🤖 AI 竞技场 ──
     {
-      id: 'show',
-      icon: Crown,
-      label: '观战表演',
-      gradient: 'from-fuchsia-500 via-purple-500 to-indigo-500',
-      description: '看 AI 神仙打架，坐享其成',
+      id: 'arena',
+      icon: Bot,
+      label: 'AI 竞技场',
+      gradient: 'from-amber-400 via-orange-500 to-red-500',
+      description: '看 AI 神仙打架，亲自上阵单挑',
       cards: [
         {
-          id: 'ai-arena',
+          id: 'ai-battle',
           icon: Bot,
           title: 'AI 斗蛐蛐',
-          desc: '两大 AI 针锋相对，看谁更胜一筹',
+          desc: '诸葛亮 vs 王朗 · 名人擂台 · 自由对战',
           btnText: '观战',
           gradient: 'from-amber-400 to-orange-500',
           pixelColor: '#f59e0b',
           badge: 'HOT',
           badgeColor: '#ef4444',
           players: '2,341 人在看',
-          onClick: () => navigate('/debates'),
+          onClick: () => navigate('/entertainment/arena'),
         },
+      ],
+    },
+    // ── 👥 真人辩论厅 ──
+    {
+      id: 'debate',
+      icon: Users,
+      label: '真人辩论厅',
+      gradient: 'from-emerald-400 via-teal-500 to-cyan-600',
+      description: '圆桌混战 · 4v4 国赛机制',
+      cards: [
         {
           id: 'round-table',
           icon: Swords,
-          title: '圆桌局',
-          desc: '四神混战 · 舌战群儒 · 火花四溅',
-          btnText: '进入',
-          gradient: 'from-rose-400 to-pink-600',
-          pixelColor: '#f43f5e',
-          players: '1,208 人在看',
-          onClick: () => navigate('/round-table'),
-        },
-      ],
-    },
-    // ── 🎮 互动类 ──
-    {
-      id: 'interactive',
-      icon: Zap,
-      label: '亲自上阵',
-      gradient: 'from-cyan-500 via-blue-500 to-indigo-500',
-      description: '亲自下场，和 AI 一决高下',
-      cards: [
-        {
-          id: 'ai-battle',
-          icon: Mic,
-          title: '人机对战',
-          desc: '你 vs AI，谁才是辩论之王',
-          btnText: '开战',
-          gradient: 'from-red-500 to-rose-600',
-          pixelColor: '#dc2626',
-          badge: 'NEW',
-          badgeColor: '#22c55e',
-          players: '856 人在玩',
-          onClick: () => navigate('/ai-battle'),
-        },
-        {
-          id: 'debate-lobby',
-          icon: Users,
           title: '真人辩论',
-          desc: '国赛 4v4 规则 · 进房间开打',
-          btnText: '匹配',
+          desc: '圆桌局 · 4v4 国赛 · AI 补位',
+          btnText: '进入',
           gradient: 'from-emerald-400 to-teal-600',
           pixelColor: '#10b981',
           players: '432 人在线',
-          onClick: () => navigate('/debate-lobby'),
+          onClick: () => navigate('/entertainment/debate'),
         },
       ],
     },
-    // ── ⚖️ 判官模式 ──
+    // ── ⚖️ 判官台 ──
     {
       id: 'judge',
       icon: Scale,
-      label: '判官模式',
+      label: '判官台',
       gradient: 'from-amber-500 via-orange-500 to-red-500',
       description: '看纠纷 · 当判官 · 断是非',
       cards: [
@@ -134,35 +110,14 @@ export default function EntertainmentHallPage() {
           id: 'judge-mode',
           icon: Shield,
           title: '我是判官',
-          desc: '审理纠纷案件，做出公正裁决',
+          desc: '审理纠纷案件 · 瓜田真假站队',
           btnText: '开审',
           gradient: 'from-yellow-400 via-amber-500 to-orange-600',
           pixelColor: '#f59e0b',
           badge: 'NEW',
           badgeColor: '#22c55e',
           players: '678 人在审',
-          onClick: () => navigate('/judge'),
-        },
-      ],
-    },
-    // ── 📦 趣味玩法 ──
-    {
-      id: 'other',
-      icon: Gamepad2,
-      label: '趣味玩法',
-      gradient: 'from-slate-500 via-gray-500 to-zinc-500',
-      description: '更多有趣的小游戏',
-      cards: [
-        {
-          id: 'melon-debate',
-          icon: MessageSquare,
-          title: '瓜田争议',
-          desc: '真/假投票 · 吃瓜站队 · 赌上积分',
-          btnText: '投票',
-          gradient: 'from-pink-400 to-rose-500',
-          pixelColor: '#ec4899',
-          players: '3,102 人参与',
-          onClick: () => navigate('/debate/mock-1/热门话题'),
+          onClick: () => navigate('/entertainment/judge'),
         },
       ],
     },
@@ -223,7 +178,7 @@ export default function EntertainmentHallPage() {
               <span className="text-[14px] font-medium text-gray-400 ml-3 font-mono">v1.0</span>
             </h1>
             <p className="text-[15px] text-gray-500 leading-relaxed max-w-md">
-              选个玩法，放松一下。看 AI 打架，亲自上阵，或者当个判官断是非
+              三馆制娱乐：AI 竞技场看神仙打架，真人辩论厅亲自上阵，判官台断是非
             </p>
             <div className="flex items-center gap-4 mt-1">
               <div className="flex items-center gap-1.5 text-[12px] text-gray-400">

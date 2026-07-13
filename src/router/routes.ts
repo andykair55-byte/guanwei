@@ -64,6 +64,9 @@ export const CricketForge = lazy(() => import('../pages/CricketForge'))
 export const AgentWorldPage = lazy(() => import('../pages/AgentWorldPage'))
 export const EntertainmentHallPage = lazy(() => import('../pages/EntertainmentHallPage'))
 export const JudgeFeedPage = lazy(() => import('../pages/JudgeFeedPage'))
+export const AIArenaLobby = lazy(() => import('../pages/AIArenaLobby'))
+export const DebateHallLobby = lazy(() => import('../pages/DebateHallLobby'))
+export const MelonJudgePage = lazy(() => import('../pages/MelonJudgePage'))
 
 // 排行 / 积分
 export const RankListPage = lazy(() => import('../pages/RankListPage'))
@@ -100,20 +103,23 @@ export const layoutRoutes: RouteConfig[] = [
   { path: '/notes',            platform: 'both' },
   { path: '/notes/:id',        platform: 'both' },
 
-  // 辩论
-  { path: '/debates',          platform: 'both' },
-  { path: '/debate/:melonId/:title', platform: 'both' },
-  { path: '/debate-lobby',     platform: 'both' },
-  { path: '/debate-room/:roomId', platform: 'both' },
+  // 娱乐大厅（三馆制）
+  { path: '/entertainment',                          platform: 'both' },
+  { path: '/entertainment/arena',                    platform: 'both' },
+  { path: '/entertainment/arena/ai-battle/:topicId', platform: 'both' },
+  { path: '/entertainment/arena/human-battle',       platform: 'both' },
+  { path: '/entertainment/arena/forge',              platform: 'web' },
+  { path: '/entertainment/debate',                   platform: 'both' },
+  { path: '/entertainment/debate/round-table',       platform: 'both' },
+  { path: '/entertainment/debate/lobby',             platform: 'both' },
+  { path: '/entertainment/debate/room/:roomId',      platform: 'both' },
+  { path: '/entertainment/judge',                    platform: 'both' },
+  { path: '/entertainment/judge/cases',              platform: 'both' },
+  { path: '/entertainment/judge/melon/:id',          platform: 'both' },
 
-  // AI
-  { path: '/ai-arena/:topicId', platform: 'both' },
-  { path: '/ai-battle',        platform: 'both' },
-  { path: '/round-table',      platform: 'both' },
+  // AI 创作
   { path: '/ai-creation',      platform: 'both' },
   { path: '/agent-world',      platform: 'web' },
-  { path: '/entertainment',    platform: 'web' },
-  { path: '/judge',            platform: 'web' },
 
   // 工具
   { path: '/tools/exif',           platform: 'both' },
@@ -132,7 +138,6 @@ export const layoutRoutes: RouteConfig[] = [
   { path: '/settings/llm',     platform: 'both' },
   { path: '/admin',            platform: 'both' },
   { path: '/about',            platform: 'both' },
-  { path: '/cricket-forge',    platform: 'web'  },
 ]
 
 /** 布局外的独立路由（如 /share 不需要 Layout） */

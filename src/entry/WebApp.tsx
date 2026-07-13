@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from 'react-router-dom'
 import WebLayout from '../layouts/WebLayout'
 import ShareRedirect from '../components/ShareRedirect'
 import ErrorBoundary from '../components/ErrorBoundary'
@@ -28,9 +28,7 @@ import {
   TimelineBuilder,
   PlagiarismChecker,
   MultiSourceVerify,
-  DebateArena,
   AIArena,
-  DebatesPage,
   AIBattle,
   RoundTable,
   DebateLobby,
@@ -49,6 +47,9 @@ import {
   AICreationPage,
   EmotionDetector,
   JudgeFeedPage,
+  AIArenaLobby,
+  DebateHallLobby,
+  MelonJudgePage,
 } from '../router/routes'
 
 // 独立路由 → 组件映射
@@ -71,13 +72,18 @@ const pageMap: Record<string, React.LazyExoticComponent<React.ComponentType<any>
   '/hot/:id': HotEventDetailPage,
   '/notes': NotesPage,
   '/notes/:id': NoteDetailPage,
-  '/debates': DebatesPage,
-  '/debate/:melonId/:title': DebateArena,
-  '/debate-lobby': DebateLobby,
-  '/debate-room/:roomId': DebateRoomPage,
-  '/ai-arena/:topicId': AIArena,
-  '/ai-battle': AIBattle,
-  '/round-table': RoundTable,
+  '/entertainment': EntertainmentHallPage,
+  '/entertainment/arena': AIArenaLobby,
+  '/entertainment/arena/ai-battle/:topicId': AIArena,
+  '/entertainment/arena/human-battle': AIBattle,
+  '/entertainment/arena/forge': CricketForge,
+  '/entertainment/debate': DebateHallLobby,
+  '/entertainment/debate/round-table': RoundTable,
+  '/entertainment/debate/lobby': DebateLobby,
+  '/entertainment/debate/room/:roomId': DebateRoomPage,
+  '/entertainment/judge': JudgeFeedPage,
+  '/entertainment/judge/cases': JudgeFeedPage,
+  '/entertainment/judge/melon/:id': MelonJudgePage,
   '/agent-world': AgentWorldPage,
   '/tools/exif': ExifAnalyzer,
   '/tools/reverse-image': ReverseImageSearch,
@@ -88,13 +94,10 @@ const pageMap: Record<string, React.LazyExoticComponent<React.ComponentType<any>
   '/settings/llm': LLMSettingsPage,
   '/admin': AdminPage,
   '/about': AboutPage,
-  '/cricket-forge': CricketForge,
   '/notifications': NotificationPage,
   '/messages': MessagePage,
-  '/entertainment': EntertainmentHallPage,
   '/ai-creation': AICreationPage,
   '/tools/emotion': EmotionDetector,
-  '/judge': JudgeFeedPage,
 }
 
 function PageLoader() {
@@ -103,6 +106,17 @@ function PageLoader() {
       <div className="w-6 h-6 border-2 border-seal/30 border-t-seal rounded-full animate-spin" />
     </div>
   )
+}
+
+/** 保留路径参数的旧路由重定向 */
+function OldRouteRedirect({ to }: { to: string }) {
+  const params = useParams()
+  const location = useLocation()
+  const paramValues = Object.values(params).filter(Boolean)
+  const target = paramValues.length > 0
+    ? `${to}/${paramValues[0]}`
+    : to
+  return <Navigate to={target + location.search} replace />
 }
 
 export default function WebApp() {
@@ -116,6 +130,17 @@ export default function WebApp() {
       <ErrorBoundary>
         <Suspense fallback={<PageLoader />}>
           <Routes>
+            {/* 旧路由重定向 */}
+            <Route path="/debates" element={<Navigate to="/entertainment/arena" replace />} />
+            <Route path="/ai-arena/:topicId" element={<OldRouteRedirect to="/entertainment/arena/ai-battle" />} />
+            <Route path="/ai-battle" element={<Navigate to="/entertainment/arena/human-battle" replace />} />
+            <Route path="/cricket-forge" element={<Navigate to="/entertainment/arena/forge" replace />} />
+            <Route path="/round-table" element={<Navigate to="/entertainment/debate/round-table" replace />} />
+            <Route path="/debate-lobby" element={<Navigate to="/entertainment/debate/lobby" replace />} />
+            <Route path="/debate-room/:roomId" element={<OldRouteRedirect to="/entertainment/debate/room" />} />
+            <Route path="/judge" element={<Navigate to="/entertainment/judge" replace />} />
+            <Route path="/debate/:melonId/:title" element={<OldRouteRedirect to="/entertainment/judge/melon" />} />
+
             {/* 独立路由（无 Layout） */}
             {myStandaloneRoutes.map(r => {
               const Comp = standaloneMap[r.path]
