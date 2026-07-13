@@ -5,7 +5,7 @@
  */
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Scale, BarChart3, RotateCcw } from 'lucide-react'
+import { ArrowLeft, Scale, BarChart3, RotateCcw, ChevronRight, Sprout } from 'lucide-react'
 import JudgeCard from '../components/judge/JudgeCard'
 import { getNextCase, submitVote, getStats, resetVotes } from '../services/judgeService'
 import type { JudgeCase, JudgeVote } from '../types/judge'
@@ -89,6 +89,23 @@ export default function JudgeFeedPage() {
             style={{ width: `${stats.total > 0 ? (stats.voted / stats.total) * 100 : 0}%` }}
           />
         </div>
+      </div>
+
+      {/* 瓜田判官入口 */}
+      <div className={`px-5 mb-3 ${isDesktop ? 'max-w-2xl mx-auto w-full' : ''}`}>
+        <button
+          onClick={() => navigate('/entertainment/judge/melon/melon-1')}
+          className="w-full flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/50 active:scale-[0.98] transition-transform"
+        >
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0">
+            <Sprout size={18} className="text-white" />
+          </div>
+          <div className="flex-1 text-left min-w-0">
+            <p className="text-[13px] font-bold text-ink-900">瓜田判官</p>
+            <p className="text-[11px] text-ink-400">看瓜站队，判真假</p>
+          </div>
+          <ChevronRight size={16} className="text-ink-300" />
+        </button>
       </div>
 
       {/* 内容区 */}
