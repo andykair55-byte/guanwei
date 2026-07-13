@@ -119,3 +119,26 @@ export const PLATFORM_TEMPLATES: Record<PlatformId, PlatformTemplate> = {
 }
 
 export const PLATFORM_LIST = Object.values(PLATFORM_TEMPLATES)
+
+// 默认选中的平台（新建 Workspace 时预填）
+export const DEFAULT_PLATFORMS: PlatformId[] = ['guanwei', 'zhihu', 'xiaohongshu']
+
+// 全局存储的默认平台 key
+const DEFAULT_PLATFORMS_KEY = 'guanwei-default-platforms'
+
+export function getDefaultPlatforms(): PlatformId[] {
+  try {
+    const stored = localStorage.getItem(DEFAULT_PLATFORMS_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed
+    }
+  } catch {
+    // ignore
+  }
+  return DEFAULT_PLATFORMS
+}
+
+export function setDefaultPlatforms(platforms: PlatformId[]): void {
+  localStorage.setItem(DEFAULT_PLATFORMS_KEY, JSON.stringify(platforms))
+}

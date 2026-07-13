@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useSnapshotStore } from '../../stores/snapshotStore'
-import { Clock, ChevronRight } from 'lucide-react'
+import { Clock, ChevronRight, Lock, Unlock } from 'lucide-react'
 
 interface VersionBarProps {
   onRestore?: (content: string, topic: string) => void
@@ -51,23 +51,34 @@ export default function VersionBar({ onRestore, className }: VersionBarProps) {
           const versionNum = snapshots.length - snapshots.findIndex(s => s.id === snap.id)
           const isCurrent = snap.id === currentId
           return (
-            <button
-              key={snap.id}
-              onClick={() => {
-                const restored = restoreSnapshot(snap.id)
-                if (restored && onRestore) {
-                  onRestore(restored.content, restored.draftTopic)
-                }
-              }}
-              className={`px-2 py-0.5 rounded-md text-[11px] whitespace-nowrap transition-colors ${
-                isCurrent
-                  ? 'bg-seal-100 text-seal-700 font-medium'
-                  : 'bg-paper-0 text-ink-400 hover:bg-paper-100 hover:text-ink-600 border border-ink-100'
-              }`}
-            >
-              V{versionNum} {formatTimeAgo(snap.timestamp)}
-              {idx === 0 && isCurrent && ' (自动保存)'}
-            </button>
+            <div key={snap.id} className="flex items-center gap-0.5 shrink-0">
+              <button
+                onClick={() => {
+                  const restored = restoreSnapshot(snap.id)
+                  if (restored && onRestore) {
+                    onRestore(restored.content, restored.draftTopic)
+                  }
+                }}
+                className={`px-2 py-0.5 rounded-md text-[11px] whitespace-nowrap transition-colors ${
+                  isCurrent
+                    ? 'bg-seal-100 text-seal-700 font-medium'
+                    : 'bg-paper-0 text-ink-400 hover:bg-paper-100 hover:text-ink-600 border border-ink-100'
+                }`}
+              >
+                V{versionNum} {formatTimeAgo(snap.timestamp)}
+                {idx === 0 && isCurrent && ' (自动保存)'}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  useSnapshotStore.getState().toggleLock(snap.id)
+                }}
+                className="p-0.5 hover:bg-paper-100 rounded"
+                title={snap.locked ? '解锁' : '锁定'}
+              >
+                {snap.locked ? <Lock size={10} className="text-amber-500" /> : <Unlock size={10} className="text-ink-300" />}
+              </button>
+            </div>
           )
         })}
         {snapshots.length > 5 && !showAll && (

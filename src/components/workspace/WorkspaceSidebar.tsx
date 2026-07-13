@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
 import { useAuthStore } from '../../stores/authStore'
@@ -95,11 +96,14 @@ export default function WorkspaceSidebar({ className }: WorkspaceSidebarProps) {
     .map(id => ALL_NAV_ITEMS.find(item => item.id === id))
     .filter(Boolean) as typeof ALL_NAV_ITEMS
 
-  const active = workspaces.filter(w => w.status === 'active')
-  const drafts = workspaces.filter(w => w.status === 'draft')
-  const completed = workspaces.filter(w => w.status === 'completed')
-  const favorites = workspaces.filter(w => w.status === 'favorite')
-  const archived = workspaces.filter(w => w.status === 'archived')
+  const groups = useMemo(() => {
+    const active = workspaces.filter(w => w.status === 'active' || w.status === 'draft')
+    const completed = workspaces.filter(w => w.status === 'completed' || w.status === 'published')
+    const tracking = workspaces.filter(w => w.status === 'tracking')
+    const favorites = workspaces.filter(w => w.isFavorite && w.status !== 'archived')
+    const archived = workspaces.filter(w => w.status === 'archived')
+    return { active, completed, tracking, favorites, archived }
+  }, [workspaces])
 
   const isNavActive = (path: string) => {
     return location.pathname === path || location.pathname.startsWith(path + '/')
@@ -137,48 +141,53 @@ export default function WorkspaceSidebar({ className }: WorkspaceSidebarProps) {
       </div>
 
       <div className="flex-1 overflow-y-auto py-2 space-y-1">
-        {active.length > 0 && (
-          <div>
-            <div className="px-3 py-1 text-[10px] font-semibold text-ink-400 uppercase tracking-wider">进行中</div>
-            <div className="px-1 space-y-0.5">
-              {active.map(ws => (
-                <WorkspaceItem key={ws.id} ws={ws} active={ws.id === currentId} onClick={() => handleSwitch(ws.id)} />
-              ))}
-            </div>
+        {/* 收藏组 */}
+        {groups.favorites.length > 0 && (
+          <div className="mb-2">
+            <div className="px-3 py-1 text-[11px] text-ink-300 font-medium">收藏</div>
+            {groups.favorites.map(ws => (
+              <WorkspaceItem key={ws.id} ws={ws} active={ws.id === currentId} onClick={() => handleSwitch(ws.id)} />
+            ))}
           </div>
         )}
 
-        {drafts.length > 0 && (
-          <div>
-            <div className="px-3 py-1 text-[10px] font-semibold text-ink-400 uppercase tracking-wider">草稿</div>
-            <div className="px-1 space-y-0.5">
-              {drafts.slice(0, 3).map(ws => (
-                <WorkspaceItem key={ws.id} ws={ws} active={ws.id === currentId} onClick={() => handleSwitch(ws.id)} />
-              ))}
-            </div>
+        {/* 进行中 */}
+        {groups.active.length > 0 && (
+          <div className="mb-2">
+            <div className="px-3 py-1 text-[11px] text-ink-300 font-medium">进行中</div>
+            {groups.active.map(ws => (
+              <WorkspaceItem key={ws.id} ws={ws} active={ws.id === currentId} onClick={() => handleSwitch(ws.id)} />
+            ))}
           </div>
         )}
 
-        {completed.length > 0 && (
-          <div>
-            <div className="px-3 py-1 text-[10px] font-semibold text-ink-400 uppercase tracking-wider">已完成</div>
-            <div className="px-1 space-y-0.5">
-              {completed.slice(0, 3).map(ws => (
-                <WorkspaceItem key={ws.id} ws={ws} active={ws.id === currentId} onClick={() => handleSwitch(ws.id)} />
-              ))}
-            </div>
+        {/* 跟踪中 */}
+        {groups.tracking.length > 0 && (
+          <div className="mb-2">
+            <div className="px-3 py-1 text-[11px] text-ink-300 font-medium">跟踪中</div>
+            {groups.tracking.map(ws => (
+              <WorkspaceItem key={ws.id} ws={ws} active={ws.id === currentId} onClick={() => handleSwitch(ws.id)} />
+            ))}
           </div>
         )}
 
-        {favorites.length > 0 && (
-          <div>
-            <SectionHeader icon={Star} label="收藏夹" count={favorites.length} />
+        {/* 已完成 */}
+        {groups.completed.length > 0 && (
+          <div className="mb-2">
+            <div className="px-3 py-1 text-[11px] text-ink-300 font-medium">已完成</div>
+            {groups.completed.map(ws => (
+              <WorkspaceItem key={ws.id} ws={ws} active={ws.id === currentId} onClick={() => handleSwitch(ws.id)} />
+            ))}
           </div>
         )}
 
-        {archived.length > 0 && (
-          <div>
-            <SectionHeader icon={Archive} label="归档" count={archived.length} />
+        {/* 已归档 */}
+        {groups.archived.length > 0 && (
+          <div className="mb-2">
+            <div className="px-3 py-1 text-[11px] text-ink-300 font-medium">已归档</div>
+            {groups.archived.map(ws => (
+              <WorkspaceItem key={ws.id} ws={ws} active={ws.id === currentId} onClick={() => handleSwitch(ws.id)} />
+            ))}
           </div>
         )}
 

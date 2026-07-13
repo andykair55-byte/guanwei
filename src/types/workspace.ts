@@ -1,5 +1,6 @@
 import type { CanonicalDraft } from './canonicalDraft'
 import { createEmptyDraft } from './canonicalDraft'
+import { getDefaultPlatforms } from '../config/platformTemplates'
 
 export type WorkspaceStatus =
   | 'draft'
@@ -59,11 +60,12 @@ export function createEmptyWorkspace(
   topic: string = '',
   source: WorkspaceSource = { type: 'manual' },
   tags: WorkspaceTag[] = [],
-  platformOrder: string[] = DEFAULT_PLATFORMS,
+  platformOrder?: string[],
 ): Workspace {
+  const resolvedPlatformOrder = platformOrder || getDefaultPlatforms()
   const now = new Date().toISOString()
   const platformContents: Record<string, PlatformContent> = {}
-  for (const p of platformOrder) {
+  for (const p of resolvedPlatformOrder) {
     platformContents[p] = { title: '', content: '', generated: false, overridden: false }
   }
   return {
@@ -74,7 +76,7 @@ export function createEmptyWorkspace(
     isFavorite: false,
     tags,
     source,
-    platformOrder,
+    platformOrder: resolvedPlatformOrder,
     draft: createEmptyDraft(topic),
     platformContents,
     snapshots: [],

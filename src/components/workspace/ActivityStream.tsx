@@ -3,7 +3,7 @@ import EventCard from './EventCard'
 import { useActivityStore } from '../../stores/activityStore'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
 import type { ActivityEvent, AgentTypeLabel } from '../../types/activity'
-import { Filter, Settings } from 'lucide-react'
+import { Filter, Settings, AlertTriangle } from 'lucide-react'
 
 interface ActivityStreamProps {
   onAction?: (actionId: string, event: ActivityEvent) => void
@@ -35,6 +35,9 @@ export default function ActivityStream({ onAction, onQuickReply, className }: Ac
     return all.filter(e => e.agentType === filter)
   }, [eventsByWorkspace, currentId, filter])
 
+  // 检查是否有降级事件
+  const hasDegradedEvents = events.some(e => e.type === 'info' && (e.content.includes('降级') || e.content.includes('degraded')))
+
   useEffect(() => {
     if (autoScroll && containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight
@@ -61,6 +64,13 @@ export default function ActivityStream({ onAction, onQuickReply, className }: Ac
           </button>
         </div>
       </div>
+
+      {hasDegradedEvents && (
+        <div className="px-3 py-2 bg-amber-50 border-b border-amber-200 flex items-center gap-2 text-[12px] text-amber-700">
+          <AlertTriangle size={14} className="shrink-0" />
+          <span>当前使用降级模式，结果可能受限</span>
+        </div>
+      )}
 
       <div className="flex items-center gap-1 px-3 py-2 border-b border-ink-100 overflow-x-auto scrollbar-none">
         {FILTERS.map(f => (
