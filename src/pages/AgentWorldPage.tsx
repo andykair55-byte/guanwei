@@ -11,7 +11,7 @@ import { useActivityStore } from '../stores/activityStore'
 import { useCommanderStore } from '../stores/commanderStore'
 import { useCanonicalStore } from '../stores/canonicalStore'
 import { useSnapshotStore } from '../stores/snapshotStore'
-import { handleUserInput, sendWelcome, quickStart, confirmPlan, resetCommander } from '../services/commanderService'
+import { handleUserInput, quickStart, confirmPlan, resetCommander } from '../services/commanderService'
 import { PLATFORM_TEMPLATES, type PlatformId } from '../config/platformTemplates'
 import { adaptToPlatform } from '../services/platformAdapter'
 import type { ActivityEvent } from '../types/activity'
@@ -76,6 +76,14 @@ export default function AgentWorldPage() {
 
     const isDemo = searchParams.get('demo') === 'true'
     const titleParam = searchParams.get('title')
+    const existingWorkspaces = useWorkspaceStore.getState().workspaces
+
+    // 如果已有 Workspace，切换到最近的
+    if (existingWorkspaces.length > 0 && !isDemo && !titleParam) {
+      const recent = existingWorkspaces[0]
+      switchWorkspace(recent.id)
+      return
+    }
 
     const topic = isDemo ? DEMO_TOPIC : (titleParam || '')
     const ws = createWorkspace(topic)
@@ -87,8 +95,16 @@ export default function AgentWorldPage() {
         quickStart(ws.id, topic, mode)
       }, 300)
     } else {
+      // 首次用户引导：发送欢迎消息
       setTimeout(() => {
-        sendWelcome(ws.id)
+        const { addEventSimple } = useActivityStore.getState()
+        addEventSimple(
+          ws.id,
+          'commander_welcome',
+          'orchestrator',
+          '欢迎使用工作间',
+          '我可以帮你把一个话题变成多个平台的内容。先告诉我你想写什么？'
+        )
       }, 300)
     }
 
