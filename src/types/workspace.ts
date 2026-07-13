@@ -1,12 +1,39 @@
 import type { CanonicalDraft } from './canonicalDraft'
 import { createEmptyDraft } from './canonicalDraft'
 
-export type WorkspaceStatus = 'active' | 'draft' | 'completed' | 'favorite' | 'archived'
+export type WorkspaceStatus =
+  | 'draft'
+  | 'active'
+  | 'completed'
+  | 'published'
+  | 'tracking'
+  | 'archived'
+
+export type WorkspaceTag = 'hotspot' | 'science' | 'meme' | 'opinion' | 'debunk' | string
+
+export type WorkspaceSource =
+  | { type: 'manual' }
+  | { type: 'melon'; id: string }
+  | { type: 'community'; id: string }
+  | { type: 'template'; templateId: string }
+  | { type: 'copy'; workspaceId: string }
 
 export interface PlatformContent {
-  content: string
   title: string
+  content: string
   generated: boolean
+  overridden: boolean
+  generatedAt?: string
+  overriddenAt?: string
+}
+
+export interface WorkspaceSnapshot {
+  id: string
+  draft: CanonicalDraft
+  platformContents: Record<string, PlatformContent>
+  description: string
+  createdAt: string
+  locked: boolean
 }
 
 export interface Workspace {
@@ -14,30 +41,46 @@ export interface Workspace {
   title: string
   topic: string
   status: WorkspaceStatus
-  createdAt: string
-  updatedAt: string
+  isFavorite: boolean
+  tags: WorkspaceTag[]
+  source: WorkspaceSource
+  platformOrder: string[]
   draft: CanonicalDraft
   platformContents: Record<string, PlatformContent>
-  melonId?: string
+  snapshots: WorkspaceSnapshot[]
+  previousStatus?: WorkspaceStatus
+  createdAt: string
+  updatedAt: string
 }
 
-export function createEmptyWorkspace(topic: string = ''): Workspace {
+const DEFAULT_PLATFORMS = ['guanwei', 'zhihu', 'xiaohongshu']
+
+export function createEmptyWorkspace(
+  topic: string = '',
+  source: WorkspaceSource = { type: 'manual' },
+  tags: WorkspaceTag[] = [],
+  platformOrder: string[] = DEFAULT_PLATFORMS,
+): Workspace {
   const now = new Date().toISOString()
+  const platformContents: Record<string, PlatformContent> = {}
+  for (const p of platformOrder) {
+    platformContents[p] = { title: '', content: '', generated: false, overridden: false }
+  }
   return {
     id: `ws-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     title: topic || '新工作空间',
     topic,
-    status: 'active',
+    status: 'draft',
+    isFavorite: false,
+    tags,
+    source,
+    platformOrder,
+    draft: createEmptyDraft(topic),
+    platformContents,
+    snapshots: [],
     createdAt: now,
     updatedAt: now,
-    draft: createEmptyDraft(topic),
-    platformContents: {
-      guanwei: { content: '', title: '', generated: false },
-      douyin: { content: '', title: '', generated: false },
-      weibo: { content: '', title: '', generated: false },
-      zhihu: { content: '', title: '', generated: false },
-      tieba: { content: '', title: '', generated: false },
-      xiaohongshu: { content: '', title: '', generated: false },
-    },
   }
 }
+
+export const ALL_PLATFORMS = ['guanwei', 'zhihu', 'xiaohongshu', 'weibo', 'douyin', 'tieba'] as const

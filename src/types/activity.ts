@@ -1,8 +1,10 @@
 export type EventType =
+  | 'agent_started'
   | 'search_complete'
   | 'research_complete'
   | 'verify_warning'
   | 'writing_complete'
+  | 'platform_complete'
   | 'commander_question'
   | 'commander_plan'
   | 'commander_welcome'
