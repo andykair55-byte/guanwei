@@ -122,6 +122,32 @@ export default function AgentWorldPage() {
     await handleUserInput(currentId, text, mode)
   }, [currentId, mode])
 
+  const handleGeneratePlatform = useCallback(async (platform: PlatformId) => {
+    if (!current) return
+    setGeneratingPlatform(platform)
+    try {
+      const result = await adaptToPlatform(current.draft, platform)
+      updatePlatformContent(platform, { content: result.content, title: result.title, generated: true })
+      addEventSimple(currentId!, 'writing_complete', 'writing',
+        `${PLATFORM_TEMPLATES[platform].name}版本已生成`,
+        result.content.slice(0, 100) + '...',
+        [{ id: `platform-${platform}`, label: '查看', style: 'primary' }]
+      )
+    } catch (e) {
+      addEventSimple(currentId!, 'error', 'system', '生成失败', String(e))
+    } finally {
+      setGeneratingPlatform(null)
+    }
+  }, [current, updatePlatformContent, addEventSimple, currentId])
+
+  const handleGenerateAll = useCallback(async () => {
+    for (const p of availablePlatforms) {
+      if (p !== 'guanwei') {
+        await handleGeneratePlatform(p)
+      }
+    }
+  }, [handleGeneratePlatform, availablePlatforms])
+
   const handleAction = useCallback(async (actionId: string, _event: ActivityEvent) => {
     if (!currentId) return
 
@@ -159,32 +185,6 @@ export default function AgentWorldPage() {
   const handlePlatformChange = useCallback((platform: PlatformId) => {
     setActivePlatform(platform)
   }, [])
-
-  const handleGeneratePlatform = useCallback(async (platform: PlatformId) => {
-    if (!current) return
-    setGeneratingPlatform(platform)
-    try {
-      const result = await adaptToPlatform(current.draft, platform)
-      updatePlatformContent(platform, { content: result.content, title: result.title, generated: true })
-      addEventSimple(currentId!, 'writing_complete', 'writing',
-        `${PLATFORM_TEMPLATES[platform].name}版本已生成`,
-        result.content.slice(0, 100) + '...',
-        [{ id: `platform-${platform}`, label: '查看', style: 'primary' }]
-      )
-    } catch (e) {
-      addEventSimple(currentId!, 'error', 'system', '生成失败', String(e))
-    } finally {
-      setGeneratingPlatform(null)
-    }
-  }, [current, updatePlatformContent, addEventSimple, currentId])
-
-  const handleGenerateAll = useCallback(async () => {
-    for (const p of availablePlatforms) {
-      if (p !== 'guanwei') {
-        await handleGeneratePlatform(p)
-      }
-    }
-  }, [handleGeneratePlatform, availablePlatforms])
 
   const handlePublish = useCallback(async (platform: PlatformId) => {
     const content = current?.platformContents?.[platform]?.content || ''
