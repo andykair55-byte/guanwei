@@ -28,14 +28,16 @@ function WorkspaceItem({ ws, active, onClick }: { ws: Workspace; active: boolean
     active: 'bg-emerald-500',
     draft: 'bg-ink-300',
     completed: 'bg-blue-500',
-    favorite: 'bg-amber-500',
+    published: 'bg-emerald-500',
+    tracking: 'bg-blue-500',
     archived: 'bg-ink-200',
   }
   const statusLabels: Record<WorkspaceStatus, string> = {
     active: '进行中',
     draft: '草稿',
     completed: '已完成',
-    favorite: '收藏',
+    published: '已发布',
+    tracking: '跟踪中',
     archived: '归档',
   }
 

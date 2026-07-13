@@ -16,8 +16,6 @@ import { PLATFORM_TEMPLATES, type PlatformId } from '../config/platformTemplates
 import { adaptToPlatform } from '../services/platformAdapter'
 import type { ActivityEvent } from '../types/activity'
 
-const PLATFORM_IDS: PlatformId[] = ['guanwei', 'zhihu', 'xiaohongshu', 'weibo', 'douyin', 'tieba']
-
 const PLATFORM_SHORT: Record<PlatformId, string> = {
   guanwei: '观', zhihu: '知', xiaohongshu: '红', weibo: '微', douyin: '抖', tieba: '贴'
 }
@@ -32,6 +30,10 @@ export default function AgentWorldPage() {
   const currentId = useWorkspaceStore(s => s.currentId)
   const workspaces = useWorkspaceStore(s => s.workspaces)
   const current = useMemo(() => workspaces.find(w => w.id === currentId) || null, [workspaces, currentId])
+  const availablePlatforms = useMemo(
+    () => (current?.platformOrder || ['guanwei']) as PlatformId[],
+    [current?.platformOrder]
+  )
   const createWorkspace = useWorkspaceStore(s => s.createWorkspace)
   const switchWorkspace = useWorkspaceStore(s => s.switchWorkspace)
   const updatePlatformContent = useWorkspaceStore(s => s.updatePlatformContent)
@@ -49,6 +51,8 @@ export default function AgentWorldPage() {
   const [generatingPlatform, setGeneratingPlatform] = useState<PlatformId | null>(null)
   const [copied, setCopied] = useState(false)
   const [lastSaved, setLastSaved] = useState(Date.now())
+  const [showPlatformMenu, setShowPlatformMenu] = useState(false)
+  const [publishingPlatforms, setPublishingPlatforms] = useState<Set<string>>(new Set())
   const initRef = useRef(false)
 
   const [saveLabel, setSaveLabel] = useState('已保存')
@@ -111,7 +115,7 @@ export default function AgentWorldPage() {
       addEventSimple(currentId, 'commander_question', 'orchestrator', '修改计划', '你想怎么调整？可以告诉我需要修改的地方。')
     } else if (actionId.startsWith('platform-')) {
       const platform = actionId.replace('platform-', '') as PlatformId
-      if (PLATFORM_IDS.includes(platform)) {
+      if (availablePlatforms.includes(platform)) {
         setActivePlatform(platform)
       }
     } else if (actionId === 'adapt_all') {
@@ -119,7 +123,7 @@ export default function AgentWorldPage() {
     } else if (actionId === 'reverify') {
       addEventSimple(currentId, 'info', 'verify', '重新核查', '正在重新核查存疑信息...')
     }
-  }, [currentId, mode, addEventSimple])
+  }, [currentId, mode, addEventSimple, availablePlatforms])
 
   const handleQuickReply = useCallback((text: string) => {
     handleSend(text)
@@ -127,7 +131,7 @@ export default function AgentWorldPage() {
 
   const handleEditorChange = useCallback((content: string) => {
     if (!currentId) return
-    updatePlatformContent(activePlatform, { content, generated: false })
+    updatePlatformContent(activePlatform, { content })
     setLastSaved(Date.now())
   }, [currentId, activePlatform, updatePlatformContent])
 
@@ -159,12 +163,12 @@ export default function AgentWorldPage() {
   }, [current, updatePlatformContent, addEventSimple, currentId])
 
   const handleGenerateAll = useCallback(async () => {
-    for (const p of PLATFORM_IDS) {
+    for (const p of availablePlatforms) {
       if (p !== 'guanwei') {
         await handleGeneratePlatform(p)
       }
     }
-  }, [handleGeneratePlatform])
+  }, [handleGeneratePlatform, availablePlatforms])
 
   const handlePublish = useCallback(async (platform: PlatformId) => {
     const content = current?.platformContents?.[platform]?.content || ''
@@ -177,7 +181,15 @@ export default function AgentWorldPage() {
     if (url && url.startsWith('http')) {
       window.open(url, '_blank')
     }
+    // 标记为待确认发布
+    setPublishingPlatforms(prev => new Set(prev).add(platform))
   }, [current])
+
+  const confirmPublished = useCallback(() => {
+    if (!currentId) return
+    useWorkspaceStore.getState().setStatus(currentId, 'published')
+    setPublishingPlatforms(new Set())
+  }, [currentId])
 
   useEffect(() => {
     if (!currentId || !editorContent.trim()) return
@@ -280,7 +292,7 @@ export default function AgentWorldPage() {
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
             通用稿（主稿）
           </button>
-          {PLATFORM_IDS.filter(p => p !== 'guanwei').map(p => (
+          {availablePlatforms.filter(p => p !== 'guanwei').map(p => (
             <button
               key={p}
               onClick={() => handlePlatformChange(p)}
@@ -297,22 +309,59 @@ export default function AgentWorldPage() {
               )}
             </button>
           ))}
-          <button className="w-7 h-7 rounded-full border-2 border-dashed border-ink-200 flex items-center justify-center text-ink-300 hover:text-ink-500 hover:border-ink-300 shrink-0">
-            <Plus size={13} />
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowPlatformMenu(!showPlatformMenu)}
+              className="w-7 h-7 rounded-full border-2 border-dashed border-ink-200 flex items-center justify-center text-ink-300 hover:text-ink-500 hover:border-ink-300 shrink-0"
+            >
+              <Plus size={13} />
+            </button>
+            {showPlatformMenu && (
+              <div className="absolute top-full left-0 mt-1 bg-paper-0 border border-ink-100 rounded-lg shadow-lg z-50 min-w-[120px]">
+                {(['zhihu', 'xiaohongshu', 'weibo', 'douyin', 'tieba'] as PlatformId[])
+                  .filter(p => !availablePlatforms.includes(p))
+                  .map(p => (
+                    <button
+                      key={p}
+                      onClick={() => {
+                        if (currentId) {
+                          useWorkspaceStore.getState().addPlatform(currentId, p)
+                        }
+                        setShowPlatformMenu(false)
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-[12px] text-ink-700 hover:bg-paper-50"
+                    >
+                      {PLATFORM_TEMPLATES[p].name}
+                    </button>
+                  ))}
+              </div>
+            )}
+          </div>
           <div className="flex-1" />
           <div className="flex items-center gap-1">
             <span className="text-[12px] text-ink-400 mr-1">发布到</span>
-            {PLATFORM_IDS.map(p => (
+            {availablePlatforms.map(p => (
               <button
                 key={p}
                 onClick={() => handlePublish(p)}
-                className="w-7 h-7 rounded-lg border border-ink-200 flex items-center justify-center text-[10px] font-medium text-ink-600 hover:border-seal-400 hover:text-seal-600 transition-colors shrink-0"
+                className={`w-7 h-7 rounded-lg border flex items-center justify-center text-[10px] font-medium transition-colors shrink-0 ${
+                  publishingPlatforms.has(p)
+                    ? 'border-emerald-500 text-emerald-600 bg-emerald-50'
+                    : 'border-ink-200 text-ink-600 hover:border-seal-400 hover:text-seal-600'
+                }`}
                 title={`发布到${PLATFORM_TEMPLATES[p].name}${copied ? '（已复制）' : ''}`}
               >
                 {PLATFORM_SHORT[p]}
               </button>
             ))}
+            {publishingPlatforms.size > 0 && (
+              <button
+                onClick={confirmPublished}
+                className="ml-1 px-3 py-1 rounded-lg bg-emerald-500 text-white text-[12px] font-medium"
+              >
+                已完成发布 ({publishingPlatforms.size})
+              </button>
+            )}
           </div>
         </div>
 
