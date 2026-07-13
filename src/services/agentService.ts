@@ -38,6 +38,38 @@ function genId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
+// ===== 超时与去重 =====
+
+const AGENT_TIMEOUT_MS = 30_000
+
+function withTimeout<T>(promise: Promise<T>, agentType: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${agentType} Agent 执行超时（${AGENT_TIMEOUT_MS / 1000}s）`)), AGENT_TIMEOUT_MS)
+    ),
+  ])
+}
+
+// 去重：同一 Agent 同一 Workspace 只能有一个运行中任务
+const runningAgents = new Map<string, AbortController>()
+
+function startAgent(workspaceId: string, agentType: string): AbortController | null {
+  const key = `${workspaceId}:${agentType}`
+  const existing = runningAgents.get(key)
+  if (existing) {
+    existing.abort()
+  }
+  const controller = new AbortController()
+  runningAgents.set(key, controller)
+  return controller
+}
+
+function endAgent(workspaceId: string, agentType: string): void {
+  const key = `${workspaceId}:${agentType}`
+  runningAgents.delete(key)
+}
+
 // 主Agent：分析主题→生成搜索关键词
 export async function runOrchestrator(topic: string): Promise<OrchestratorOutput> {
   const { setAgentStatus, addLog } = useCommanderStore.getState()
@@ -46,7 +78,7 @@ export async function runOrchestrator(topic: string): Promise<OrchestratorOutput
 
   try {
     setAgentStatus('orchestrator', 'running', '生成搜索策略')
-    const response = await callLLM([
+    const response = await withTimeout(callLLM([
       {
         role: 'system',
         content: '你是一个热点分析专家。分析给定主题，生成3-5个最有效的搜索关键词。只返回JSON格式。'
@@ -55,7 +87,7 @@ export async function runOrchestrator(topic: string): Promise<OrchestratorOutput
         role: 'user',
         content: `主题：${topic}\n\n生成3-5个搜索关键词，用于全面搜集相关信息。返回JSON格式：{"keywords": ["关键词1", "关键词2", ...], "analysis": "主题分析摘要"}`
       }
-    ], { maxTokens: 500, temperature: 0.3 })
+    ], { maxTokens: 500, temperature: 0.3 }), 'orchestrator')
 
     // 解析JSON（LLM可能返回markdown代码块包裹的JSON）
     const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
@@ -160,7 +192,7 @@ export async function runResearchAgent(searchResults: SearchResult[], topic: str
       .map((r, i) => `[${i + 1}] ${r.title}\n来源：${r.source}\n摘要：${r.snippet}`)
       .join('\n\n')
 
-    const response = await callLLM([
+    const response = await withTimeout(callLLM([
       {
         role: 'system',
         content: '你是一个研究分析专家。基于搜索结果，提炼多个角度的观点和核心争议点。只返回JSON格式。'
@@ -169,7 +201,7 @@ export async function runResearchAgent(searchResults: SearchResult[], topic: str
         role: 'user',
         content: `主题：${topic}\n\n搜索结果：\n${resultsText}\n\n请提炼3-5个不同角度的观点，每个观点包含立场、论点、支撑事实。同时列出2-3个核心争议点。\n返回JSON格式：{"viewpoints": [{"stance": "立场", "argument": "论点", "supportingFacts": []}], "keyConflicts": ["争议1", "争议2"]}`
       }
-    ], { maxTokens: 1000, temperature: 0.5 })
+    ], { maxTokens: 1000, temperature: 0.5 }), 'research')
 
     const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
     const parsed = JSON.parse(cleaned)
@@ -214,7 +246,7 @@ export async function runVerifyAgent(searchResults: SearchResult[]): Promise<Ver
       .map((r, i) => `[${i + 1}] ${r.snippet}（来源：${r.source}）`)
       .join('\n')
 
-    const response = await callLLM([
+    const response = await withTimeout(callLLM([
       {
         role: 'system',
         content: '你是一个事实核查专家。从搜索结果中提取关键事实声明，并评估每条声明的可信度。只返回JSON格式。'
@@ -223,7 +255,7 @@ export async function runVerifyAgent(searchResults: SearchResult[]): Promise<Ver
         role: 'user',
         content: `搜索结果：\n${resultsText}\n\n提取最多5条关键事实声明，评估每条的可信度。\n返回JSON格式：{"claims": [{"text": "声明内容", "type": "fact|data|quote|prediction", "status": "verified|disputed|unverifiable", "evidence": "核查依据"}]}`
       }
-    ], { maxTokens: 800, temperature: 0.3 })
+    ], { maxTokens: 800, temperature: 0.3 }), 'verify')
 
     const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
     const parsed = JSON.parse(cleaned)
@@ -273,7 +305,7 @@ export async function runWritingAgent(
     const viewsText = viewpoints.map(v => `- 【${v.stance}】${v.argument}`).join('\n')
     const refsText = references.map(r => `- ${r.title}（${r.source}）${r.url}`).join('\n')
 
-    const response = await callLLM([
+    const response = await withTimeout(callLLM([
       {
         role: 'system',
         content: '你是一个专业写作Agent。基于收集的事实、核查结果和观点，生成结构化的文章。返回JSON格式，包含标题、章节结构和正文内容。正文使用Markdown格式。'
@@ -282,7 +314,7 @@ export async function runWritingAgent(
         role: 'user',
         content: `主题：${topic}\n\n事实：\n${factsText}\n\n核查结果：\n${claimsText}\n\n观点：\n${viewsText}\n\n引用来源：\n${refsText}\n\n请生成：\n1. 一个吸引人的标题\n2. 4-5个章节的结构（每节有标题、类型、要点）\n3. 完整的Markdown正文（引用使用 > [来源] 格式）\n\n返回JSON格式：{"title": "标题", "structure": [{"title": "节标题", "type": "intro|background|analysis|argument|conclusion", "points": ["要点1", "要点2"]}], "content": "完整Markdown正文"}`
       }
-    ], { maxTokens: 3000, temperature: 0.7 })
+    ], { maxTokens: 3000, temperature: 0.7 }), 'writing')
 
     const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
     const parsed = JSON.parse(cleaned)
@@ -356,6 +388,9 @@ export async function runAutoPipeline(topic: string): Promise<void> {
     // 5. 完成
     useCommanderStore.getState().addLog('orchestrator', '管线执行完成！', 'success')
     useCommanderStore.setState({ pipelineStatus: 'completed', currentAgent: null })
+
+    // 管线完成后清理 runningAgents
+    runningAgents.clear()
 
     return
   } catch (e) {

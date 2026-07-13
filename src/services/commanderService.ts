@@ -2,10 +2,57 @@ import { callLLM } from '../stores/llmStore'
 import { type SearchResult } from './searchService'
 import { runOrchestrator, runSearchAgent, runResearchAgent, runVerifyAgent, runWritingAgent } from './agentService'
 import { adaptToAllPlatforms } from './platformAdapter'
+import { filterUserInput } from './contentFilter'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useActivityStore } from '../stores/activityStore'
 import { useCanonicalStore } from '../stores/canonicalStore'
 import type { EventAction } from '../types/activity'
+
+// ===== 信息完整度判断（MVP 简化版） =====
+
+export interface CompletenessResult {
+  isComplete: boolean
+  missing: string[]
+  question?: string
+}
+
+const PLATFORM_KEYWORDS: Record<string, string[]> = {
+  zhihu: ['知乎', 'zhihu'],
+  xiaohongshu: ['小红书', '红书', 'xiaohongshu'],
+  weibo: ['微博', 'weibo'],
+  douyin: ['抖音', 'douyin'],
+  tieba: ['贴吧', 'tieba'],
+  guanwei: ['观微', 'guanwei'],
+}
+
+export function checkCompleteness(input: string): CompletenessResult {
+  const missing: string[] = []
+
+  if (!input || input.trim().length < 4) {
+    missing.push('topic')
+  }
+
+  const lower = input.toLowerCase()
+  const hasPlatform = Object.values(PLATFORM_KEYWORDS).some(keywords =>
+    keywords.some(kw => lower.includes(kw.toLowerCase()))
+  )
+  if (!hasPlatform) {
+    missing.push('platform')
+  }
+
+  if (missing.length > 0) {
+    const questions: string[] = []
+    if (missing.includes('topic')) questions.push('你想写什么主题？')
+    if (missing.includes('platform')) questions.push('目标发布在哪个平台？')
+    return {
+      isComplete: false,
+      missing,
+      question: questions.join(' '),
+    }
+  }
+
+  return { isComplete: true, missing: [] }
+}
 
 interface TaskSpec {
   goal: string
@@ -76,6 +123,13 @@ export function sendWelcome(workspaceId: string) {
 }
 
 export async function handleUserInput(workspaceId: string, input: string, mode: 'assist' | 'auto'): Promise<void> {
+  // 内容策略过滤
+  const filterResult = filterUserInput(input)
+  if (!filterResult.passed) {
+    useActivityStore.getState().addEventSimple(workspaceId, 'error', 'system', '内容被拦截', filterResult.reason || '输入内容不合规')
+    return
+  }
+
   addEvent(workspaceId, 'user_action', 'user', '你', input, undefined, { input })
 
   const current = useWorkspaceStore.getState().getCurrent()
@@ -282,6 +336,7 @@ async function executePlan(workspaceId: string, mode: 'assist' | 'auto'): Promis
 
   try {
     if (state.plan[state.currentStep]?.agent === 'search') {
+      useActivityStore.getState().addEventSimple(workspaceId, 'agent_started', 'search', '搜索员启动', '正在搜集相关信息...')
       addEvent(workspaceId, 'info', 'search', '搜索开始', '正在搜集相关信息...')
       const orchOutput = await runOrchestrator(state.spec.goal)
       const searchOutput = await runSearchAgent(orchOutput.keywords)
@@ -304,6 +359,7 @@ async function executePlan(workspaceId: string, mode: 'assist' | 'auto'): Promis
     }
 
     if (state.plan[state.currentStep]?.agent === 'research') {
+      useActivityStore.getState().addEventSimple(workspaceId, 'agent_started', 'research', '研究员启动', '正在整理资料与观点...')
       addEvent(workspaceId, 'info', 'research', '研究开始', '正在提炼多角度观点...')
       const researchOutput = await runResearchAgent(searchResults, state.spec.goal)
 
@@ -324,6 +380,7 @@ async function executePlan(workspaceId: string, mode: 'assist' | 'auto'): Promis
     }
 
     if (state.plan[state.currentStep]?.agent === 'verify') {
+      useActivityStore.getState().addEventSimple(workspaceId, 'agent_started', 'verify', '核查员启动', '正在核查关键声明...')
       addEvent(workspaceId, 'info', 'verify', '核查开始', '正在验证事实声明...')
       const verifyOutput = await runVerifyAgent(searchResults)
 
@@ -356,6 +413,7 @@ async function executePlan(workspaceId: string, mode: 'assist' | 'auto'): Promis
     const canonDraft = useCanonicalStore.getState().draft
 
     if (state.plan[state.currentStep]?.agent === 'writing') {
+      useActivityStore.getState().addEventSimple(workspaceId, 'agent_started', 'writing', '写作员启动', '正在生成主稿...')
       addEvent(workspaceId, 'info', 'writing', '写作开始', '正在组织结构，生成标准稿...')
       const writingOutput = await runWritingAgent(
         state.spec.goal,

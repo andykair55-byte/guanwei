@@ -110,11 +110,12 @@ export async function adaptToPlatform(
 
 // 批量适配到所有平台
 export async function adaptToAllPlatforms(
-  draft: CanonicalDraft
+  draft: CanonicalDraft,
+  platforms?: string[]
 ): Promise<PlatformContent[]> {
-  const platforms: PlatformId[] = ['guanwei', 'douyin', 'weibo', 'zhihu', 'tieba', 'xiaohongshu']
+  const targetPlatforms = (platforms as PlatformId[]) || ['guanwei', 'douyin', 'weibo', 'zhihu', 'tieba', 'xiaohongshu']
   const results = await Promise.allSettled(
-    platforms.map(p => adaptToPlatform(draft, p))
+    targetPlatforms.map(p => adaptToPlatform(draft, p))
   )
 
   return results
