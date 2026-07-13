@@ -596,7 +596,7 @@ export default function MelonFieldPage() {
                   <span>去求证</span>
                 </button>
                 <button
-                  onClick={() => navigate('/debates')}
+                  onClick={() => navigate('/entertainment/arena')}
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/70 backdrop-blur-sm text-emerald-800 text-[13px] font-semibold border border-emerald-200/50 hover:bg-white hover:shadow-md transition-all"
                 >
                   <Swords size={14} />
@@ -744,7 +744,7 @@ export default function MelonFieldPage() {
             <span>AI求证</span>
           </button>
           <div className="w-px h-4 bg-gray-100" />
-          <button onClick={() => navigate('/debates')} className="flex items-center gap-2 text-[13px] text-gray-500 hover:text-red-500 transition-colors font-medium">
+          <button onClick={() => navigate('/entertainment/arena')} className="flex items-center gap-2 text-[13px] text-gray-500 hover:text-red-500 transition-colors font-medium">
             <Swords size={16} strokeWidth={2} />
             <span>辩论对决</span>
           </button>

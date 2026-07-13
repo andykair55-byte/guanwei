@@ -74,7 +74,7 @@ function MelonRightPanel() {
             <h3 className="text-[15px] font-bold text-[#111] tracking-tight">热点辩论</h3>
           </div>
           <button
-            onClick={() => navigate('/debates')}
+            onClick={() => navigate('/entertainment/arena')}
             className="flex items-center gap-0.5 text-[12px] text-[#999] hover:text-emerald-500 transition-colors"
           >
             更多 <ChevronRight size={12} />
@@ -85,7 +85,7 @@ function MelonRightPanel() {
           {melonDebates.map((debate) => (
             <button
               key={debate.id}
-              onClick={() => navigate('/debates')}
+              onClick={() => navigate('/entertainment/arena')}
               className="w-full text-left group p-3 rounded-xl hover:bg-emerald-50/50 transition-colors border border-transparent hover:border-emerald-100"
             >
               <p className="text-[13px] text-[#333] leading-snug group-hover:text-[#111] transition-colors line-clamp-2 font-medium mb-2">
@@ -112,7 +112,7 @@ function MelonRightPanel() {
 
         {/* 参与辩论按钮 */}
         <button
-          onClick={() => navigate('/debate-lobby')}
+          onClick={() => navigate('/entertainment/debate/lobby')}
           className="w-full mt-4 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-[13px] font-semibold rounded-xl transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
         >
           参与辩论
