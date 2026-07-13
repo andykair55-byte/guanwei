@@ -149,13 +149,17 @@ export default function AgentWorldPage() {
       wsStore.updatePlatformContent('douyin', { title: 'AI换脸诈骗防骗指南｜1分钟学会3个技巧', content: douyinContent, generated: true })
       wsStore.updatePlatformContent('tieba', { title: '老哥们小心AI换脸诈骗，刚经历了一场', content: '刚差点被AI换脸骗了，发出来给老哥们提个醒。\n\n昨晚接到一个"朋友"的视频电话，声音画面都一模一样，说是急用钱要借5000。还好我多了个心眼，让他捏一下鼻子——结果画面直接卡住了。\n\n后来查了下才知道现在AI换脸技术已经这么发达了，几十张照片就能合成。公安部数据显示今年已经123起了，金额2.3亿。\n\n总结几个防骗经验：\n- 视频通话让对方做动作\n- 家里设个暗号\n- 涉及钱一定电话确认\n\n大家都小心点！', generated: true })
 
-      // 2c. 添加活动事件（时间倒序，与实际演示一致）
+      // 2c. 添加活动事件（管线时间线，含 agent_started）
       const events = [
-        { type: 'commander_plan' as EventType, agent: 'orchestrator' as AgentTypeLabel, title: '任务规划已完成，5 个 Agent 已启动', content: '话题拆解为 4 个子任务：资料搜集、观点提炼、事实核查、多平台写作', offset: 600000 },
-        { type: 'search_complete' as EventType, agent: 'search' as AgentTypeLabel, title: '找到 8 篇相关报道和 12 个数据源', content: '覆盖公安部、工信部、学术论文及主流媒体报道', actions: [{ id: 'view_results', label: '查看结果' }, { id: 'cite_all', label: '引用全部', style: 'primary' }], offset: 540000 },
-        { type: 'research_complete' as EventType, agent: 'research' as AgentTypeLabel, title: '提炼出 4 个核心观点', content: '技术滥用门槛降低是主因、监管存在滞后性和盲区、平台责任边界模糊、公众防范意识不足', actions: [{ id: 'view_details', label: '查看详情' }, { id: 'adopt_views', label: '采纳观点', style: 'primary' }], offset: 480000 },
-        { type: 'verify_warning' as EventType, agent: 'verify' as AgentTypeLabel, title: '发现 2 条信息存疑', content: '某平台用户量数据无法验证来源；案件破获率数据存在差异', actions: [{ id: 'reverify', label: '重新核查' }, { id: 'view_evidence', label: '查看证据' }], offset: 420000 },
-        { type: 'writing_complete' as EventType, agent: 'writing' as AgentTypeLabel, title: '已生成 6 个平台版本', content: '知乎、小红书、微博、抖音、B站、贴吧版本均已适配', actions: [{ id: 'platform-zhihu', label: '知' }, { id: 'platform-xiaohongshu', label: '红' }, { id: 'platform-weibo', label: '微' }, { id: 'platform-douyin', label: '抖' }, { id: 'platform-tieba', label: '贴' }, { id: 'switch_view', label: '切换查看', style: 'primary' }], offset: 360000 },
+        { type: 'commander_plan' as EventType, agent: 'orchestrator' as AgentTypeLabel, title: '任务规划完成', content: '资料搜集 → 观点提炼 → 事实核查 → 多平台写作', offset: 660000 },
+        { type: 'agent_started' as EventType, agent: 'search' as AgentTypeLabel, title: '正在搜集相关资料…', content: '', offset: 600000 },
+        { type: 'search_complete' as EventType, agent: 'search' as AgentTypeLabel, title: '找到 8 篇报道和 12 个数据源', content: '覆盖公安部、工信部、学术论文及主流媒体报道', actions: [{ id: 'cite_all', label: '引用全部', style: 'primary' as const }], offset: 540000 },
+        { type: 'agent_started' as EventType, agent: 'research' as AgentTypeLabel, title: '正在提炼核心观点…', content: '', offset: 510000 },
+        { type: 'research_complete' as EventType, agent: 'research' as AgentTypeLabel, title: '提炼出 4 个核心观点', content: '技术滥用门槛降低、监管存在滞后性、平台责任边界模糊、公众防范意识不足', actions: [{ id: 'adopt_views', label: '采纳观点', style: 'primary' as const }], offset: 480000 },
+        { type: 'agent_started' as EventType, agent: 'verify' as AgentTypeLabel, title: '正在核查关键声明…', content: '', offset: 450000 },
+        { type: 'verify_warning' as EventType, agent: 'verify' as AgentTypeLabel, title: '2 条信息存疑', content: '某平台用户量数据无法验证；案件破获率数据存在差异', actions: [{ id: 'reverify', label: '重新核查' }], offset: 420000 },
+        { type: 'agent_started' as EventType, agent: 'writing' as AgentTypeLabel, title: '正在生成各平台版本…', content: '', offset: 390000 },
+        { type: 'writing_complete' as EventType, agent: 'writing' as AgentTypeLabel, title: '5 个平台版本已生成', content: '知乎、小红书、微博、抖音、贴吧均已适配', actions: [{ id: 'platform-zhihu', label: '知' }, { id: 'platform-xiaohongshu', label: '红' }, { id: 'platform-weibo', label: '微' }, { id: 'platform-douyin', label: '抖' }, { id: 'platform-tieba', label: '贴' }], offset: 360000 },
       ]
 
       for (const evt of events) {
@@ -259,8 +263,6 @@ export default function AgentWorldPage() {
       addEventSimple(currentId, 'info', 'verify', '重新核查', '正在重新核查存疑信息...')
     }
   }, [currentId, mode, addEventSimple, availablePlatforms, handleGenerateAll])
-
-  const handleQuickReply = useCallback((text: string) => { handleSend(text) }, [handleSend])
 
   const handleEditorChange = useCallback((content: string) => {
     if (!currentId) return
@@ -503,7 +505,6 @@ export default function AgentWorldPage() {
 
       <ActivityStream
         onAction={handleAction}
-        onQuickReply={handleQuickReply}
       />
 
       {/* Toast Container */}

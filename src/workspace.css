@@ -537,19 +537,103 @@
 }
 .ws-degrade-banner svg { width: 15px; height: 15px; flex-shrink: 0; }
 
-/* ── Quick Reply ── */
-.ws-quick-reply-toggle {
-  font-size: 11px; color: var(--fg-muted); cursor: pointer;
-  margin-top: 6px; transition: color 0.12s;
+/* ── Pipeline Progress Bar ── */
+.ws-pipeline-bar {
+  display: flex;
+  align-items: flex-start;
+  padding: 10px 16px 8px;
+  gap: 0;
+  flex-shrink: 0;
 }
-.ws-quick-reply-toggle:hover { color: var(--primary); }
-.ws-quick-replies { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
-.ws-quick-reply-btn {
-  padding: 3px 8px; border-radius: var(--radius-sm); font-size: 11px;
-  border: 1px solid var(--border); color: var(--fg-secondary);
-  transition: all 0.12s;
+.ws-pipeline-phase {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
 }
-.ws-quick-reply-btn:hover { border-color: var(--primary); color: var(--primary); }
+.ws-pipeline-node {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  border: 2px solid var(--border);
+  background: var(--bg);
+  color: var(--fg-muted);
+  position: relative;
+  z-index: 1;
+  transition: all 0.2s;
+}
+.ws-pipeline-node.done {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--white);
+}
+.ws-pipeline-node.running {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+  animation: ws-pulse 2s ease-in-out infinite;
+}
+.ws-pipeline-icon { line-height: 1; }
+.ws-pipeline-line {
+  position: absolute;
+  top: 12px;
+  left: calc(50% + 12px);
+  right: calc(-50% + 12px);
+  height: 2px;
+  background: var(--border);
+  z-index: 0;
+}
+.ws-pipeline-line.done { background: var(--primary); }
+.ws-pipeline-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  margin-top: 4px;
+  letter-spacing: 0.02em;
+}
+.ws-pipeline-label.done { color: var(--primary-text); }
+.ws-pipeline-label.running { color: var(--primary); }
+
+/* ── Event: started state ── */
+.ws-activity-event.started { opacity: 0.7; }
+.ws-activity-event.started .ws-activity-desc-light {
+  font-size: 11px;
+  color: var(--fg-muted);
+  font-style: italic;
+  margin-top: 2px;
+}
+.ws-activity-agent-name { line-height: 1; }
+.ws-activity-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ── Event Group ── */
+.ws-activity-group { margin-bottom: 8px; }
+.ws-activity-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 6px 12px 3px;
+}
+
+/* ── Empty State ── */
+.ws-activity-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--fg-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
 
 /* ── Version Bar ── */
 .ws-version-bar {
