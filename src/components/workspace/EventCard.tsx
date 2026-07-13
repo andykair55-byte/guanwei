@@ -1,19 +1,4 @@
-import { useState } from 'react'
 import type { ActivityEvent, AgentTypeLabel, EventAction } from '../../types/activity'
-import {
-  Search,
-  BookOpen,
-  Crown,
-  PenTool,
-  ShieldCheck,
-  User,
-  Settings,
-  AlertTriangle,
-  CheckCircle,
-  Info,
-  MessageCircle,
-  Clock,
-} from 'lucide-react'
 
 interface EventCardProps {
   event: ActivityEvent
@@ -21,17 +6,43 @@ interface EventCardProps {
   onQuickReply?: (text: string) => void
 }
 
-const AGENT_CONFIG: Record<AgentTypeLabel, { label: string; color: string; bg: string; icon: typeof Search }> = {
-  orchestrator: { label: '指挥官', color: 'text-seal-600', bg: 'bg-seal-100', icon: Crown },
-  search: { label: '搜索员', color: 'text-blue-600', bg: 'bg-blue-50', icon: Search },
-  research: { label: '研究员', color: 'text-bamboo-600', bg: 'bg-bamboo-50', icon: BookOpen },
-  writing: { label: '写作员', color: 'text-purple-600', bg: 'bg-purple-50', icon: PenTool },
-  verify: { label: '核查员', color: 'text-gold-600', bg: 'bg-gold-50', icon: ShieldCheck },
-  user: { label: '用户', color: 'text-ink-600', bg: 'bg-ink-50', icon: User },
-  system: { label: '系统', color: 'text-ink-500', bg: 'bg-paper-100', icon: Settings },
+const AGENT_ICON_CLASS: Record<AgentTypeLabel, string> = {
+  orchestrator: 'orchestrator',
+  search: 'search',
+  research: 'research',
+  writing: 'writing',
+  verify: 'verify',
+  user: 'commander',
+  system: 'commander',
 }
 
-const QUICK_REPLIES = ['继续', '详细说明', '暂停', '重新执行']
+const AGENT_NAMES: Record<AgentTypeLabel, string> = {
+  orchestrator: '指挥官 Commander',
+  search: '搜索员 Search Agent',
+  research: '研究员 Research Agent',
+  writing: '写作员 Writing Agent',
+  verify: '核查员 Evidence Agent',
+  user: '用户',
+  system: '系统',
+}
+
+const STATUS_MAP: Record<string, string> = {
+  search_complete: 'done',
+  research_complete: 'done',
+  writing_complete: 'done',
+  verify_warning: 'warn',
+  error: 'warn',
+  commander_question: 'running',
+  commander_welcome: 'done',
+  info: 'done',
+  task_running: 'running',
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  done: '完成',
+  warn: '警告',
+  running: '进行中',
+}
 
 function formatTime(timestamp: number) {
   const date = new Date(timestamp)
@@ -40,96 +51,99 @@ function formatTime(timestamp: number) {
   return `${hours}:${minutes}`
 }
 
-function getEventIcon(type: string) {
-  switch (type) {
-    case 'search_complete':
-    case 'research_complete':
-    case 'writing_complete':
-      return <CheckCircle size={14} className="text-bamboo-600" />
-    case 'verify_warning':
-    case 'error':
-      return <AlertTriangle size={14} className="text-gold-600" />
-    case 'commander_question':
-      return <MessageCircle size={14} className="text-seal-600" />
-    default:
-      return <Info size={14} className="text-ink-400" />
-  }
-}
+const QUICK_REPLIES = ['继续', '详细说明', '暂停', '重新执行']
 
 export default function EventCard({ event, onAction, onQuickReply }: EventCardProps) {
-  const [showReplies, setShowReplies] = useState(false)
-  const config = AGENT_CONFIG[event.agentType]
-  const Icon = config.icon
+  const iconClass = AGENT_ICON_CLASS[event.agentType] || 'commander'
+  const statusClass = STATUS_MAP[event.type] || 'done'
 
   return (
-    <div className="animate-fade-in-up rounded-xl border border-ink-100 bg-paper-0 p-3 hover:border-ink-200 transition-colors">
-      <div className="flex items-start gap-2.5">
-        <div className={`flex-shrink-0 w-7 h-7 rounded-full ${config.bg} flex items-center justify-center`}>
-          <Icon size={14} className={config.color} />
+    <div className="ws-activity-event">
+      <div className="ws-activity-event-header">
+        <div className="ws-activity-agent">
+          <span className={`ws-activity-agent-icon ${iconClass}`}>
+            {event.agentType === 'orchestrator' && (
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            )}
+            {event.agentType === 'search' && (
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
+              </svg>
+            )}
+            {event.agentType === 'research' && (
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+              </svg>
+            )}
+            {event.agentType === 'verify' && (
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            )}
+            {event.agentType === 'writing' && (
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                <path d="M2 2l7.586 7.586" />
+                <circle cx="11" cy="11" r="2" />
+              </svg>
+            )}
+            {(event.agentType === 'user' || event.agentType === 'system' || (!['orchestrator', 'search', 'research', 'verify', 'writing'].includes(event.agentType))) && (
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            )}
+          </span>
+          {AGENT_NAMES[event.agentType] || event.agentType}
         </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className={`text-[12px] font-medium ${config.color}`}>{config.label}</span>
-            {getEventIcon(event.type)}
-            <span className="text-[11px] text-ink-300 flex items-center gap-0.5 ml-auto">
-              <Clock size={10} />
-              {formatTime(event.timestamp)}
-            </span>
-          </div>
-
-          <p className="text-[13px] font-medium text-ink-800 mb-1">{event.title}</p>
-          <p className="text-[12px] text-ink-500 leading-relaxed whitespace-pre-wrap">{event.content}</p>
-
-          {event.actions && event.actions.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mt-2.5">
-              {event.actions.map((action: EventAction) => (
-                <button
-                  key={action.id}
-                  onClick={() => onAction?.(action.id, event)}
-                  className={`px-2.5 py-1 text-[11px] font-medium rounded-lg transition-colors ${
-                    action.style === 'primary'
-                      ? 'bg-seal-600 text-white hover:bg-seal-700'
-                      : action.style === 'warning'
-                      ? 'bg-gold-100 text-gold-600 hover:bg-gold-200'
-                      : 'bg-paper-100 text-ink-600 hover:bg-paper-200'
-                  }`}
-                >
-                  {action.label}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {onQuickReply && (
-            <div className="mt-2">
-              {showReplies ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {QUICK_REPLIES.map(reply => (
-                    <button
-                      key={reply}
-                      onClick={() => {
-                        onQuickReply(reply)
-                        setShowReplies(false)
-                      }}
-                      className="px-2 py-1 text-[11px] rounded-lg border border-ink-200 text-ink-500 hover:border-seal-600 hover:text-seal-600 transition-colors"
-                    >
-                      {reply}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <button
-                  onClick={() => setShowReplies(true)}
-                  className="text-[11px] text-ink-400 hover:text-seal-600 transition-colors"
-                >
-                  快捷回复
-                </button>
-              )}
-            </div>
-          )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span className="ws-activity-time">{formatTime(event.timestamp)}</span>
+          <span className={`ws-activity-status ${statusClass}`}>{STATUS_LABEL[statusClass] || event.type}</span>
         </div>
       </div>
+
+      <div className="ws-activity-desc">{event.title}</div>
+
+      {event.content && (
+        <div className="ws-activity-content">
+          {event.content.length > 200 ? event.content.slice(0, 200) + '...' : event.content}
+        </div>
+      )}
+
+      {event.actions && event.actions.length > 0 && (
+        <div className="ws-activity-actions">
+          {event.actions.map((action: EventAction) => (
+            <button
+              key={action.id}
+              className={`ws-activity-action-btn${action.style === 'primary' ? ' primary' : ''}`}
+              onClick={() => onAction?.(action.id, event)}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 模板仅在搜索员和指挥官事件显示快速回复 */}
+      {onQuickReply && (event.agentType === 'search' || event.agentType === 'orchestrator') && (
+        <div className="ws-quick-replies">
+          {QUICK_REPLIES.map(reply => (
+            <button
+              key={reply}
+              className="ws-quick-reply-btn"
+              onClick={() => onQuickReply(reply)}
+            >
+              {reply}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
