@@ -46,9 +46,7 @@ export const MultiSourceVerify = lazy(() => import('../pages/MultiSourceVerify')
 export const EmotionDetector = lazy(() => import('../pages/EmotionDetector'))
 
 // 辩论 / AI
-export const DebateArena = lazy(() => import('../pages/DebateArena'))
 export const AIArena = lazy(() => import('../pages/AIArena'))
-export const DebatesPage = lazy(() => import('../pages/DebatesPage'))
 export const AIBattle = lazy(() => import('../pages/AIBattle'))
 export const RoundTable = lazy(() => import('../pages/RoundTable'))
 export const DebateLobby = lazy(() => import('../pages/DebateLobby'))
