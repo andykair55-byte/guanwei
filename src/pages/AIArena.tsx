@@ -134,7 +134,7 @@ export default function AIArena() {
     setIsLoadingDebate(true)
     setLoadError(null)
 
-    runThemeDebate(init.pack, init.topic, init.affirmChar, init.negateChar, roundsParam)
+    runThemeDebate(init.topic, init.affirmChar, init.negateChar, roundsParam)
       .then(fullMatch => {
         if (!cancelled) {
           setMatch(fullMatch)

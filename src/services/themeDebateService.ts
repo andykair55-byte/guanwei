@@ -5,8 +5,9 @@
 import { callLLM } from '../stores/llmStore'
 import { getThemePack } from './themePackService'
 import type { ThemePack, ThemeCharacter, ThemeTopic } from '../types/themePack'
+import type { AICharacter, DebateStance } from './characters'
 import type {
-  AICharacter, DebateStance, DebateTopic, DebateMatch, DebateRound,
+  DebateTopic, DebateMatch, DebateRound,
   RoundScore, FinalResult,
 } from './debateArenaService'
 
@@ -99,7 +100,7 @@ interface LLMRoundResponse {
 }
 
 /** 降级 mock 发言（LLM 失败时使用） */
-function getFallbackContent(charName: string, stance: 'affirm' | 'negate', topicTitle: string): string {
+function getFallbackContent(stance: 'affirm' | 'negate', topicTitle: string): string {
   const templates = stance === 'affirm'
     ? [
       `关于「${topicTitle}」，我方认为此观点成立。从道理与事实两方面来看，这都是站得住脚的。`,
@@ -114,7 +115,6 @@ function getFallbackContent(charName: string, stance: 'affirm' | 'negate', topic
 
 /** 生成单轮辩论（一次 LLM 调用生成双方发言 + 评分） */
 async function generateThemeRound(
-  pack: ThemePack,
   topic: DebateTopic,
   affirmChar: AICharacter,
   negateChar: AICharacter,
@@ -184,8 +184,8 @@ ${prevSummary}
   }
 
   // 降级 mock
-  const affirmContent = llmResult?.affirmContent || getFallbackContent(affirmChar.name, 'affirm', topic.title)
-  const negateContent = llmResult?.negateContent || getFallbackContent(negateChar.name, 'negate', topic.title)
+  const affirmContent = llmResult?.affirmContent || getFallbackContent('affirm', topic.title)
+  const negateContent = llmResult?.negateContent || getFallbackContent('negate', topic.title)
   const affirmScore = llmResult?.affirmScore ?? (6 + Math.floor(Math.random() * 4))
   const negateScore = llmResult?.negateScore ?? (6 + Math.floor(Math.random() * 4))
   const judgeReason = llmResult?.judgeReason || '双方旗鼓相当，各有千秋。'
@@ -229,7 +229,6 @@ function getRespect(char: AICharacter): string {
  * 串行调用 LLM 生成每轮，组装为 DebateMatch
  */
 export async function runThemeDebate(
-  pack: ThemePack,
   topic: DebateTopic,
   affirmChar: AICharacter,
   negateChar: AICharacter,
@@ -240,7 +239,7 @@ export async function runThemeDebate(
   for (let i = 0; i < totalRounds; i++) {
     // 串行生成：每轮需要看到前一轮内容才能回应
     const round = await generateThemeRound(
-      pack, topic, affirmChar, negateChar,
+      topic, affirmChar, negateChar,
       i + 1, totalRounds, rounds,
     )
     rounds.push(round)
