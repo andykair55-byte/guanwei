@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Heart, MessageCircle, UserPlus, AtSign, Bell, ChevronLeft } from 'lucide-react'
+import { Heart, MessageCircle, UserPlus, AtSign, Bell, ChevronLeft, CheckCheck } from 'lucide-react'
 
 type NotificationType = 'like' | 'comment' | 'follow' | 'mention' | 'system'
 
@@ -109,50 +109,67 @@ export default function NotificationPage() {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })))
   }
 
+  const hasUnread = notifications.some(n => !n.read)
+
   return (
     <div className="h-full flex flex-col bg-white max-w-2xl mx-auto w-full">
-      <header className="sticky top-0 z-10 bg-white/98 backdrop-blur-sm border-b border-ink-50">
-        <div className="flex items-center justify-between px-4 h-14">
+      {/* ── 头部 ── */}
+      <header className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm">
+        <div className="flex items-center justify-between px-4 h-12">
           <button
             onClick={() => navigate(-1)}
-            className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-paper-100 transition-colors"
+            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#f5f5f5] transition-colors"
           >
-            <ChevronLeft size={22} className="text-ink-700" />
+            <ChevronLeft size={20} className="text-[#333]" />
           </button>
-          <span className="text-[17px] font-semibold text-ink-900">通知</span>
+          <span className="text-[15px] font-bold tracking-tight text-[#111]">通知</span>
           <button
             onClick={markAllRead}
-            className="text-[13px] text-ink-500 hover:text-ink-900 transition-colors"
+            className={`flex items-center gap-1 text-[12px] transition-colors ${
+              hasUnread ? 'text-[#999] hover:text-[#555]' : 'text-[#ccc]'
+            }`}
           >
-            全部已读
+            <CheckCheck size={13} />
+            <span>全部已读</span>
           </button>
         </div>
-        <div className="flex items-center gap-1 px-3 overflow-x-auto scrollbar-none">
-          {TABS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`relative px-4 py-2.5 text-[14px] font-medium whitespace-nowrap transition-colors ${
-                activeTab === tab.key ? 'text-ink-900' : 'text-ink-400 hover:text-ink-600'
-              }`}
-            >
-              {tab.label}
-              {activeTab === tab.key && (
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 bg-ink-900 rounded-full" />
-              )}
-            </button>
-          ))}
+
+        {/* ── 胶囊式 Tab 栏 ── */}
+        <div className="flex items-center gap-2 px-4 pb-3 overflow-x-auto scrollbar-none">
+          {TABS.map(tab => {
+            const isActive = activeTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-4 py-1.5 text-[13px] font-semibold rounded-full transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
+                  isActive
+                    ? 'text-white shadow-md'
+                    : 'bg-[#f5f5f5] text-[#999] hover:bg-[#eee] hover:text-[#555]'
+                }`}
+                style={isActive ? {
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  boxShadow: '0 2px 8px -2px rgba(16, 185, 129, 0.4)',
+                } : {}}
+              >
+                {tab.label}
+              </button>
+            )
+          })}
         </div>
       </header>
 
-      <div className="flex-1">
+      {/* ── 内容区 ── */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32">
-            <Bell size={48} className="text-ink-200 mb-3" />
-            <p className="text-[14px] text-ink-300">暂无通知</p>
+            <div className="w-12 h-12 rounded-full bg-[#f5f5f5] flex items-center justify-center mb-3">
+              <Bell size={22} className="text-[#ccc]" />
+            </div>
+            <p className="text-[14px] text-[#999]">暂无通知</p>
           </div>
         ) : (
-          <div>
+          <div className="space-y-0">
             {filtered.map(notif => {
               const Icon = TYPE_ICONS[notif.type]
               const iconColor = TYPE_COLORS[notif.type]
@@ -160,52 +177,54 @@ export default function NotificationPage() {
               return (
                 <div
                   key={notif.id}
-                  className={`flex items-start gap-3 px-5 py-4 border-b border-ink-50 hover:bg-paper-50/50 transition-colors cursor-pointer ${
-                    !notif.read ? 'bg-paper-50' : ''
-                  }`}
+                  className="flex items-start gap-3 px-4 py-3.5 border-b border-[#f0f0f0] hover:bg-[#fafafa] transition-colors cursor-pointer"
                 >
+                  {/* 头像区域 */}
                   <div className="relative flex-shrink-0">
                     <div
-                      className="w-11 h-11 rounded-full flex items-center justify-center text-[14px] font-bold text-white"
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-bold text-white ring-1 ring-black/5"
                       style={{ backgroundColor: avatarBg }}
                     >
                       {notif.avatar}
                     </div>
                     <div
-                      className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center border-2 border-white"
-                      style={{ backgroundColor: iconColor }}
+                      className="absolute -bottom-0.5 -right-0.5 w-4.5 h-4.5 rounded-full flex items-center justify-center border-[1.5px] border-white"
+                      style={{ backgroundColor: iconColor, width: 18, height: 18 }}
                     >
-                      <Icon size={10} className="text-white" />
+                      <Icon size={9} className="text-white" />
                     </div>
+                    {/* 未读小圆点 */}
                     {!notif.read && (
-                      <span className="absolute -top-0.5 -left-0.5 w-2 h-2 bg-red-500 rounded-full" />
+                      <span className="absolute -top-0.5 -left-0.5 w-2 h-2 bg-emerald-500 rounded-full ring-2 ring-white" />
                     )}
                   </div>
 
+                  {/* 内容区域 */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
+                    <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className="text-[14px] text-ink-800 leading-snug">
-                          <span className="font-semibold">{notif.username}</span>
-                          <span className="text-ink-500 ml-1">{notif.action}</span>
+                        <p className="text-[14px] text-[#333] leading-snug">
+                          <span className="font-semibold text-[#111]">{notif.username}</span>
+                          <span className="text-[#999] ml-1">{notif.action}</span>
                         </p>
                         {notif.content && (
-                          <p className="text-[13px] text-ink-500 mt-1 line-clamp-2">{notif.content}</p>
+                          <p className="text-[13px] text-[#555] mt-1 line-clamp-2">{notif.content}</p>
                         )}
                       </div>
-                      <span className="text-[12px] text-ink-300 flex-shrink-0 mt-0.5">{notif.time}</span>
+                      <span className="text-[11px] text-[#ccc] flex-shrink-0 mt-0.5">{notif.time}</span>
                     </div>
 
+                    {/* 目标预览卡片 */}
                     {notif.targetPreview && (
-                      <div className="flex items-center gap-3 mt-2 p-2.5 bg-paper-50 rounded-lg">
+                      <div className="flex items-center gap-2.5 mt-2 p-2.5 rounded-xl border border-gray-100 bg-[#fafafa]">
                         {notif.targetImage && (
                           <img
                             src={notif.targetImage}
                             alt=""
-                            className="w-10 h-10 rounded object-cover flex-shrink-0"
+                            className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
                           />
                         )}
-                        <p className="text-[13px] text-ink-600 line-clamp-1 flex-1">{notif.targetPreview}</p>
+                        <p className="text-[13px] text-[#555] line-clamp-1 flex-1">{notif.targetPreview}</p>
                       </div>
                     )}
                   </div>

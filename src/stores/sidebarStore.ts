@@ -24,7 +24,7 @@ export const ALL_NAV_ITEMS: SidebarNavItem[] = [
   { id: 'debates', path: '/entertainment/arena', label: 'AI竞技', icon: 'MessageSquare', isDefault: false, group: 2 },
   // ── 休闲 ──
   { id: 'entertainment', path: '/entertainment', label: '娱乐', icon: 'Gamepad2', isDefault: true, group: 3 },
-  { id: 'settings', path: '/settings/llm', label: '设置', icon: 'Settings', isDefault: true, group: 3 },
+  { id: 'settings', path: '/settings', label: '设置', icon: 'Settings', isDefault: true, group: 3 },
   // ── 可添加项（归入工具箱） ──
   { id: 'tools/exif', path: '/tools/exif', label: 'EXIF分析', icon: 'Image', isDefault: false, group: 2 },
   { id: 'tools/timeline', path: '/tools/timeline', label: '时间线构建', icon: 'Calendar', isDefault: false, group: 2 },

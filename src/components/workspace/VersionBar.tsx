@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useSnapshotStore } from '../../stores/snapshotStore'
-import { Clock, ChevronRight, Lock, Unlock } from 'lucide-react'
 
 interface VersionBarProps {
   onRestore?: (content: string, topic: string) => void
@@ -27,13 +26,16 @@ export default function VersionBar({ onRestore, className }: VersionBarProps) {
 
   if (snapshots.length === 0) {
     return (
-      <div className={`flex items-center justify-between px-4 py-2 text-[12px] text-ink-400 border-t border-ink-100 ${className || ''}`}>
-        <div className="flex items-center gap-1.5">
-          <Clock size={13} />
-          <span>版本历史</span>
+      <div className={`ws-version-bar ${className || ''}`}>
+        <div className="ws-version-bar-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          版本历史
         </div>
-        <div className="flex items-center gap-1 text-emerald-600">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+        <div className="ws-version-autosave">
+          <span className="dot" />
           自动保存已开启
         </div>
       </div>
@@ -41,42 +43,51 @@ export default function VersionBar({ onRestore, className }: VersionBarProps) {
   }
 
   return (
-    <div className={`flex items-center gap-2 px-4 py-2 text-[12px] border-t border-ink-100 bg-paper-50/50 ${className || ''}`}>
-      <div className="flex items-center gap-1.5 text-ink-500 shrink-0">
-        <Clock size={13} />
-        <span>版本历史</span>
+    <div className={`ws-version-bar ${className || ''}`}>
+      <div className="ws-version-bar-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+        版本历史
       </div>
-      <div className="flex items-center gap-1 overflow-x-auto flex-1 scrollbar-none">
+      <div className="ws-version-list">
         {recent.map((snap, idx) => {
           const versionNum = snapshots.length - snapshots.findIndex(s => s.id === snap.id)
           const isCurrent = snap.id === currentId
           return (
-            <div key={snap.id} className="flex items-center gap-0.5 shrink-0">
+            <div key={snap.id} className="ws-version-item">
               <button
+                className={`ws-version-btn${isCurrent ? ' current' : ''}`}
                 onClick={() => {
                   const restored = restoreSnapshot(snap.id)
                   if (restored && onRestore) {
                     onRestore(restored.content, restored.draftTopic)
                   }
                 }}
-                className={`px-2 py-0.5 rounded-md text-[11px] whitespace-nowrap transition-colors ${
-                  isCurrent
-                    ? 'bg-seal-100 text-seal-700 font-medium'
-                    : 'bg-paper-0 text-ink-400 hover:bg-paper-100 hover:text-ink-600 border border-ink-100'
-                }`}
               >
-                V{versionNum} {formatTimeAgo(snap.timestamp)}
-                {idx === 0 && isCurrent && ' (自动保存)'}
+                V{versionNum} {formatTimeAgo(snap.timestamp)}{idx === 0 && isCurrent ? ' (自动保存)' : ''}
               </button>
               <button
-                onClick={(e) => {
-                  e.stopPropagation()
+                className={`ws-version-lock-btn ${snap.locked ? 'locked' : 'unlocked'}`}
+                onClick={() => {
                   useSnapshotStore.getState().toggleLock(snap.id)
                 }}
-                className="p-0.5 hover:bg-paper-100 rounded"
-                title={snap.locked ? '解锁' : '锁定'}
+                title={snap.locked ? '已锁定' : '锁定'}
               >
-                {snap.locked ? <Lock size={10} className="text-amber-500" /> : <Unlock size={10} className="text-ink-300" />}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  {snap.locked ? (
+                    <>
+                      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+                    </>
+                  ) : (
+                    <>
+                      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </>
+                  )}
+                </svg>
               </button>
             </div>
           )
@@ -84,14 +95,15 @@ export default function VersionBar({ onRestore, className }: VersionBarProps) {
         {snapshots.length > 5 && !showAll && (
           <button
             onClick={() => setShowAll(true)}
-            className="text-ink-400 hover:text-seal-600 inline-flex items-center gap-0.5 shrink-0"
+            className="ws-version-btn"
+            style={{ border: 'none', color: 'var(--fg-muted)' }}
           >
-            查看全部 <ChevronRight size={12} />
+            查看全部 →
           </button>
         )}
       </div>
-      <div className="flex items-center gap-1 text-emerald-600 shrink-0">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+      <div className="ws-version-autosave">
+        <span className="dot" />
         自动保存已开启
       </div>
     </div>

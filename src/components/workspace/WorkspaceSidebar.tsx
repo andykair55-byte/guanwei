@@ -1,9 +1,7 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
 import { useAuthStore } from '../../stores/authStore'
-import { useSidebarStore, ICON_MAP, ALL_NAV_ITEMS } from '../../stores/sidebarStore'
-import { Plus, Leaf } from 'lucide-react'
 import type { Workspace, WorkspaceStatus } from '../../types/workspace'
 
 interface WorkspaceSidebarProps {
@@ -23,50 +21,32 @@ function formatRelativeTime(isoString: string): string {
   return `${Math.floor(days / 7)}周前`
 }
 
-function WorkspaceItem({ ws, active, onClick }: { ws: Workspace; active: boolean; onClick: () => void }) {
-  const statusColors: Record<WorkspaceStatus, string> = {
-    active: 'bg-emerald-500',
-    draft: 'bg-ink-300',
-    completed: 'bg-blue-500',
-    published: 'bg-emerald-500',
-    tracking: 'bg-blue-500',
-    archived: 'bg-ink-200',
-  }
-  const statusLabels: Record<WorkspaceStatus, string> = {
-    active: '进行中',
-    draft: '草稿',
-    completed: '已完成',
-    published: '已发布',
-    tracking: '跟踪中',
-    archived: '归档',
-  }
-
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full text-left px-3 py-2 rounded-lg transition-colors group ${
-        active ? 'bg-seal-50 border-l-2 border-seal-600' : 'hover:bg-paper-100'
-      }`}
-    >
-      <div className="flex items-start gap-2">
-        <span className={`w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 ${statusColors[ws.status]}`} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-1">
-            <span className={`text-[13px] font-medium truncate ${active ? 'text-seal-700' : 'text-ink-800'}`}>
-              {ws.title}
-            </span>
-            {ws.status === 'active' && (
-              <span className="text-[10px] text-seal-600 shrink-0">{statusLabels[ws.status]}</span>
-            )}
-          </div>
-          <div className="text-[11px] text-ink-400 mt-0.5 truncate">
-            {formatRelativeTime(ws.updatedAt)}
-          </div>
-        </div>
-      </div>
-    </button>
-  )
+const STATUS_LABELS: Record<WorkspaceStatus, string> = {
+  active: '进行中',
+  draft: '草稿',
+  completed: '已完成',
+  published: '已发布',
+  tracking: '跟踪中',
+  archived: '已归档',
 }
+
+const TAG_LABELS: Record<string, string> = {
+  hotspot: '热点',
+  science: '科技',
+  opinion: '观点',
+  debunk: '辟谣',
+  meme: '梗',
+}
+
+const GROUP_ORDER = [
+  { key: 'favorites', label: '收藏' },
+  { key: 'active', label: '进行中' },
+  { key: 'tracking', label: '跟踪中' },
+  { key: 'completed', label: '已完成' },
+  { key: 'archived', label: '已归档' },
+]
+
+const DEFAULT_COLLAPSED = new Set<string>(['tracking', 'completed', 'archived'])
 
 export default function WorkspaceSidebar({ className }: WorkspaceSidebarProps) {
   const navigate = useNavigate()
@@ -76,26 +56,45 @@ export default function WorkspaceSidebar({ className }: WorkspaceSidebarProps) {
   const currentId = useWorkspaceStore(s => s.currentId)
   const createWorkspace = useWorkspaceStore(s => s.createWorkspace)
   const switchWorkspace = useWorkspaceStore(s => s.switchWorkspace)
-  const enabledItems = useSidebarStore(s => s.enabledItems)
-  const navItems = enabledItems
-    .map(id => ALL_NAV_ITEMS.find(item => item.id === id))
-    .filter(Boolean) as typeof ALL_NAV_ITEMS
+  const toggleFavorite = useWorkspaceStore(s => s.toggleFavorite)
+  const archiveWorkspace = useWorkspaceStore(s => s.archive)
+  const unarchiveWorkspace = useWorkspaceStore(s => s.unarchive)
+  const deleteWorkspace = useWorkspaceStore(s => s.deleteWorkspace)
+
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set(DEFAULT_COLLAPSED))
+  const [searchQuery, setSearchQuery] = useState('')
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const toggleGroup = (key: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  const filteredWorkspaces = useMemo(() => {
+    if (!searchQuery.trim()) return workspaces
+    const q = searchQuery.toLowerCase()
+    return workspaces.filter(w => w.title.toLowerCase().includes(q) || w.topic.toLowerCase().includes(q))
+  }, [workspaces, searchQuery])
 
   const groups = useMemo(() => {
-    const active = workspaces.filter(w => w.status === 'active' || w.status === 'draft')
-    const completed = workspaces.filter(w => w.status === 'completed' || w.status === 'published')
-    const tracking = workspaces.filter(w => w.status === 'tracking')
-    const favorites = workspaces.filter(w => w.isFavorite && w.status !== 'archived')
-    const archived = workspaces.filter(w => w.status === 'archived')
-    return { active, completed, tracking, favorites, archived }
-  }, [workspaces])
+    const favorites = filteredWorkspaces.filter(w => w.isFavorite && w.status !== 'archived')
+    const active = filteredWorkspaces.filter(w => (w.status === 'active' || w.status === 'draft') && !w.isFavorite)
+    const tracking = filteredWorkspaces.filter(w => w.status === 'tracking')
+    const completed = filteredWorkspaces.filter(w => (w.status === 'completed' || w.status === 'published') && !w.isFavorite)
+    const archived = filteredWorkspaces.filter(w => w.status === 'archived')
+    return { favorites, active, tracking, completed, archived }
+  }, [filteredWorkspaces])
 
   const isNavActive = (path: string) => {
     return location.pathname === path || location.pathname.startsWith(path + '/')
   }
 
   const handleCreate = () => {
-    const ws = createWorkspace('')
+    const ws = createWorkspace({})
     switchWorkspace(ws.id)
   }
 
@@ -104,117 +103,284 @@ export default function WorkspaceSidebar({ className }: WorkspaceSidebarProps) {
   }
 
   const displayName = user?.nickname || '见微侦探'
-  const displayRank = user?.rank || 'Lv.1 新手'
   const avatarChar = displayName.charAt(0)
 
   return (
-    <div className={`flex flex-col h-full bg-paper-0 border-r border-ink-100 w-[220px] shrink-0 ${className || ''}`}>
-      <div className="px-3 py-3 border-b border-ink-100">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-7 h-7 bg-ink-900 rounded-lg flex items-center justify-center shadow-sm">
-            <Leaf size={16} className="text-seal-600" strokeWidth={2.5} />
+    <aside className={`ws-sidebar ${className || ''}`}>
+      {/* Header */}
+      <div className="ws-sidebar-header">
+        <div className="ws-sidebar-brand">
+          <div className="ws-sidebar-logo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 20A7 7 0 0 1 9.8 6.9C15.5 4.9 17 3.5 19 2c1 2 2 4.5 2 8 0 5.5-4.78 10-10 10Z" />
+              <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
+            </svg>
           </div>
-          <span className="font-bold text-[15px] text-ink-900">观微</span>
+          <div>
+            <div className="ws-sidebar-brand-text">观微</div>
+            <div className="ws-sidebar-brand-sub">GuanWei</div>
+          </div>
         </div>
-        <button
-          onClick={handleCreate}
-          className="w-full flex items-center justify-center gap-1.5 py-2 bg-seal-600 text-white rounded-xl text-[13px] font-medium hover:bg-seal-700 transition-colors"
-        >
-          <Plus size={15} />
+        <button className="ws-btn-create" onClick={handleCreate}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
           新建工作空间
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-2 space-y-1">
-        {/* 收藏组 */}
-        {groups.favorites.length > 0 && (
-          <div className="mb-2">
-            <div className="px-3 py-1 text-[11px] text-ink-300 font-medium">收藏</div>
-            {groups.favorites.map(ws => (
-              <WorkspaceItem key={ws.id} ws={ws} active={ws.id === currentId} onClick={() => handleSwitch(ws.id)} />
-            ))}
-          </div>
-        )}
-
-        {/* 进行中 */}
-        {groups.active.length > 0 && (
-          <div className="mb-2">
-            <div className="px-3 py-1 text-[11px] text-ink-300 font-medium">进行中</div>
-            {groups.active.map(ws => (
-              <WorkspaceItem key={ws.id} ws={ws} active={ws.id === currentId} onClick={() => handleSwitch(ws.id)} />
-            ))}
-          </div>
-        )}
-
-        {/* 跟踪中 */}
-        {groups.tracking.length > 0 && (
-          <div className="mb-2">
-            <div className="px-3 py-1 text-[11px] text-ink-300 font-medium">跟踪中</div>
-            {groups.tracking.map(ws => (
-              <WorkspaceItem key={ws.id} ws={ws} active={ws.id === currentId} onClick={() => handleSwitch(ws.id)} />
-            ))}
-          </div>
-        )}
-
-        {/* 已完成 */}
-        {groups.completed.length > 0 && (
-          <div className="mb-2">
-            <div className="px-3 py-1 text-[11px] text-ink-300 font-medium">已完成</div>
-            {groups.completed.map(ws => (
-              <WorkspaceItem key={ws.id} ws={ws} active={ws.id === currentId} onClick={() => handleSwitch(ws.id)} />
-            ))}
-          </div>
-        )}
-
-        {/* 已归档 */}
-        {groups.archived.length > 0 && (
-          <div className="mb-2">
-            <div className="px-3 py-1 text-[11px] text-ink-300 font-medium">已归档</div>
-            {groups.archived.map(ws => (
-              <WorkspaceItem key={ws.id} ws={ws} active={ws.id === currentId} onClick={() => handleSwitch(ws.id)} />
-            ))}
-          </div>
-        )}
-
-        {workspaces.length === 0 && (
-          <div className="px-4 py-8 text-center text-ink-300 text-[12px]">
-            <p>还没有工作空间</p>
-            <p className="mt-1">点击上方按钮创建</p>
-          </div>
-        )}
+      {/* Search */}
+      <div className="ws-sidebar-search">
+        <div className="ws-search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="搜索工作空间…"
+          />
+          <span className="ws-search-shortcut">⌘K</span>
+        </div>
       </div>
 
-      <div className="border-t border-ink-100 py-2 px-2">
-        <div className="flex flex-wrap items-center justify-start gap-1 mb-2">
-          {navItems.map(item => {
-            const Icon = ICON_MAP[item.icon]
-            const isActive = isNavActive(item.path)
+      {/* Workspace List */}
+      <div className="ws-sidebar-list">
+        {filteredWorkspaces.length === 0 ? (
+          <div className="ws-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+            <div>{searchQuery ? '没有找到匹配的工作空间' : '还没有工作空间'}</div>
+            {searchQuery && <div style={{ marginTop: 4, fontSize: 11 }}>尝试其他关键词</div>}
+          </div>
+        ) : (
+          GROUP_ORDER.map(g => {
+            const items = groups[g.key as keyof typeof groups] as Workspace[]
+            if (items.length === 0) return null
+            const isCollapsed = collapsedGroups.has(g.key)
+
             return (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className={`p-2 rounded-lg transition-colors ${
-                  isActive
-                    ? 'text-seal-600 bg-seal-50'
-                    : 'text-ink-400 hover:text-ink-600 hover:bg-paper-100'
-                }`}
-                title={item.label}
-              >
-                <Icon size={18} strokeWidth={isActive ? 2.25 : 1.75} />
-              </button>
+              <div className="ws-group" key={g.key}>
+                <div className="ws-group-header" onClick={() => toggleGroup(g.key)}>
+                  <svg
+                    className={`ws-group-chevron${isCollapsed ? ' collapsed' : ''}`}
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                  <span className="ws-group-label">{g.label}</span>
+                  <span className="ws-group-count">{items.length}</span>
+                </div>
+                <div
+                  className={`ws-group-items${isCollapsed ? ' collapsed' : ''}`}
+                  style={{ maxHeight: isCollapsed ? 0 : items.length * 48 + 'px' }}
+                >
+                  {items.map(ws => {
+                    const isActive = ws.id === currentId
+                    return (
+                      <div
+                        key={ws.id}
+                        className={`ws-item${isActive ? ' active' : ''}`}
+                        onClick={() => handleSwitch(ws.id)}
+                      >
+                        <span className={`ws-status-dot ${ws.status}`} />
+                        <div className="ws-item-content">
+                          <div className="ws-item-title">{ws.title}</div>
+                          <div className="ws-item-meta">
+                            <span>{formatRelativeTime(ws.updatedAt)}</span>
+                            {ws.tags?.[0] && (
+                              <span className={`ws-item-tag ${ws.tags[0]}`}>
+                                {TAG_LABELS[ws.tags[0]] || ws.tags[0]}
+                              </span>
+                            )}
+                            {ws.status === 'active' && <span style={{color:'var(--primary)',fontSize:10}}>{STATUS_LABELS[ws.status]}</span>}
+                            {ws.status === 'draft' && <span style={{color:'var(--fg-muted)',fontSize:10}}>{STATUS_LABELS[ws.status]}</span>}
+                          </div>
+                        </div>
+
+                        <div style={{display:'flex',alignItems:'center',gap:2,flexShrink:0,marginLeft:'auto',paddingLeft:4,alignSelf:'center'}}>
+                          <button
+                            className="ws-action-btn"
+                            onClick={(e) => { e.stopPropagation(); toggleFavorite(ws.id) }}
+                            title={ws.isFavorite ? '取消收藏' : '收藏'}
+                          >
+                            <svg viewBox="0 0 24 24" fill={ws.isFavorite ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5">
+                              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                            </svg>
+                          </button>
+                          {ws.status !== 'archived' ? (
+                            <button
+                              className="ws-action-btn"
+                              onClick={(e) => { e.stopPropagation(); archiveWorkspace(ws.id) }}
+                              title="归档"
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                <rect width="20" height="5" x="2" y="3" rx="1" />
+                                <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+                                <path d="M10 12h4" />
+                              </svg>
+                            </button>
+                          ) : (
+                            <button
+                              className="ws-action-btn"
+                              onClick={(e) => { e.stopPropagation(); unarchiveWorkspace(ws.id) }}
+                              title="取消归档"
+                            >
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                <rect width="20" height="5" x="2" y="3" rx="1" />
+                                <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+                                <path d="m10 14 2-2 2 2" />
+                              </svg>
+                            </button>
+                          )}
+                          <button
+                            style={{color:'var(--danger)',width:20,height:20,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:4,transition:'color 0.12s,background 0.12s'}}
+                            onClick={(e) => { e.stopPropagation(); setDeletingId(ws.id) }}
+                            title="删除"
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              <line x1="10" y1="11" x2="10" y2="17" />
+                              <line x1="14" y1="11" x2="14" y2="17" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
             )
-          })}
-        </div>
-        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-paper-100 cursor-pointer">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-seal-500 to-seal-700 flex items-center justify-center text-white text-[12px] font-medium">
-            {avatarChar}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-[12px] font-medium text-ink-800 truncate">{displayName}</div>
-            <div className="text-[10px] text-ink-400">{displayRank}</div>
+          })
+        )}
+      </div>
+
+      {/* Bottom Nav */}
+      <div className="ws-sidebar-bottom">
+        <nav className="ws-bottom-nav">
+          <button
+            className={`ws-nav-btn${isNavActive('/melon') ? ' active' : ''}`}
+            onClick={() => navigate('/melon')}
+            title="瓜田"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 20A7 7 0 0 1 9.8 6.9C15.5 4.9 17 3.5 19 2c1 2 2 4.5 2 8 0 5.5-4.78 10-10 10Z" />
+              <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
+            </svg>
+            <span className="ws-nav-btn-label">瓜田</span>
+          </button>
+          <button
+            className={`ws-nav-btn${isNavActive('/agent-world') ? ' active' : ''}`}
+            onClick={() => navigate('/agent-world')}
+            title="工作间"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <rect width="20" height="14" x="2" y="7" rx="2" ry="2" />
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+            </svg>
+            <span className="ws-nav-btn-label">工作间</span>
+            <span className="ws-nav-badge" />
+          </button>
+          <button
+            className={`ws-nav-btn${isNavActive('/verify') ? ' active' : ''}`}
+            onClick={() => navigate('/verify')}
+            title="求证"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+            <span className="ws-nav-btn-label">求证</span>
+          </button>
+          <button
+            className={`ws-nav-btn${isNavActive('/settings') ? ' active' : ''}`}
+            onClick={() => navigate('/settings')}
+            title="设置"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            <span className="ws-nav-btn-label">设置</span>
+          </button>
+        </nav>
+
+        {/* User Card */}
+        <div className="ws-user-card">
+          <div className="ws-user-avatar">{avatarChar}</div>
+          <div className="ws-user-info">
+            <div className="ws-user-name">{displayName}</div>
+            <div className="ws-user-rank">Lv.4 洞察者 · 1280/2000</div>
+            <div className="ws-user-rank-bar"><div className="ws-user-rank-fill" /></div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* ── 删除确认弹窗 ── */}
+      {deletingId && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.35)',
+          }}
+          onClick={() => setDeletingId(null)}
+        >
+          <div
+            style={{
+              background: 'var(--bg)', borderRadius: 'var(--radius-lg)',
+              padding: '20px 24px', width: 280,
+              boxShadow: '0 8px 32px var(--shadow-toast)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--fg)', marginBottom: 8 }}>
+              确认删除
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--fg-secondary)', marginBottom: 4 }}>
+              确定要删除「{workspaces.find(w => w.id === deletingId)?.title}」吗？
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--danger)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+              此操作不可逆
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                style={{
+                  flex: 1, padding: '7px 0', borderRadius: 'var(--radius-sm)',
+                  fontSize: 13, fontWeight: 500, border: '1px solid var(--border)',
+                  color: 'var(--fg-secondary)', background: 'var(--bg)',
+                }}
+                onClick={() => setDeletingId(null)}
+              >
+                取消
+              </button>
+              <button
+                style={{
+                  flex: 1, padding: '7px 0', borderRadius: 'var(--radius-sm)',
+                  fontSize: 13, fontWeight: 500, border: 'none',
+                  color: 'var(--white)', background: 'var(--danger)',
+                }}
+                onClick={() => {
+                  deleteWorkspace(deletingId)
+                  setDeletingId(null)
+                }}
+              >
+                确认删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </aside>
   )
 }

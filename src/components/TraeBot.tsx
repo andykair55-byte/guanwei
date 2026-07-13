@@ -12,6 +12,26 @@ function withTimeout<T>(promise: Promise<T>, ms = 12000): Promise<T> {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer)) as Promise<T>
 }
 
+/** Demo 数据 —— 当 LLM 不可用或无上下文时的 fallback */
+const DEMO_SUMMARY = '这篇文章主要讲述了信息甄别与批判性思维的核心内容，涉及媒体素养和逻辑推理方面的分析，结论是在信息过载的时代，培养独立思考和验证能力至关重要。'
+
+const DEMO_FACTS = `· 事实1：批判性思维的核心在于对信息来源、论证方式和结论进行系统性审视
+· 事实2：媒体素养包含识别事实报道与观点评论的能力，以及对数据引用的核查
+· 事实3：逻辑谬误（如诉诸情感、稻草人论证）常被用于操控公众认知
+· 事实4：培养信息验证习惯可以有效降低被误导的风险`
+
+const DEMO_EMOTION_RESULT = {
+  score: 42,
+  level: 'medium' as const,
+  techniques: [
+    { name: '情感化用词', count: 3 },
+    { name: '绝对化表述', count: 1 },
+  ],
+  objectiveSummary: '该文本在描述问题时使用了一些带有情感色彩的词汇，存在一定的引导倾向，但整体论述较为客观。',
+}
+
+const DEMO_TEXT = '这项政策毫无疑问是最伟大的改革，所有人都应该热烈拥护。那些反对者不是愚蠢就是别有用心，他们的观点根本不值一驳。我们必须立刻、马上支持这一决定，否则国家将走向深渊。'
+
 export default function TraeBot() {
   const isOpen = useXiaoWeiStore(s => s.isOpen)
   const isTyping = useXiaoWeiStore(s => s.isTyping)
@@ -41,6 +61,10 @@ export default function TraeBot() {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null)
   const dragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
   const [showIntro, setShowIntro] = useState(false)
+  const [collapsedPos, setCollapsedPos] = useState<{ x: number; y: number } | null>(null)
+  const collapsedDragRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null)
+  const wasDraggedRef = useRef(false)
+  const [isDragging, setIsDragging] = useState(false)
 
   useEffect(() => {
     if (!localStorage.getItem('guanwei-xiaowei-introduced')) {
@@ -107,26 +131,36 @@ export default function TraeBot() {
   }, [input, isTyping, canSendMessage, addMessage, setTyping, pageContext, messages])
 
   const handleSummarize = useCallback(async () => {
-    if (!pageContext) { addMessage({ role: 'assistant', content: '当前页面不支持总结，请在文章详情页使用~' }); return }
     if (isTyping) return
     if (!canSendMessage()) { addMessage({ role: 'assistant', content: '小薇需要休息一下，稍后再试~' }); return }
+    if (!pageContext) {
+      addMessage({ role: 'assistant', content: `文章总结（演示）\n\n${DEMO_SUMMARY}` })
+      return
+    }
     setTyping(true)
     try {
       const summary = await withTimeout(callLLM([{ role: 'system', content: '请用3-5句话总结以下文章的核心内容。' }, { role: 'user', content: pageContext.content }], { maxTokens: 512, temperature: 0.3 }))
       addMessage({ role: 'assistant', content: `文章总结\n\n${summary}` })
-    } catch { addMessage({ role: 'assistant', content: '小薇走神了，重试一下？' }) }
+    } catch {
+      addMessage({ role: 'assistant', content: `文章总结（演示）\n\n${DEMO_SUMMARY}` })
+    }
     finally { setTyping(false) }
   }, [pageContext, isTyping, canSendMessage, addMessage, setTyping])
 
   const handleExtractFacts = useCallback(async () => {
-    if (!pageContext) { addMessage({ role: 'assistant', content: '当前页面不支持提取事实，请在文章详情页使用~' }); return }
     if (isTyping) return
     if (!canSendMessage()) { addMessage({ role: 'assistant', content: '小薇需要休息一下，稍后再试~' }); return }
+    if (!pageContext) {
+      addMessage({ role: 'assistant', content: `关键事实（演示）\n\n${DEMO_FACTS}` })
+      return
+    }
     setTyping(true)
     try {
       const facts = await withTimeout(callLLM([{ role: 'system', content: '从以下文章中提取关键事实，以列表形式返回。每行一个事实，用「·」开头。' }, { role: 'user', content: pageContext.content }], { maxTokens: 512, temperature: 0.2 }))
       addMessage({ role: 'assistant', content: `关键事实\n\n${facts}` })
-    } catch { addMessage({ role: 'assistant', content: '小薇走神了，重试一下？' }) }
+    } catch {
+      addMessage({ role: 'assistant', content: `关键事实（演示）\n\n${DEMO_FACTS}` })
+    }
     finally { setTyping(false) }
   }, [pageContext, isTyping, canSendMessage, addMessage, setTyping])
 
@@ -138,15 +172,24 @@ export default function TraeBot() {
     if (isTyping) return
     const selectedText = selectedTextRef.current || window.getSelection()?.toString().trim() || ''
     selectedTextRef.current = ''
-    if (!selectedText) { addMessage({ role: 'assistant', content: '请先选中要分析的文本，再点击情绪检测~' }); return }
     if (!canSendMessage()) { addMessage({ role: 'assistant', content: '小薇需要休息一下，稍后再试~' }); return }
+
+    const textToAnalyze = selectedText || DEMO_TEXT
+    const isDemo = !selectedText
     setTyping(true)
     try {
-      const result = await withTimeout(analyzeEmotion(selectedText), 12000)
+      const result = await withTimeout(analyzeEmotion(textToAnalyze), 12000)
       const levelText = result.level === 'high' ? '操控性较强' : result.level === 'medium' ? '有一定操控倾向' : '基本客观'
       const techniquesText = result.techniques.length > 0 ? result.techniques.map(t => `· ${t.name}（${t.count}次）`).join('\n') : '未检测到明显操控手法'
-      addMessage({ role: 'assistant', content: `情绪操控检测\n\n操控指数：${result.score}/100（${levelText}）\n\n检测到的手法：\n${techniquesText}\n\n客观重述：\n${result.objectiveSummary}` })
-    } catch { addMessage({ role: 'assistant', content: '小薇走神了，重试一下？' }) }
+      const prefix = isDemo ? `情绪操控检测（使用演示文本）` : `情绪操控检测`
+      addMessage({ role: 'assistant', content: `${prefix}\n\n操控指数：${result.score}/100（${levelText}）\n\n检测到的手法：\n${techniquesText}\n\n客观重述：\n${result.objectiveSummary}` })
+    } catch {
+      // LLM 分析失败时使用预设 demo 结果
+      const result = DEMO_EMOTION_RESULT
+      const levelText = result.level === 'high' ? '操控性较强' : result.level === 'medium' ? '有一定操控倾向' : '基本客观'
+      const techniquesText = result.techniques.map(t => `· ${t.name}（${t.count}次）`).join('\n')
+      addMessage({ role: 'assistant', content: `情绪操控检测（演示）\n\n操控指数：${result.score}/100（${levelText}）\n\n检测到的手法：\n${techniquesText}\n\n客观重述：\n${result.objectiveSummary}` })
+    }
     finally { setTyping(false) }
   }, [isTyping, canSendMessage, addMessage, setTyping])
 
@@ -157,6 +200,7 @@ export default function TraeBot() {
     if (!panel) return
     e.preventDefault()
     const rect = panel.getBoundingClientRect()
+    setIsDragging(true)
     dragRef.current = { startX: e.clientX, startY: e.clientY, origX: rect.left, origY: rect.top }
     setPos({ x: rect.left, y: rect.top })
     const onMove = (ev: MouseEvent) => {
@@ -165,7 +209,42 @@ export default function TraeBot() {
       const newY = dragRef.current.origY + (ev.clientY - dragRef.current.startY)
       setPos({ x: Math.max(0, Math.min(window.innerWidth - 360, newX)), y: Math.max(0, Math.min(window.innerHeight - 100, newY)) })
     }
-    const onUp = () => { dragRef.current = null; document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); document.body.style.cursor = ''; document.body.style.userSelect = '' }
+    const onUp = () => { dragRef.current = null; setIsDragging(false); document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); document.body.style.cursor = ''; document.body.style.userSelect = '' }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+    document.body.style.cursor = 'move'
+    document.body.style.userSelect = 'none'
+  }, [])
+
+  // 拖拽收起状态的悬浮按钮
+  const onCollapsedMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    const btn = e.currentTarget as HTMLElement
+    const rect = btn.getBoundingClientRect()
+    wasDraggedRef.current = false
+    setIsDragging(true)
+    collapsedDragRef.current = { startX: e.clientX, startY: e.clientY, origX: rect.left, origY: rect.top }
+    setCollapsedPos({ x: rect.left, y: rect.top })
+    const onMove = (ev: MouseEvent) => {
+      if (!collapsedDragRef.current) return
+      const dx = ev.clientX - collapsedDragRef.current.startX
+      const dy = ev.clientY - collapsedDragRef.current.startY
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) wasDraggedRef.current = true
+      const newX = collapsedDragRef.current.origX + dx
+      const newY = collapsedDragRef.current.origY + dy
+      setCollapsedPos({
+        x: Math.max(0, Math.min(window.innerWidth - 48, newX)),
+        y: Math.max(0, Math.min(window.innerHeight - 48, newY)),
+      })
+    }
+    const onUp = () => {
+      collapsedDragRef.current = null
+      setIsDragging(false)
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
     document.addEventListener('mousemove', onMove)
     document.addEventListener('mouseup', onUp)
     document.body.style.cursor = 'move'
@@ -183,20 +262,24 @@ export default function TraeBot() {
     return `${d.getMonth() + 1}/${d.getDate()}`
   }
 
-  // 收起状态：悬浮按钮
+  // 收起状态：悬浮按钮（可拖拽）
   if (!isOpen) {
     return (
-      <div className="fixed right-6 bottom-6 z-[100]">
-        {showIntro && (
+      <div
+        className={`fixed z-[100] ${collapsedPos ? '' : 'right-6 bottom-6'}`}
+        style={collapsedPos ? { left: collapsedPos.x, top: collapsedPos.y } : undefined}
+      >
+        {showIntro && !collapsedPos && (
           <div className="absolute right-full top-1/2 -translate-y-1/2 mr-3 whitespace-nowrap bg-ink-900 text-white text-[13px] px-4 py-2.5 rounded-2xl rounded-br-md shadow-xl animate-fade-in-up">
             你好！我是小薇，有问题可以随时问我~
             <span className="absolute right-[-4px] top-1/2 -translate-y-1/2 w-2 h-2 bg-ink-900 rotate-45" />
           </div>
         )}
         <button
-          onClick={toggleOpen}
-          className="relative w-12 h-12 rounded-full bg-seal-600 text-white shadow-2xl flex items-center justify-center hover:-translate-y-1 hover:shadow-lg transition-all duration-300 active:scale-95 group"
-          title="和小薇聊聊"
+          onMouseDown={onCollapsedMouseDown}
+          onClick={() => { if (wasDraggedRef.current) { wasDraggedRef.current = false; return } toggleOpen() }}
+          className={`relative w-12 h-12 rounded-full bg-seal-600 text-white shadow-2xl flex items-center justify-center ${isDragging ? '' : 'hover:-translate-y-1 hover:shadow-lg transition-all duration-300'} active:scale-95 group cursor-move`}
+          title="和小薇聊聊（可拖拽）"
         >
           <Sparkles size={22} className="group-hover:scale-110 transition-transform" />
           {conversations.length > 0 && (
@@ -213,7 +296,7 @@ export default function TraeBot() {
   return (
     <div
       ref={panelRef}
-      className={`fixed z-[100] w-[360px] h-[500px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-ink-100 ${pos ? '' : 'right-6 bottom-6'}`}
+      className={`fixed z-[100] w-[360px] h-[500px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-ink-100 ${pos ? '' : 'right-6 bottom-6'} ${isDragging ? '!transition-none' : ''}`}
       style={pos ? { left: pos.x, top: pos.y, right: 'auto', bottom: 'auto' } : undefined}
     >
       {/* 标题栏 */}

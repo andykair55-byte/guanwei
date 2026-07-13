@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  ArrowLeft, ThumbsUp, ThumbsDown, Play, FastForward,
-  Swords, Trophy, Users, RotateCcw, Sparkles, Shield,
-  MessageCircle, MessageSquare, BarChart3, Search, Target,
-  Lightbulb, BookOpen, RefreshCw, Smile, Brain, Crown, Loader2,
+  Play, FastForward, Trophy, RotateCcw,
+  MessageCircle, Share2, MoreHorizontal, ThumbsUp,
+  BookOpen, Swords as SwordsIcon, RefreshCw, Loader2,
+  Flame, Sparkles,
 } from 'lucide-react'
 import {
   getTopic, getMockMatch,
@@ -14,52 +14,46 @@ import { type AICharacter } from '../services/characters'
 import { initThemeDebate, runThemeDebate } from '../services/themeDebateService'
 import DanmakuOverlay from '../components/DanmakuOverlay'
 import { pickDanmaku, toQueueItems, type DanmakuQueueItem, type DanmakuTrigger } from '../services/danmakuService'
-import CharacterIcon from '../components/CharacterIcon'
+import PixelAvatar, { PixelAvatarSmall } from '../components/PixelAvatar'
 
-const THINKING_ICON_MAP: Record<string, React.ElementType> = {
-  '📊': BarChart3, '🔍': Search, '⚔️': Swords, '🎯': Target,
-  '🛡️': Shield, '💡': Lightbulb, '📖': BookOpen, '🔄': RefreshCw, '😏': Smile, '💭': Search,
+// ===== Faction / Skill data =====
+const FACTION_MAP: Record<string, string> = {
+  'zhuge-liang': '蜀', 'zhuge-liang-2': '蜀',
+  'wang-lang': '魏',
+  'mengzi': '儒', 'xunzi': '儒',
+  'zhou-yu': '吴',
+  'lu-xun': '新', 'hu-shi': '新',
+  'baize': '神', 'xiezhi': '神',
+}
+
+const SKILL_TAGS: Record<string, { name: string; icon: string }[]> = {
+  'zhuge-liang': [{ name: '舌战群儒', icon: '⚔️' }, { name: '空城计', icon: '' }],
+  'wang-lang': [{ name: '巧言令色', icon: '' }, { name: '偷换概念', icon: '🎭' }],
+  'baize': [{ name: '数据洞察', icon: '📊' }, { name: '逻辑推演', icon: '🔍' }],
+  'xiezhi': [{ name: '铁面无私', icon: '⚖️' }, { name: '一击必杀', icon: '⚔️' }],
 }
 
 // ===== Typing animation hook =====
-
 function useTypingAnimation(text: string, speed: number = 25, trigger: boolean = false) {
   const [displayed, setDisplayed] = useState('')
   const [isTyping, setIsTyping] = useState(false)
-
   useEffect(() => {
-    if (!trigger || !text) {
-      setDisplayed('')
-      return
-    }
-    setIsTyping(true)
-    setDisplayed('')
+    if (!trigger || !text) { setDisplayed(''); return }
+    setIsTyping(true); setDisplayed('')
     let i = 0
     const timer = setInterval(() => {
-      i++
-      setDisplayed(text.slice(0, i))
-      if (i >= text.length) {
-        clearInterval(timer)
-        setIsTyping(false)
-      }
+      i++; setDisplayed(text.slice(0, i))
+      if (i >= text.length) { clearInterval(timer); setIsTyping(false) }
     }, speed)
     return () => clearInterval(timer)
   }, [text, speed, trigger])
-
   return { displayed, isTyping }
 }
 
-// ===== Reveal phase per round =====
-// Flow: think-affirm → affirm → think-negate → negate → scored
 type Phase = 'think-affirm' | 'affirm' | 'think-negate' | 'negate' | 'scored'
+interface RevealedState { round: DebateRound; phase: Phase }
 
-interface RevealedState {
-  round: DebateRound
-  phase: Phase
-}
-
-// ===== Component =====
-
+// ===== Main Component =====
 export default function AIArena() {
   const { topicId } = useParams<{ topicId: string }>()
   const [searchParams] = useSearchParams()
@@ -70,21 +64,11 @@ export default function AIArena() {
   const negateCharId = searchParams.get('negate') || 'xiezhi'
   const roundsParam = parseInt(searchParams.get('rounds') || '5', 10)
 
-  // 初始化 match：theme 模式返回空 match（rounds 待异步加载），非 theme 模式返回 mock match
   const [match, setMatch] = useState<DebateMatch>(() => {
     if (themeId) {
       const init = initThemeDebate(themeId, topicId || 'college')
-      if (init) {
-        return {
-          topic: init.topic,
-          affirmChar: init.affirmChar,
-          negateChar: init.negateChar,
-          rounds: [],
-          totalRounds: roundsParam,
-        }
-      }
+      if (init) return { topic: init.topic, affirmChar: init.affirmChar, negateChar: init.negateChar, rounds: [], totalRounds: roundsParam }
     }
-    // 非 theme 模式或主题包初始化失败：回退到 mock
     const fallbackTopic = getTopic(topicId || 'college') || getTopic('college')!
     return getMockMatch(fallbackTopic.id, affirmCharId, negateCharId, roundsParam)
   })
@@ -94,839 +78,459 @@ export default function AIArena() {
 
   const [revealed, setRevealed] = useState<RevealedState[]>([])
   const [isAutoPlaying, setIsAutoPlaying] = useState(false)
-  const [affirmVotes, setAffirmVotes] = useState(1247 + Math.floor(Math.random() * 500))
-  const [negateVotes, setNegateVotes] = useState(1183 + Math.floor(Math.random() * 500))
+  const [affirmVotes, setAffirmVotes] = useState(23876)
+  const [negateVotes, setNegateVotes] = useState(11248)
   const [hasVoted, setHasVoted] = useState<'affirm' | 'negate' | null>(null)
   const [showResult, setShowResult] = useState(false)
   const [showClosing, setShowClosing] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
-
-  // ===== theme 模式异步加载 =====
   const [isLoadingDebate, setIsLoadingDebate] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
-
-  // ===== Danmaku =====
   const [danmakuEnabled, setDanmakuEnabled] = useState(true)
   const [danmakuQueue, setDanmakuQueue] = useState<DanmakuQueueItem[]>([])
+  const [viewerCount, setViewerCount] = useState(23124)
+
+  useEffect(() => {
+    const t = setInterval(() => setViewerCount(v => v + Math.floor(Math.random() * 7) - 3), 3000)
+    return () => clearInterval(t)
+  }, [])
+
+  const debateHeat = 98766 + revealed.length * 1200
 
   const pushDanmaku = useCallback((trigger: DanmakuTrigger, count: number, characterId?: string) => {
     if (!danmakuEnabled) return
-    const templates = pickDanmaku(trigger, count, characterId)
-    const items = toQueueItems(templates)
-    setDanmakuQueue(prev => [...prev, ...items])
+    setDanmakuQueue(prev => [...prev, ...toQueueItems(pickDanmaku(trigger, count, characterId))])
   }, [danmakuEnabled])
 
   const handleDanmakuComplete = useCallback((id: string) => {
     setDanmakuQueue(prev => prev.filter(d => d.id !== id))
   }, [])
 
-  // ===== 异步加载主题包辩论 rounds =====
   useEffect(() => {
-    if (!themeId) return
-    // 已经有 rounds（非首次加载）则跳过
-    if (match.rounds.length > 0) return
-
+    if (!themeId || match.rounds.length > 0) return
     let cancelled = false
     const init = initThemeDebate(themeId, topicId || 'college')
     if (!init) return
-
-    setIsLoadingDebate(true)
-    setLoadError(null)
-
+    setIsLoadingDebate(true); setLoadError(null)
     runThemeDebate(init.topic, init.affirmChar, init.negateChar, roundsParam)
-      .then(fullMatch => {
-        if (!cancelled) {
-          setMatch(fullMatch)
-          setIsLoadingDebate(false)
-        }
-      })
-      .catch(err => {
-        if (!cancelled) {
-          setLoadError(err.message || '辩论加载失败，请检查 LLM 配置')
-          setIsLoadingDebate(false)
-        }
-      })
-
+      .then(m => { if (!cancelled) { setMatch(m); setIsLoadingDebate(false) } })
+      .catch(err => { if (!cancelled) { setLoadError(err.message || '辩论加载失败'); setIsLoadingDebate(false) } })
     return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [themeId, topicId, roundsParam, reloadKey])
 
   const totalRounds = match.totalRounds
   const isComplete = revealed.length >= totalRounds && revealed.every(r => r.phase === 'scored')
-
-  // Current typing target
   const lastRevealed = revealed[revealed.length - 1]
+
   const typingTarget = (() => {
     if (!lastRevealed) return ''
     if (lastRevealed.phase === 'affirm') return lastRevealed.round.affirm.content
     if (lastRevealed.phase === 'negate') return lastRevealed.round.negate.content
     return ''
   })()
-
   const { displayed, isTyping } = useTypingAnimation(typingTarget, 22, !!typingTarget)
 
-  // Auto-scroll
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [revealed.length, displayed])
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [revealed.length, displayed])
 
-  // Danmaku triggers on phase changes
   const prevPhaseRef = useRef<string>('')
   useEffect(() => {
-    const last = revealed[revealed.length - 1]
-    if (!last) return
-    const key = `${last.round.round}-${last.phase}`
-    if (key === prevPhaseRef.current) return
+    const last = revealed[revealed.length - 1]; if (!last) return
+    const key = `${last.round.round}-${last.phase}`; if (key === prevPhaseRef.current) return
     prevPhaseRef.current = key
-
-    const charId = last.phase === 'affirm' ? affirmChar.id
-      : last.phase === 'negate' ? negateChar.id
-      : undefined
-
-    if (last.phase === 'affirm' || last.phase === 'negate') {
-      pushDanmaku('speech', 2 + Math.floor(Math.random() * 3), charId)
-    } else if (last.phase === 'scored') {
-      if (last.round.highlight) {
-        pushDanmaku('highlight', 3 + Math.floor(Math.random() * 3), last.round.highlight.characterId)
-      }
-      if (last.round.taunt) {
-        pushDanmaku('taunt', 2 + Math.floor(Math.random() * 2))
-      }
-      // Score upset: check if lead changed this round
-      const prevRounds = revealed.filter(r => r.phase === 'scored' && r.round.round !== last.round.round)
-      if (prevRounds.length > 0) {
-        const prevDiff = prevRounds.reduce((a, r) => a + (r.round.score.affirmScore - r.round.score.negateScore), 0)
-        const currDiff = prevDiff + (last.round.score.affirmScore - last.round.score.negateScore)
-        if (prevDiff * currDiff < 0) {
-          pushDanmaku('score-upset', 2 + Math.floor(Math.random() * 2))
-        }
-      }
+    const charId = last.phase === 'affirm' ? affirmChar.id : last.phase === 'negate' ? negateChar.id : undefined
+    if (last.phase === 'affirm' || last.phase === 'negate') pushDanmaku('speech', 2 + Math.floor(Math.random() * 3), charId)
+    else if (last.phase === 'scored') {
+      if (last.round.highlight) pushDanmaku('highlight', 3 + Math.floor(Math.random() * 3), last.round.highlight.characterId)
+      if (last.round.taunt) pushDanmaku('taunt', 2 + Math.floor(Math.random() * 2))
     }
   }, [revealed, affirmChar.id, negateChar.id, pushDanmaku])
 
-  // Trigger closing danmaku
-  useEffect(() => {
-    if (showClosing) {
-      pushDanmaku('closing', 5 + Math.floor(Math.random() * 4))
-    }
-  }, [showClosing, pushDanmaku])
+  useEffect(() => { if (showClosing) pushDanmaku('closing', 5 + Math.floor(Math.random() * 4)) }, [showClosing, pushDanmaku])
 
-  // Advance to next phase
   const advance = useCallback(() => {
-    if (revealed.length === 0) {
-      // Start: reveal first round's thinking phase (affirm side)
-      setRevealed([{ round: match.rounds[0], phase: 'think-affirm' }])
-      return
-    }
-
+    if (revealed.length === 0) { setRevealed([{ round: match.rounds[0], phase: 'think-affirm' }]); return }
     const last = revealed[revealed.length - 1]
-    const roundIdx = match.rounds.indexOf(last.round)
-
-    if (last.phase === 'think-affirm') {
-      // Show affirm speech
-      setRevealed(prev => [...prev.slice(0, -1), { ...last, phase: 'affirm' }])
-    } else if (last.phase === 'affirm') {
-      // Show negate thinking
-      setRevealed(prev => [...prev.slice(0, -1), { ...last, phase: 'think-negate' }])
-    } else if (last.phase === 'think-negate') {
-      // Show negate speech
-      setRevealed(prev => [...prev.slice(0, -1), { ...last, phase: 'negate' }])
-    } else if (last.phase === 'negate') {
-      // Show score
-      setRevealed(prev => [...prev.slice(0, -1), { ...last, phase: 'scored' }])
-    } else {
-      // Move to next round
-      const nextIdx = roundIdx + 1
-      if (nextIdx < match.rounds.length) {
-        setRevealed(prev => [...prev, { round: match.rounds[nextIdx], phase: 'think-affirm' }])
-      }
+    if (last.phase === 'think-affirm') setRevealed(p => [...p.slice(0, -1), { ...last, phase: 'affirm' }])
+    else if (last.phase === 'affirm') setRevealed(p => [...p.slice(0, -1), { ...last, phase: 'think-negate' }])
+    else if (last.phase === 'think-negate') setRevealed(p => [...p.slice(0, -1), { ...last, phase: 'negate' }])
+    else if (last.phase === 'negate') setRevealed(p => [...p.slice(0, -1), { ...last, phase: 'scored' }])
+    else {
+      const nextIdx = match.rounds.indexOf(last.round) + 1
+      if (nextIdx < match.rounds.length) setRevealed(p => [...p, { round: match.rounds[nextIdx], phase: 'think-affirm' }])
     }
   }, [revealed, match])
 
-  // Auto-play
   useEffect(() => {
     if (!isAutoPlaying || isComplete || isTyping) return
-    // Thinking phases need more time for steps to animate
     const isThinking = lastRevealed?.phase === 'think-affirm' || lastRevealed?.phase === 'think-negate'
-    const delay = isThinking ? 3000 : 800
-    const timer = setTimeout(() => advance(), delay)
-    return () => clearTimeout(timer)
+    const t = setTimeout(() => advance(), isThinking ? 3000 : 800)
+    return () => clearTimeout(t)
   }, [isAutoPlaying, isComplete, isTyping, advance, lastRevealed])
 
-  const handleStart = () => {
-    setIsAutoPlaying(true)
-    if (revealed.length === 0) advance()
-  }
-
-  const handleFastForward = () => {
-    setIsAutoPlaying(false)
-    setRevealed(match.rounds.map(r => ({ round: r, phase: 'scored' as Phase })))
-  }
-
+  const handleStart = () => { setIsAutoPlaying(true); if (revealed.length === 0) advance() }
+  const handleFastForward = () => { setIsAutoPlaying(false); setRevealed(match.rounds.map(r => ({ round: r, phase: 'scored' as Phase }))) }
   const handleReset = () => {
-    setRevealed([])
-    setIsAutoPlaying(false)
-    setShowResult(false)
-    setShowClosing(false)
-    setDanmakuQueue([])
-    prevPhaseRef.current = ''
-
+    setRevealed([]); setIsAutoPlaying(false); setShowResult(false); setShowClosing(false)
+    setDanmakuQueue([]); prevPhaseRef.current = ''
     if (themeId) {
-      // theme 模式：重置为空 match，触发 useEffect 重新加载
       const init = initThemeDebate(themeId, topicId || 'college')
-      if (init) {
-        setMatch({
-          topic: init.topic,
-          affirmChar: init.affirmChar,
-          negateChar: init.negateChar,
-          rounds: [],
-          totalRounds: roundsParam,
-        })
-        setLoadError(null)
-        setReloadKey(k => k + 1)
-        return
-      }
+      if (init) { setMatch({ topic: init.topic, affirmChar: init.affirmChar, negateChar: init.negateChar, rounds: [], totalRounds: roundsParam }); setLoadError(null); setReloadKey(k => k + 1); return }
     }
-    // 非 theme 模式：重新生成 mock
     setMatch(getMockMatch(topic.id, affirmCharId, negateCharId, roundsParam))
   }
 
-
   const handleVote = (side: 'affirm' | 'negate') => {
-    if (hasVoted) return
-    setHasVoted(side)
-    if (side === 'affirm') setAffirmVotes(v => v + 1)
-    else setNegateVotes(v => v + 1)
+    if (hasVoted) return; setHasVoted(side)
+    if (side === 'affirm') setAffirmVotes(v => v + 1); else setNegateVotes(v => v + 1)
   }
 
   const totalVotes = affirmVotes + negateVotes
   const affirmPercent = totalVotes > 0 ? Math.round((affirmVotes / totalVotes) * 100) : 50
-
-  // Compute cumulative score
-  const cumulativeScore = revealed.filter(r => r.phase === 'scored').reduce(
-    (acc, r) => ({
-      affirm: acc.affirm + r.round.score.affirmScore,
-      negate: acc.negate + r.round.score.negateScore,
-    }),
-    { affirm: 0, negate: 0 },
-  )
-
-  const scoredCount = revealed.filter(r => r.phase === 'scored').length
-  const momentumPercent = cumulativeScore.affirm + cumulativeScore.negate > 0
-    ? Math.round((cumulativeScore.affirm / (cumulativeScore.affirm + cumulativeScore.negate)) * 100)
-    : 50
-
-  const currentRoundNum = revealed.length > 0
-    ? match.rounds.indexOf(revealed[revealed.length - 1].round) + 1
-    : 0
+  const currentRoundNum = revealed.length > 0 ? match.rounds.indexOf(revealed[revealed.length - 1].round) + 1 : 0
+  const affirmFaction = FACTION_MAP[affirmChar.id] || ''
+  const negateFaction = FACTION_MAP[negateChar.id] || ''
+  const affirmSkills = SKILL_TAGS[affirmChar.id] || []
+  const negateSkills = SKILL_TAGS[negateChar.id] || []
+  const isThemeMode = !!themeId
+  const battleTitle = isThemeMode ? '历史名战' : 'AI 对决'
 
   return (
-    <div className="flex flex-col min-h-full bg-paper-texture">
-      {/* Danmaku Overlay */}
-      <DanmakuOverlay
-        items={danmakuQueue}
-        enabled={danmakuEnabled}
-        onItemComplete={handleDanmakuComplete}
-      />
+    <div className="arena-page">
+      <DanmakuOverlay items={danmakuQueue} enabled={danmakuEnabled} onItemComplete={handleDanmakuComplete} />
 
-      {/* Header */}
-      <div className="px-5 pt-4 pb-2 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="p-1.5 -ml-1.5 rounded-lg hover:bg-paper-dark transition-colors active:scale-95">
-          <ArrowLeft size={20} className="text-ink-700" />
-        </button>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-[15px] font-bold text-ink-900 truncate">{topic.title}</h1>
-          <p className="text-[11px] text-ink-400">AI 辩论 · {affirmChar.name} vs {negateChar.name}</p>
+      {/* ===== HEADER ===== */}
+      <header className="arena-header">
+        <div className="arena-header-left">
+          <div className="arena-logo">
+            <span className="arena-logo-icon">🦊</span>
+            <div>
+              <h1 className="arena-logo-title">AI竞技场 <span className="arena-beta-tag">BETA</span></h1>
+              <p className="arena-logo-subtitle">看AI斗嘴 · 看热闹 · 看乐子</p>
+            </div>
+          </div>
         </div>
-        <button
-          onClick={() => setDanmakuEnabled(v => !v)}
-          className={`p-2 rounded-lg transition-colors active:scale-95 ${danmakuEnabled ? 'bg-seal/10 text-seal' : 'bg-surface text-ink-400'}`}
-          title={danmakuEnabled ? '关闭弹幕' : '开启弹幕'}
-        >
-          <MessageSquare size={16} />
-        </button>
-        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-surface shadow-card">
-          <Users size={12} className="text-ink-400" />
-          <span className="text-[11px] text-ink-500">{totalVotes.toLocaleString()}</span>
+        <div className="arena-header-center">
+          <div className="arena-live-badge"><span className="arena-live-dot" /><span>LIVE</span></div>
+          <div className="arena-viewer-count">
+            <Flame size={16} className="arena-fire-icon" />
+            <span>{viewerCount.toLocaleString()}</span>
+            <span className="arena-viewer-label">人正在围观</span>
+          </div>
+        </div>
+        <div className="arena-header-right">
+          <button className="arena-header-btn"><Share2 size={16} /><span>分享</span></button>
+          <button className="arena-header-btn arena-header-btn-icon"><MoreHorizontal size={18} /></button>
+        </div>
+      </header>
+
+      {/* ===== BATTLE ARENA ===== */}
+      <div className="arena-battle">
+        <div className="arena-battle-title-bar"><span className="arena-battle-title-label">{battleTitle}</span></div>
+
+        <div className="arena-vs-display">
+          {/* Affirm Character */}
+          <div className="arena-character">
+            <div className="arena-char-info">
+              <span className="arena-char-name">{affirmChar.name}</span>
+              <span className="arena-char-era">{affirmChar.title}</span>
+              {affirmFaction && <span className="arena-faction-badge arena-faction-affirm">{affirmFaction}</span>}
+            </div>
+            <PixelAvatar characterId={affirmChar.id} name={affirmChar.name} size={180} />
+            <div className="arena-character-tags">
+              {affirmSkills.map((s, i) => <span key={i} className="arena-skill-tag">{s.icon}{s.name}</span>)}
+            </div>
+          </div>
+
+          {/* VS Center */}
+          <div className="arena-vs-center">
+            <div className="arena-vs-text">
+              <span className="arena-vs-name">{affirmChar.name}</span>
+              <span className="arena-vs-vs">VS</span>
+              <span className="arena-vs-name">{negateChar.name}</span>
+            </div>
+            <div className="arena-round-badge">
+              <span className="arena-round-diamond">◆</span>
+              <span>{currentRoundNum > 0 ? `第 ${currentRoundNum} 回合 · 正在辩论中` : isLoadingDebate ? 'AI 准备中…' : '即将开始'}</span>
+              <span className="arena-round-diamond">◆</span>
+            </div>
+            <div className="arena-vs-swords">⚔️</div>
+          </div>
+
+          {/* Negate Character */}
+          <div className="arena-character">
+            <div className="arena-char-info">
+              {negateFaction && <span className="arena-faction-badge arena-faction-negate">{negateFaction}</span>}
+              <span className="arena-char-era">{negateChar.title}</span>
+              <span className="arena-char-name">{negateChar.name}</span>
+            </div>
+            <PixelAvatar characterId={negateChar.id} name={negateChar.name} size={180} flip />
+            <div className="arena-character-tags">
+              {negateSkills.map((s, i) => <span key={i} className="arena-skill-tag">{s.icon}{s.name}</span>)}
+            </div>
+          </div>
+        </div>
+
+        {/* Voting Bar */}
+        <div className="arena-voting-bar">
+          <div className="arena-vote-side">
+            <ThumbsUp size={28} className="arena-vote-thumb-up" />
+            <div>
+              <span className="arena-vote-label">支持率</span>
+              <div className="arena-vote-number">
+                <span className="arena-vote-percent">{affirmPercent}%</span>
+                <span className="arena-vote-count">{affirmVotes.toLocaleString()} 票</span>
+              </div>
+            </div>
+          </div>
+          <div className="arena-heat-center">
+            <div className="arena-heat-label">辩论热度</div>
+            <div className="arena-heat-number"><Flame size={20} className="arena-fire-icon" /><span>{debateHeat.toLocaleString()}</span></div>
+          </div>
+          <div className="arena-vote-side arena-vote-side-right">
+            <div className="arena-vote-info-right">
+              <span className="arena-vote-label">支持率</span>
+              <div className="arena-vote-number">
+                <span className="arena-vote-count">{negateVotes.toLocaleString()} 票</span>
+                <span className="arena-vote-percent">{100 - affirmPercent}%</span>
+              </div>
+            </div>
+            <ThumbsUp size={28} className="arena-vote-thumb-down" />
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="arena-progress-bar">
+          <div className="arena-progress-fill-left" style={{ width: `${affirmPercent}%` }} />
+          <div className="arena-progress-fill-right" style={{ width: `${100 - affirmPercent}%` }} />
         </div>
       </div>
 
-      <div className="flex-1 px-5 pb-4 overflow-y-auto flex flex-col gap-3">
-        {/* ===== VS Header with Score ===== */}
-        <div className="bg-surface rounded-xl shadow-card p-4">
-          <div className="flex items-center gap-3">
-            {/* Affirm character */}
-            <div className="flex-1 text-center">
-              <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${affirmChar.visual.gradientFrom} ${affirmChar.visual.gradientTo} flex items-center justify-center mx-auto mb-1.5 shadow-lg ${affirmChar.visual.glowShadow}`}>
-                <CharacterIcon characterId={affirmChar.id} size={20} className="text-white" />
-              </div>
-              <p className="text-[13px] font-bold text-ink-900">{affirmChar.name}</p>
-              <p className="text-[10px] text-ink-400">{topic.affirmLabel}</p>
-              {scoredCount > 0 && (
-                <p className={`text-[11px] font-bold mt-0.5 ${affirmChar.visual.textColor}`}>{cumulativeScore.affirm}分</p>
-              )}
+      {/* ===== DEBATE CHAT ===== */}
+      <div className="arena-chat">
+        {revealed.map((item, i) => {
+          const round = item.round; const isLast = i === revealed.length - 1
+          const showAffirmThinking = item.phase === 'think-affirm'
+          const showAffirmSpeech = item.phase === 'affirm' || item.phase === 'think-negate' || item.phase === 'negate' || item.phase === 'scored'
+          const showNegateThinking = item.phase === 'think-negate'
+          const showNegateSpeech = item.phase === 'negate' || item.phase === 'scored'
+          const showScore = item.phase === 'scored'
+          return (
+            <div key={i} className="arena-chat-round">
+              {i > 0 && <div className="arena-round-divider"><span>第 {round.round} 回合</span></div>}
+              {showAffirmThinking && round.affirm.thinkingSteps && <ThinkingProcess char={affirmChar} steps={round.affirm.thinkingSteps} isAnimating={isLast} />}
+              {showAffirmSpeech && <ChatBubble char={affirmChar} content={isLast && item.phase === 'affirm' ? displayed : round.affirm.content} isTyping={isLast && item.phase === 'affirm' && isTyping} isRight={false} faction={affirmFaction} />}
+              {showNegateThinking && round.negate.thinkingSteps && <ThinkingProcess char={negateChar} steps={round.negate.thinkingSteps} isAnimating={isLast} />}
+              {showNegateSpeech && <ChatBubble char={negateChar} content={isLast && item.phase === 'negate' ? displayed : round.negate.content} isTyping={isLast && item.phase === 'negate' && isTyping} isRight={true} faction={negateFaction} />}
+              {showScore && <ScoreCard score={round.score} affirmName={affirmChar.name} negateName={negateChar.name} />}
+              {showScore && round.highlight && <HighlightCard highlight={round.highlight} affirmName={affirmChar.name} negateName={negateChar.name} />}
+              {showScore && round.taunt && <TauntCard taunt={round.taunt} affirmChar={affirmChar} negateChar={negateChar} />}
             </div>
+          )
+        })}
+        <div ref={chatEndRef} />
+      </div>
 
-            {/* VS + Round */}
-            <div className="flex flex-col items-center gap-1">
-              <Swords size={20} className="text-ink-300" />
-              <span className="text-[10px] text-ink-400 font-medium">
-                {currentRoundNum > 0 ? `第 ${currentRoundNum} / ${totalRounds} 局` : '即将开始'}
-              </span>
-            </div>
-
-            {/* Negate character */}
-            <div className="flex-1 text-center">
-              <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${negateChar.visual.gradientFrom} ${negateChar.visual.gradientTo} flex items-center justify-center mx-auto mb-1.5 shadow-lg ${negateChar.visual.glowShadow}`}>
-                <CharacterIcon characterId={negateChar.id} size={20} className="text-white" />
-              </div>
-              <p className="text-[13px] font-bold text-ink-900">{negateChar.name}</p>
-              <p className="text-[10px] text-ink-400">{topic.negateLabel}</p>
-              {scoredCount > 0 && (
-                <p className={`text-[11px] font-bold mt-0.5 ${negateChar.visual.textColor}`}>{cumulativeScore.negate}分</p>
-              )}
-            </div>
-          </div>
-
-          {/* Momentum bar (judge score based) */}
-          <div className="mt-3">
-            <div className="h-3 rounded-full overflow-hidden flex bg-paper-dark">
-              <div
-                className={`h-full bg-gradient-to-r ${affirmChar.visual.gradientFrom} ${affirmChar.visual.gradientTo} transition-all duration-700`}
-                style={{ width: `${momentumPercent}%` }}
-              />
-              <div
-                className={`h-full bg-gradient-to-r ${negateChar.visual.gradientFrom} ${negateChar.visual.gradientTo} transition-all duration-700`}
-                style={{ width: `${100 - momentumPercent}%` }}
-              />
-            </div>
-            <div className="flex justify-between mt-1 text-[11px]">
-              <span className={`${affirmChar.visual.textColor} font-medium`}>{momentumPercent}%</span>
-              <span className={`${negateChar.visual.textColor} font-medium`}>{100 - momentumPercent}%</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ===== Debate Area ===== */}
-        <div className="flex-1 space-y-3 min-h-[200px]">
-          {revealed.map((item, i) => {
-            const round = item.round
-            const isLast = i === revealed.length - 1
-            const showAffirmThinking = item.phase === 'think-affirm'
-            const showAffirmSpeech = item.phase === 'affirm' || item.phase === 'think-negate' || item.phase === 'negate' || item.phase === 'scored'
-            const showNegateThinking = item.phase === 'think-negate'
-            const showNegateSpeech = item.phase === 'negate' || item.phase === 'scored'
-            const showScore = item.phase === 'scored'
-
-            return (
-              <div key={i} className="space-y-2">
-                {/* Round divider */}
-                <div className="flex items-center gap-2 py-1">
-                  <div className="flex-1 h-px bg-line/30" />
-                  <span className="text-[10px] text-ink-400 font-medium">第 {round.round} 局</span>
-                  <div className="flex-1 h-px bg-line/30" />
-                </div>
-
-                {/* Affirm thinking process */}
-                {showAffirmThinking && round.affirm.thinkingSteps && (
-                  <ThinkingProcess
-                    char={affirmChar}
-                    steps={round.affirm.thinkingSteps}
-                    isAnimating={isLast}
-                  />
-                )}
-
-                {/* Affirm speech */}
-                {showAffirmSpeech && (
-                  <SpeechBubble
-                    char={affirmChar}
-                    content={isLast && item.phase === 'affirm' ? displayed : round.affirm.content}
-                    isTyping={isLast && item.phase === 'affirm' && isTyping}
-                    align="left"
-                  />
-                )}
-
-                {/* Negate thinking process */}
-                {showNegateThinking && round.negate.thinkingSteps && (
-                  <ThinkingProcess
-                    char={negateChar}
-                    steps={round.negate.thinkingSteps}
-                    isAnimating={isLast}
-                  />
-                )}
-
-                {/* Negate speech */}
-                {showNegateSpeech && (
-                  <SpeechBubble
-                    char={negateChar}
-                    content={isLast && item.phase === 'negate' ? displayed : round.negate.content}
-                    isTyping={isLast && item.phase === 'negate' && isTyping}
-                    align="right"
-                  />
-                )}
-
-                {/* Score card */}
-                {showScore && (
-                  <ScoreCard
-                    score={round.score}
-                    affirmName={affirmChar.name}
-                    negateName={negateChar.name}
-                    affirmColor={affirmChar.visual.textColor}
-                    negateColor={negateChar.visual.textColor}
-                  />
-                )}
-
-                {/* Highlight */}
-                {showScore && round.highlight && (
-                  <HighlightCard highlight={round.highlight} affirmName={affirmChar.name} negateName={negateChar.name} />
-                )}
-
-                {/* Taunt */}
-                {showScore && round.taunt && (
-                  <TauntCard taunt={round.taunt} affirmChar={affirmChar} negateChar={negateChar} />
-                )}
-              </div>
-            )
-          })}
-          <div ref={chatEndRef} />
-        </div>
-
-        {/* ===== Controls ===== */}
-        {!isComplete && (
-          <div className="flex gap-2">
-            {/* Loading 状态（theme 模式异步加载中，或 rounds 尚未就绪） */}
-            {(isLoadingDebate || (themeId && match.rounds.length === 0 && !loadError)) && (
-              <div className="flex-1 py-3.5 rounded-xl bg-surface shadow-card text-[13px] text-ink-500 font-medium flex items-center justify-center gap-2">
-                <Loader2 size={16} className="animate-spin" />
-                AI 正在准备辩论…
-              </div>
-            )}
-            {/* Error 状态 */}
-            {loadError && !isLoadingDebate && (
-              <button
-                onClick={() => setReloadKey(k => k + 1)}
-                className="flex-1 py-3.5 rounded-xl bg-red-50 text-red-600 text-[13px] font-medium active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-              >
-                {loadError} · 点击重试
-              </button>
-            )}
-            {/* 正常控制（rounds 已就绪） */}
-            {!isLoadingDebate && !loadError && match.rounds.length > 0 && (
-              <>
-                {!isAutoPlaying && revealed.length === 0 && (
-                  <button
-                    onClick={handleStart}
-                    className="flex-1 py-3.5 rounded-xl bg-seal text-white font-semibold text-[14px] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-seal-glow"
-                  >
-                    <Play size={16} />
-                    开始辩论
-                  </button>
-                )}
-                {!isAutoPlaying && revealed.length > 0 && (
-                  <button
-                    onClick={advance}
-                    className="flex-1 py-3 rounded-xl bg-surface shadow-card text-[13px] text-ink-700 font-medium active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                  >
-                    <Play size={14} />
-                    {lastRevealed?.phase === 'think-affirm' ? `${affirmChar.name}发言` : lastRevealed?.phase === 'affirm' ? `${negateChar.name}思考` : lastRevealed?.phase === 'think-negate' ? `${negateChar.name}发言` : lastRevealed?.phase === 'negate' ? '评委打分' : '下一回合'}
-                  </button>
-                )}
-                {!isAutoPlaying && (
-                  <button
-                    onClick={handleStart}
-                    className="py-3 px-4 rounded-xl bg-surface shadow-card text-[13px] text-ink-700 font-medium active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                  >
-                    <FastForward size={14} />
-                    自动播放
-                  </button>
-                )}
-                {isAutoPlaying && (
-                  <button
-                    onClick={() => setIsAutoPlaying(false)}
-                    className="flex-1 py-3 rounded-xl bg-surface shadow-card text-[13px] text-ink-700 font-medium active:scale-[0.98] transition-all"
-                  >
-                    暂停
-                  </button>
-                )}
-                <button
-                  onClick={handleFastForward}
-                  className="py-3 px-4 rounded-xl bg-paper-dark text-[12px] text-ink-500 font-medium active:scale-[0.97] transition-transform flex items-center justify-center gap-1.5"
-                >
-                  <FastForward size={12} />
-                  跳过
+      {/* ===== CONTROLS ===== */}
+      {!isComplete && (
+        <div className="arena-controls">
+          {(isLoadingDebate || (themeId && match.rounds.length === 0 && !loadError)) && (
+            <div className="arena-ctrl-loading"><Loader2 size={16} className="animate-spin" />AI 正在准备辩论…</div>
+          )}
+          {loadError && !isLoadingDebate && <button onClick={() => setReloadKey(k => k + 1)} className="arena-ctrl-btn arena-ctrl-error">{loadError} · 点击重试</button>}
+          {!isLoadingDebate && !loadError && match.rounds.length > 0 && (
+            <>
+              {!isAutoPlaying && revealed.length === 0 && <button onClick={handleStart} className="arena-ctrl-btn arena-ctrl-primary"><Play size={16} />开始辩论</button>}
+              {!isAutoPlaying && revealed.length > 0 && (
+                <button onClick={advance} className="arena-ctrl-btn arena-ctrl-secondary">
+                  <Play size={14} />
+                  {lastRevealed?.phase === 'think-affirm' ? `${affirmChar.name}发言` : lastRevealed?.phase === 'affirm' ? `${negateChar.name}思考` : lastRevealed?.phase === 'think-negate' ? `${negateChar.name}发言` : lastRevealed?.phase === 'negate' ? '评委打分' : '下一回合'}
                 </button>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* ===== Closing Ceremony ===== */}
-        {isComplete && !showClosing && match.finalResult && (
-          <button
-            onClick={() => setShowClosing(true)}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 via-seal to-cyan-500 text-white font-semibold text-[14px] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg"
-          >
-            <Trophy size={16} />
-            查看最终结果
-          </button>
-        )}
-
-        {showClosing && match.finalResult && (
-          <ClosingCeremony
-            result={match.finalResult}
-            affirmChar={affirmChar}
-            negateChar={negateChar}
-            topic={topic}
-          />
-        )}
-
-        {/* ===== Final Vote ===== */}
-        {showClosing && !showResult && (
-          <div className="bg-surface rounded-xl shadow-card p-4 animate-fade-in-up space-y-3">
-            <div className="text-center mb-2">
-              <MessageCircle size={24} className="text-gold mx-auto mb-1" />
-              <p className="text-[14px] font-bold text-ink-900">谁说服了你？</p>
-              <p className="text-[11px] text-ink-400">投出你的一票</p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => handleVote('affirm')}
-                className={`flex-1 py-3.5 rounded-xl font-semibold text-[14px] active:scale-[0.97] transition-all flex items-center justify-center gap-2 ${
-                  hasVoted === 'affirm'
-                    ? `bg-gradient-to-r ${affirmChar.visual.gradientFrom} ${affirmChar.visual.gradientTo} text-white shadow-lg`
-                    : `${affirmChar.visual.bubbleBg} ${affirmChar.visual.textColor} border-2 ${affirmChar.visual.bubbleBorder}`
-                }`}
-              >
-                <ThumbsUp size={16} />
-                {affirmChar.name}
-              </button>
-              <button
-                onClick={() => handleVote('negate')}
-                className={`flex-1 py-3.5 rounded-xl font-semibold text-[14px] active:scale-[0.97] transition-all flex items-center justify-center gap-2 ${
-                  hasVoted === 'negate'
-                    ? `bg-gradient-to-r ${negateChar.visual.gradientFrom} ${negateChar.visual.gradientTo} text-white shadow-lg`
-                    : `${negateChar.visual.bubbleBg} ${negateChar.visual.textColor} border-2 ${negateChar.visual.bubbleBorder}`
-                }`}
-              >
-                <ThumbsDown size={16} />
-                {negateChar.name}
-              </button>
-            </div>
-            <button
-              onClick={() => setShowResult(true)}
-              className="w-full py-2.5 rounded-xl bg-paper-dark text-[12px] text-ink-500 font-medium active:scale-[0.97] transition-transform"
-            >
-              {hasVoted ? '查看结果' : '跳过投票，查看结果'}
-            </button>
-          </div>
-        )}
-
-        {/* ===== Vote Result ===== */}
-        {showResult && (
-          <div className="bg-surface rounded-xl shadow-card p-4 animate-fade-in-up space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Trophy size={16} className="text-gold" />
-                <span className="text-[14px] font-bold text-ink-900">观众投票</span>
-              </div>
-              <span className="text-[12px] text-ink-400">{totalVotes.toLocaleString()} 票</span>
-            </div>
-
-            <div className="h-5 rounded-full overflow-hidden flex bg-paper-dark">
-              <div
-                className={`h-full bg-gradient-to-r ${affirmChar.visual.gradientFrom} ${affirmChar.visual.gradientTo} transition-all duration-700 flex items-center justify-end pr-2`}
-                style={{ width: `${affirmPercent}%` }}
-              >
-                {affirmPercent > 15 && <span className="text-[10px] text-white font-bold">{affirmPercent}%</span>}
-              </div>
-              <div
-                className={`h-full bg-gradient-to-r ${negateChar.visual.gradientFrom} ${negateChar.visual.gradientTo} transition-all duration-700 flex items-center pl-2`}
-                style={{ width: `${100 - affirmPercent}%` }}
-              >
-                {100 - affirmPercent > 15 && <span className="text-[10px] text-white font-bold">{100 - affirmPercent}%</span>}
-              </div>
-            </div>
-
-            <div className="flex justify-between text-[12px]">
-              <div className="text-center">
-                <p className={`font-bold ${affirmChar.visual.textColor}`}>{affirmChar.name} · {topic.affirmLabel}</p>
-                <p className="text-ink-400">{affirmVotes.toLocaleString()} 票</p>
-              </div>
-              <div className="text-center">
-                <p className={`font-bold ${negateChar.visual.textColor}`}>{negateChar.name} · {topic.negateLabel}</p>
-                <p className="text-ink-400">{negateVotes.toLocaleString()} 票</p>
-              </div>
-            </div>
-
-            {hasVoted && (
-              <div className={`p-3 rounded-xl text-center ${
-                hasVoted === 'affirm' && affirmPercent > 50 || hasVoted === 'negate' && affirmPercent <= 50
-                  ? 'bg-bamboo/10 border border-bamboo/20'
-                  : 'bg-paper-dark/50 border border-line/20'
-              }`}>
-                <p className="text-[12px] text-ink-700">
-                  你投给了 <span className="font-bold">{hasVoted === 'affirm' ? affirmChar.name : negateChar.name}</span>
-                  {(hasVoted === 'affirm' && affirmPercent > 50 || hasVoted === 'negate' && affirmPercent <= 50)
-                    ? ' — 你的选择是多数派！'
-                    : ' — 你是少数派，但少数派不一定错'}
-                </p>
-              </div>
-            )}
-
-            <button
-              onClick={handleReset}
-              className="w-full py-3 rounded-xl bg-seal/10 text-seal text-[13px] font-medium active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
-            >
-              <RotateCcw size={14} />
-              再来一场
-            </button>
-          </div>
-        )}
-
-        {/* Disclaimer */}
-        <p className="text-[9px] text-ink-300 text-center pb-2">
-          AI 辩论内容由大语言模型生成，仅供参考和娱乐<br />
-          观点不代表平台立场
-        </p>
-      </div>
-    </div>
-  )
-}
-
-// ===== Sub-components =====
-
-function ThinkingProcess({ char, steps, isAnimating }: {
-  char: AICharacter
-  steps: ThinkingStep[]
-  isAnimating: boolean
-}) {
-  // Show all steps immediately if not animating (fast-forward)
-  const [visibleCount, setVisibleCount] = useState(isAnimating ? 0 : steps.length)
-
-  useEffect(() => {
-    if (!isAnimating) {
-      setVisibleCount(steps.length)
-      return
-    }
-    setVisibleCount(0)
-    const timers: ReturnType<typeof setTimeout>[] = []
-    steps.forEach((_, i) => {
-      timers.push(setTimeout(() => setVisibleCount(i + 1), 500 + i * 800))
-    })
-    return () => timers.forEach(clearTimeout)
-  }, [steps, isAnimating])
-
-  return (
-    <div className={`flex gap-2.5 ${isAnimating ? '' : ''}`}>
-      {/* Avatar with thinking indicator */}
-      <div className="relative flex-shrink-0">
-        <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${char.visual.gradientFrom} ${char.visual.gradientTo} flex items-center justify-center shadow-md`}>
-          <CharacterIcon characterId={char.id} size={16} className="text-white" />
-        </div>
-        {visibleCount < steps.length && (
-          <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-paper border-2 border-surface flex items-center justify-center">
-            <Brain size={7} className="text-ink-400 animate-pulse" />
-          </div>
-        )}
-      </div>
-
-      {/* Thinking steps */}
-      <div className="flex-1 space-y-1.5">
-        <p className={`text-[10px] ${char.visual.textColor} font-medium`}>
-          {char.name} 正在思考……
-        </p>
-        {steps.slice(0, visibleCount).map((step, i) => (
-          <div
-            key={i}
-            className="flex items-start gap-2 animate-fade-in-up"
-          >
-            {(() => {
-              const IconComponent = THINKING_ICON_MAP[step.icon] || Search
-              return <IconComponent size={12} className="flex-shrink-0 mt-0.5 text-ink-400" />
-            })()}
-            <div className="flex-1 min-w-0">
-              <span className="text-[10px] text-ink-400 font-medium">{step.label}</span>
-              <p className="text-[11px] text-ink-600 leading-relaxed">{step.content}</p>
-            </div>
-          </div>
-        ))}
-        {/* Loading dots for next step */}
-        {visibleCount < steps.length && (
-          <div className="flex items-center gap-1.5 pl-5">
-            <span className="w-1 h-1 rounded-full bg-ink-300 animate-bounce" style={{ animationDelay: '0ms' }} />
-            <span className="w-1 h-1 rounded-full bg-ink-300 animate-bounce" style={{ animationDelay: '150ms' }} />
-            <span className="w-1 h-1 rounded-full bg-ink-300 animate-bounce" style={{ animationDelay: '300ms' }} />
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function SpeechBubble({ char, content, isTyping, align }: {
-  char: AICharacter
-  content: string
-  isTyping: boolean
-  align: 'left' | 'right'
-}) {
-  const isLeft = align === 'left'
-  return (
-    <div className={`flex gap-2.5 animate-fade-in-up ${isLeft ? '' : 'flex-row-reverse'}`}>
-      {/* Avatar */}
-      <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${char.visual.gradientFrom} ${char.visual.gradientTo} flex items-center justify-center flex-shrink-0 shadow-md`}>
-        <CharacterIcon characterId={char.id} size={16} className="text-white" />
-      </div>
-
-      {/* Bubble */}
-      <div className={`max-w-[80%] ${isLeft ? '' : 'text-right'}`}>
-        <div className={`inline-block px-3.5 py-2.5 rounded-2xl text-[13px] leading-relaxed ${
-          isLeft
-            ? `${char.visual.bubbleBg} border ${char.visual.bubbleBorder} text-ink-900 rounded-tl-md`
-            : `${char.visual.bubbleBg} border ${char.visual.bubbleBorder} text-ink-900 rounded-tr-md`
-        }`}>
-          {content}
-          {isTyping && (
-            <span className="inline-block w-0.5 h-3.5 bg-ink-400 ml-0.5 animate-pulse align-middle" />
+              )}
+              {!isAutoPlaying && <button onClick={handleStart} className="arena-ctrl-btn arena-ctrl-secondary"><FastForward size={14} />自动播放</button>}
+              {isAutoPlaying && <button onClick={() => setIsAutoPlaying(false)} className="arena-ctrl-btn arena-ctrl-secondary">暂停</button>}
+              <button onClick={handleFastForward} className="arena-ctrl-btn arena-ctrl-ghost"><FastForward size={12} />跳过</button>
+            </>
           )}
         </div>
-        <p className={`text-[10px] text-ink-400 mt-0.5 ${isLeft ? 'text-left' : 'text-right'}`}>
-          {char.name} · {char.title}
-        </p>
+      )}
+
+      {/* ===== ACTION BUTTONS ===== */}
+      <div className="arena-actions">
+        <button className={`arena-action-btn ${hasVoted === 'affirm' ? 'arena-action-active' : ''}`} onClick={() => handleVote('affirm')} disabled={!!hasVoted}>
+          <ThumbsUp size={20} /><div><span>点赞{affirmChar.name}</span><small>{affirmVotes.toLocaleString()}</small></div>
+        </button>
+        <button className="arena-action-btn"><BookOpen size={20} /><div><span>要求举证</span><small>12,345</small></div></button>
+        <button className="arena-action-btn"><SwordsIcon size={20} /><div><span>申请反驳</span><small>8,923</small></div></button>
+        <button className="arena-action-btn"><RefreshCw size={20} /><div><span>换个角度</span><small>6,789</small></div></button>
+        <button className="arena-action-btn"><Share2 size={20} /><div><span>分享本场</span><small>9,876</small></div></button>
+      </div>
+
+      <div className="arena-tip"><span></span><span>小提示：你的互动会影响辩论走向哦！</span><span className="arena-tip-help">?</span></div>
+
+      {/* Closing / Result */}
+      {isComplete && !showClosing && match.finalResult && (
+        <button onClick={() => setShowClosing(true)} className="arena-ctrl-btn arena-ctrl-primary arena-ctrl-gold"><Trophy size={16} />查看最终结果</button>
+      )}
+      {showClosing && match.finalResult && <ClosingCeremony result={match.finalResult} affirmChar={affirmChar} negateChar={negateChar} />}
+      {showClosing && !showResult && (
+        <div className="arena-vote-panel">
+          <div className="arena-vote-panel-header"><MessageCircle size={20} /><p>谁说服了你？</p><small>投出你的一票</small></div>
+          <div className="arena-vote-panel-btns">
+            <button onClick={() => handleVote('affirm')} className={`arena-vote-panel-btn ${hasVoted === 'affirm' ? 'arena-vote-panel-btn-active' : ''}`}><ThumbsUp size={16} />{affirmChar.name}</button>
+            <button onClick={() => handleVote('negate')} className={`arena-vote-panel-btn ${hasVoted === 'negate' ? 'arena-vote-panel-btn-active' : ''}`}><ThumbsUp size={16} />{negateChar.name}</button>
+          </div>
+          <button onClick={() => setShowResult(true)} className="arena-vote-panel-skip">{hasVoted ? '查看结果' : '跳过投票，查看结果'}</button>
+        </div>
+      )}
+      {showResult && (
+        <div className="arena-result-panel">
+          <div className="arena-result-header"><Trophy size={16} /><span>观众投票</span><small>{totalVotes.toLocaleString()} 票</small></div>
+          <div className="arena-result-bar">
+            <div className="arena-result-bar-left" style={{ width: `${affirmPercent}%` }}>{affirmPercent > 15 && <span>{affirmPercent}%</span>}</div>
+            <div className="arena-result-bar-right" style={{ width: `${100 - affirmPercent}%` }}>{100 - affirmPercent > 15 && <span>{100 - affirmPercent}%</span>}</div>
+          </div>
+          <div className="arena-result-info">
+            <div><strong>{affirmChar.name}</strong><br /><small>{affirmVotes.toLocaleString()} 票</small></div>
+            <div><strong>{negateChar.name}</strong><br /><small>{negateVotes.toLocaleString()} 票</small></div>
+          </div>
+          <button onClick={handleReset} className="arena-ctrl-btn arena-ctrl-secondary" style={{ width: '100%' }}><RotateCcw size={14} />再来一场</button>
+        </div>
+      )}
+
+      {/* Bottom Nav */}
+      <div className="arena-bottom-nav">
+        <span className="arena-bottom-nav-label">更多玩法：</span>
+        <button className={`arena-bottom-nav-item ${isThemeMode ? 'arena-bottom-nav-active' : ''}`} onClick={() => navigate('/entertainment/arena/ai-battle/shelian?theme=shelian')}>历史名战</button>
+        <button className="arena-bottom-nav-item">AI新秀赛</button>
+        <button className="arena-bottom-nav-item" onClick={() => navigate('/entertainment/arena/human-battle')}>自由辩论</button>
+        <button className="arena-bottom-nav-item">我的关注</button>
+      </div>
+
+      <p className="arena-disclaimer">AI 辩论内容由大语言模型生成，仅供参考和娱乐 · 观点不代表平台立场</p>
+
+      {/* Mascot */}
+      <div className="arena-mascot">
+        <div className="arena-mascot-bubble">做个快乐的围观群众~</div>
+        <div className="arena-mascot-avatar" />
       </div>
     </div>
   )
 }
 
-function ScoreCard({ score, affirmName, negateName, affirmColor, negateColor }: {
-  score: { affirmScore: number; negateScore: number; winner: string; reason: string }
-  affirmName: string
-  negateName: string
-  affirmColor: string
-  negateColor: string
-}) {
+// ===== Chat Bubble =====
+function ChatBubble({ char, content, isTyping, isRight, faction }: { char: AICharacter; content: string; isTyping: boolean; isRight: boolean; faction: string }) {
   return (
-    <div className="bg-surface/80 backdrop-blur-sm rounded-xl border border-line/20 p-3 animate-fade-in-up">
-      <div className="flex items-center gap-2 mb-2">
-        <Shield size={12} className="text-ink-400" />
-        <span className="text-[11px] text-ink-500 font-medium">评委打分</span>
+    <div className={`arena-bubble ${isRight ? 'arena-bubble-right' : ''}`}>
+      <PixelAvatarSmall characterId={char.id} name={char.name} size={36} flip={isRight} />
+      <div className={`arena-bubble-content ${isRight ? 'arena-bubble-content-right' : ''}`}>
+        <div className="arena-bubble-header">
+          <span className="arena-bubble-name">{char.name}</span>
+          {faction && <span className="arena-bubble-faction">{faction}</span>}
+        </div>
+        <div className="arena-bubble-text">{content}{isTyping && <span className="arena-bubble-cursor" />}</div>
+        <div className="arena-bubble-time">{new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
       </div>
-      <div className="flex items-center justify-between">
-        <div className="text-center flex-1">
-          <span className={`text-[18px] font-bold ${affirmColor}`}>{score.affirmScore}</span>
-          <p className="text-[10px] text-ink-400">{affirmName}</p>
-        </div>
-        <div className="px-3 py-1 rounded-lg bg-paper-dark">
-          <span className="text-[10px] text-ink-500">
-            {score.winner === 'draw' ? '平局' : score.winner === 'affirm' ? `${affirmName}领先` : `${negateName}领先`}
-          </span>
-        </div>
-        <div className="text-center flex-1">
-          <span className={`text-[18px] font-bold ${negateColor}`}>{score.negateScore}</span>
-          <p className="text-[10px] text-ink-400">{negateName}</p>
-        </div>
-      </div>
-      <p className="text-[11px] text-ink-500 text-center mt-2 italic">"{score.reason}"</p>
     </div>
   )
 }
 
-function HighlightCard({ highlight, affirmName, negateName }: {
-  highlight: Highlight
-  affirmName: string
-  negateName: string
-}) {
+// ===== Thinking Process =====
+function ThinkingProcess({ char, steps, isAnimating }: { char: AICharacter; steps: ThinkingStep[]; isAnimating: boolean }) {
+  const [visibleCount, setVisibleCount] = useState(isAnimating ? 0 : steps.length)
+  useEffect(() => {
+    if (!isAnimating) { setVisibleCount(steps.length); return }
+    setVisibleCount(0)
+    const timers: ReturnType<typeof setTimeout>[] = []
+    steps.forEach((_, i) => { timers.push(setTimeout(() => setVisibleCount(i + 1), 500 + i * 800)) })
+    return () => timers.forEach(clearTimeout)
+  }, [steps, isAnimating])
+  return (
+    <div className="arena-thinking">
+      <PixelAvatarSmall characterId={char.id} name={char.name} size={28} />
+      <div className="arena-thinking-content">
+        <p className="arena-thinking-label">{char.name} 正在思考……</p>
+        {steps.slice(0, visibleCount).map((step, i) => (
+          <div key={i} className="arena-thinking-step animate-fade-in-up">
+            <span className="arena-thinking-step-icon">{step.icon}</span>
+            <div><span className="arena-thinking-step-label">{step.label}</span><p className="arena-thinking-step-text">{step.content}</p></div>
+          </div>
+        ))}
+        {visibleCount < steps.length && (
+          <div className="arena-thinking-dots">
+            <span className="arena-thinking-dot" style={{ animationDelay: '0ms' }} />
+            <span className="arena-thinking-dot" style={{ animationDelay: '150ms' }} />
+            <span className="arena-thinking-dot" style={{ animationDelay: '300ms' }} />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ===== Score Card =====
+function ScoreCard({ score, affirmName, negateName }: { score: { affirmScore: number; negateScore: number; winner: string; reason: string }; affirmName: string; negateName: string }) {
+  return (
+    <div className="arena-score-card animate-fade-in-up">
+      <div className="arena-score-header"><span>🛡️</span><span>评委打分</span></div>
+      <div className="arena-score-body">
+        <div className="arena-score-side"><span className="arena-score-num arena-score-affirm">{score.affirmScore}</span><small>{affirmName}</small></div>
+        <div className="arena-score-vs">{score.winner === 'draw' ? '平局' : score.winner === 'affirm' ? `${affirmName}领先` : `${negateName}领先`}</div>
+        <div className="arena-score-side"><span className="arena-score-num arena-score-negate">{score.negateScore}</span><small>{negateName}</small></div>
+      </div>
+      <p className="arena-score-reason">"{score.reason}"</p>
+    </div>
+  )
+}
+
+// ===== Highlight Card =====
+function HighlightCard({ highlight, affirmName, negateName }: { highlight: Highlight; affirmName: string; negateName: string }) {
   const charName = highlight.side === 'affirm' ? affirmName : negateName
   return (
-    <div className="bg-gradient-to-r from-amber-50 to-cyan-50 rounded-xl border border-amber-200/30 p-3 animate-fade-in-up">
-      <div className="flex items-center gap-2 mb-1.5">
-        <Sparkles size={14} className="text-amber-500" />
-        <span className="text-[12px] font-bold text-ink-800">{highlight.label}</span>
-        <span className="text-[10px] text-ink-400">· {charName}</span>
-      </div>
-      <p className="text-[12px] text-ink-700 italic leading-relaxed">"{highlight.quote}"</p>
+    <div className="arena-highlight-card animate-fade-in-up">
+      <div className="arena-highlight-card-header"><Sparkles size={14} /><span className="arena-highlight-card-label">{highlight.label}</span><span className="arena-highlight-card-name">· {charName}</span></div>
+      <p className="arena-highlight-card-quote">"{highlight.quote}"</p>
     </div>
   )
 }
 
-function TauntCard({ taunt, affirmChar, negateChar }: {
-  taunt: TauntMoment
-  affirmChar: AICharacter
-  negateChar: AICharacter
-}) {
+// ===== Taunt Card =====
+function TauntCard({ taunt, affirmChar, negateChar }: { taunt: TauntMoment; affirmChar: AICharacter; negateChar: AICharacter }) {
   const char = taunt.side === 'affirm' ? affirmChar : negateChar
   return (
-    <div className={`rounded-xl border ${char.visual.bubbleBorder} ${char.visual.bubbleBg} p-3 animate-fade-in-up`}>
-      <div className="flex items-center gap-2 mb-1">
-        <CharacterIcon characterId={char.id} size={14} className={char.visual.textColor} />
-        <span className={`text-[11px] font-semibold ${char.visual.textColor}`}>{char.name} 不甘示弱：</span>
-      </div>
-      <p className="text-[12px] text-ink-700 leading-relaxed">{taunt.content}</p>
+    <div className="arena-taunt-card animate-fade-in-up">
+      <div className="arena-taunt-header"><PixelAvatarSmall characterId={char.id} name={char.name} size={18} /><span className="arena-taunt-name">{char.name} 不甘示弱：</span></div>
+      <p className="arena-taunt-text">{taunt.content}</p>
     </div>
   )
 }
 
-function ClosingCeremony({ result, affirmChar, negateChar, topic: _topic }: {
-  result: FinalResult
-  affirmChar: AICharacter
-  negateChar: AICharacter
-  topic: { affirmLabel: string; negateLabel: string }
-}) {
-  const affirmWon = result.winner === 'affirm'
-  const isDraw = result.winner === 'draw'
-
+// ===== Closing Ceremony =====
+function ClosingCeremony({ result, affirmChar, negateChar }: { result: FinalResult; affirmChar: AICharacter; negateChar: AICharacter }) {
+  const affirmWon = result.winner === 'affirm'; const isDraw = result.winner === 'draw'
   return (
-    <div className="bg-surface rounded-xl shadow-card p-4 animate-fade-in-up space-y-4">
-      {/* Winner announcement */}
-      <div className="text-center">
-        <Trophy size={28} className="text-gold mx-auto mb-2" />
-        <p className="text-[16px] font-bold text-ink-900">
-          {isDraw ? '势均力敌！' : `${affirmWon ? affirmChar.name : negateChar.name} 获胜！`}
-        </p>
-        <p className="text-[12px] text-ink-500 mt-1">
-          评委打分 {result.affirmTotalScore} : {result.negateTotalScore}
-        </p>
+    <div className="arena-closing animate-fade-in-up">
+      <div className="arena-closing-header">
+        <Trophy size={28} className="arena-closing-trophy" />
+        <p className="arena-closing-title">{isDraw ? '势均力敌！' : `${affirmWon ? affirmChar.name : negateChar.name} 获胜！`}</p>
+        <p className="arena-closing-score">评委打分 {result.affirmTotalScore} : {result.negateTotalScore}</p>
       </div>
-
-      {/* Closing words */}
-      <div className="space-y-3">
-        <ClosingBubble char={affirmChar} text={result.affirmClosing} isWinner={affirmWon || isDraw} />
-        <ClosingBubble char={negateChar} text={result.negateClosing} isWinner={!affirmWon || isDraw} />
-      </div>
-
-      {/* Respect */}
-      <div className="border-t border-line/20 pt-3 space-y-2">
-        <p className="text-[11px] text-ink-400 text-center font-medium">互致敬意</p>
-        <div className="bg-paper-dark/50 rounded-xl p-3 space-y-2">
-          <p className="text-[12px] text-ink-600 leading-relaxed">
-            <span className={`font-semibold ${affirmChar.visual.textColor}`}>{affirmChar.name}：</span>
-            {result.affirmRespect}
-          </p>
-          <p className="text-[12px] text-ink-600 leading-relaxed">
-            <span className={`font-semibold ${negateChar.visual.textColor}`}>{negateChar.name}：</span>
-            {result.negateRespect}
-          </p>
+      <div className="arena-closing-words">
+        <div className="arena-closing-bubble">
+          <PixelAvatarSmall characterId={affirmChar.id} name={affirmChar.name} size={24} />
+          <div><p className="arena-closing-bubble-name">{affirmChar.name} {affirmWon && ''}</p><p>{result.affirmClosing}</p></div>
+        </div>
+        <div className="arena-closing-bubble">
+          <PixelAvatarSmall characterId={negateChar.id} name={negateChar.name} size={24} />
+          <div><p className="arena-closing-bubble-name">{negateChar.name} {!affirmWon && '👑'}</p><p>{result.negateClosing}</p></div>
         </div>
       </div>
-    </div>
-  )
-}
-
-function ClosingBubble({ char, text, isWinner }: {
-  char: AICharacter
-  text: string
-  isWinner: boolean
-}) {
-  return (
-    <div className={`flex gap-2.5 items-start ${isWinner ? '' : 'opacity-80'}`}>
-      <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${char.visual.gradientFrom} ${char.visual.gradientTo} flex items-center justify-center flex-shrink-0`}>
-        <CharacterIcon characterId={char.id} size={14} className="text-white" />
-      </div>
-      <div className="flex-1">
-        <p className="text-[10px] text-ink-400 mb-0.5 flex items-center gap-0.5">
-          {char.name} {isWinner && <Crown size={10} className="text-gold" />}
-        </p>
-        <p className="text-[12px] text-ink-700 leading-relaxed">{text}</p>
+      <div className="arena-closing-respect">
+        <p className="arena-closing-respect-title">互致敬意</p>
+        <div className="arena-closing-respect-body">
+          <p><strong>{affirmChar.name}：</strong>{result.affirmRespect}</p>
+          <p><strong>{negateChar.name}：</strong>{result.negateRespect}</p>
+        </div>
       </div>
     </div>
   )

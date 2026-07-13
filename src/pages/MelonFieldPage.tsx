@@ -690,7 +690,7 @@ export default function MelonFieldPage() {
 
       {/* 主内容区 */}
       <main className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="px-6 py-6">
+        <div className="px-6 py-6 max-w-[1400px] mx-auto">
           {loading ? (
             <div className="grid grid-cols-4 gap-6">
               {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
