@@ -166,7 +166,7 @@ export default function CricketForge() {
     } catch {
       // localStorage 不可用时忽略，仅跳转
     }
-    navigate(`/ai-battle?forgeId=${forge.id}`)
+    navigate(`/entertainment/arena/human-battle?forgeId=${forge.id}`)
   }, [name, prompt, selectedColor, navigate])
 
   return (
