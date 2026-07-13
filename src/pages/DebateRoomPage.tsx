@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Eye, MessageSquare, Shield, LogIn, LogOut, Trophy, Play, Users } from 'lucide-react'
 import { useDebateStore } from '../stores/debateStore'
@@ -15,12 +15,18 @@ import { getPhaseLabel } from '../types/debate'
 import type { DanmakuQueueItem } from '../services/danmakuService'
 import { pickDanmaku, toQueueItems } from '../services/danmakuService'
 import { useIsDesktop } from '../hooks/useIsDesktop'
+import DebateRoom4v4Demo from './DebateRoom4v4Demo'
 
 
 
 export default function DebateRoomPage() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
+
+  // 4v4 国赛 demo 模式
+  if (roomId === 'new') {
+    return <DebateRoom4v4Demo />
+  }
 
   const currentRoom = useDebateStore(s => s.currentRoom)
   const speeches = useDebateStore(s => s.speeches)
@@ -56,9 +62,6 @@ export default function DebateRoomPage() {
   useEffect(() => {
     if (roomId && roomId !== 'new') {
       fetchRoom(roomId)
-    } else if (roomId === 'new') {
-      // 创建房间功能暂未开放，返回大厅
-      navigate('/debate-lobby', { replace: true })
     }
   }, [roomId, fetchRoom, navigate])
 
@@ -144,7 +147,7 @@ export default function DebateRoomPage() {
         setRedirectTimer(prev => {
           if (prev <= 1) {
             clearInterval(timer)
-            navigate('/debate-lobby', { replace: true })
+            navigate('/entertainment/debate/lobby', { replace: true })
             return 0
           }
           return prev - 1
@@ -185,7 +188,7 @@ export default function DebateRoomPage() {
         <Shield size={36} className="text-ink-faint mb-3" />
         <p className="text-[14px] text-ink-400 mb-2">房间加载失败</p>
         <p className="text-[12px] text-ink-faint">{redirectTimer}s 后自动返回大厅...</p>
-        <button onClick={() => navigate('/debate-lobby')} className="mt-4 px-4 py-2 bg-seal text-white rounded-xl text-sm active:scale-95 transition-transform">
+        <button onClick={() => navigate('/entertainment/debate/lobby')} className="mt-4 px-4 py-2 bg-seal text-white rounded-xl text-sm active:scale-95 transition-transform">
           立即返回
         </button>
       </div>
@@ -199,7 +202,7 @@ export default function DebateRoomPage() {
         <Shield size={36} className="text-ink-faint mb-3" />
         <p className="text-[14px] text-ink-400 mb-2">房间已关闭</p>
         <p className="text-[12px] text-ink-faint">{redirectTimer}s 后自动返回大厅...</p>
-        <button onClick={() => navigate('/debate-lobby')} className="mt-4 px-4 py-2 bg-seal text-white rounded-xl text-sm active:scale-95 transition-transform">
+        <button onClick={() => navigate('/entertainment/debate/lobby')} className="mt-4 px-4 py-2 bg-seal text-white rounded-xl text-sm active:scale-95 transition-transform">
           立即返回
         </button>
       </div>
@@ -227,7 +230,7 @@ export default function DebateRoomPage() {
       {/* Header */}
       <div className="sticky top-0 z-20 glass border-b border-line/50">
         <div className={`flex items-center h-12 px-4 ${isDesktop ? '' : 'max-w-[480px] mx-auto'}`}>
-          <button onClick={() => { resetRoom(); navigate('/debate-lobby') }} className="flex items-center gap-1 text-ink-700 text-sm active:opacity-60">
+          <button onClick={() => { resetRoom(); navigate('/entertainment/debate/lobby') }} className="flex items-center gap-1 text-ink-700 text-sm active:opacity-60">
             <ArrowLeft size={18} />
           </button>
           <div className="flex-1 ml-3 min-w-0">
@@ -431,7 +434,7 @@ export default function DebateRoomPage() {
           {isEnded && isOnStage && (
             <div className="px-4 pb-3 text-center">
               <button
-                onClick={async () => { await leaveRoom(); navigate('/debate-lobby') }}
+                onClick={async () => { await leaveRoom(); navigate('/entertainment/debate/lobby') }}
                 className="flex items-center gap-1.5 mx-auto text-[12px] text-ink-400 active:opacity-60"
               >
                 <LogOut size={14} />
@@ -476,7 +479,7 @@ export default function DebateRoomPage() {
       {summary && (
         <SummaryPanel
           summary={summary}
-          onClose={() => navigate('/debate-lobby')}
+          onClose={() => navigate('/entertainment/debate/lobby')}
         />
       )}
     </div>
