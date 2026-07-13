@@ -2,7 +2,7 @@
 import { callLLM } from '../stores/llmStore'
 import {
   NATIONAL_PHASES, DEMO_SPEED_MULTIPLIER, calculateTotalScore,
-  type NationalDebateRoom, type NationalSeat, type NationalSpeech,
+  type NationalDebateRoom, type NationalSeat,
   type DebaterScore, type SeatId, type NationalPhase, type ScoreDimension,
 } from '../types/nationalDebate'
 

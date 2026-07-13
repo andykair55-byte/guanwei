@@ -9,7 +9,7 @@ import {
 } from '../services/nationalDebateService'
 import {
   NATIONAL_PHASES,
-  type NationalDebateRoom, type NationalSpeech, type DebaterScore,
+  type NationalDebateRoom, type NationalSpeech, type DebaterScore, type DebateSide,
 } from '../types/nationalDebate'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 
@@ -68,7 +68,7 @@ export default function DebateRoom4v4Demo() {
     setScores(result)
     const affirmTotal = result.filter(s => s.side === 'affirm').reduce((sum, s) => sum + s.totalScore, 0)
     const negateTotal = result.filter(s => s.side === 'negate').reduce((sum, s) => sum + s.totalScore, 0)
-    const winner = affirmTotal > negateTotal ? room.affirmLabel : negateTotal > affirmTotal ? room.negateLabel : '平局'
+    const winner: DebateSide | 'draw' = affirmTotal > negateTotal ? 'affirm' : negateTotal > affirmTotal ? 'negate' : 'draw'
     const mvp = result.reduce((max, s) => s.totalScore > max.totalScore ? s : max, result[0])
     setRoom(prev => prev ? {
       ...prev,
@@ -198,7 +198,7 @@ export default function DebateRoom4v4Demo() {
               topic={room.topic}
               affirmLabel={room.affirmLabel}
               negateLabel={room.negateLabel}
-              winner={room.winner || '平局'}
+              winner={room.winner === 'affirm' ? room.affirmLabel : room.winner === 'negate' ? room.negateLabel : '平局'}
               mvpName={scores.find(s => s.seatId === room.mvpSeatId)?.nickname || '—'}
               affirmScore={affirmTotal}
               negateScore={negateTotal}
