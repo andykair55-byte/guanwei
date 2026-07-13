@@ -4,13 +4,14 @@ import {
   ArrowLeft, ThumbsUp, ThumbsDown, Play, FastForward,
   Swords, Trophy, Users, RotateCcw, Sparkles, Shield,
   MessageCircle, MessageSquare, BarChart3, Search, Target,
-  Lightbulb, BookOpen, RefreshCw, Smile, Brain, Crown,
+  Lightbulb, BookOpen, RefreshCw, Smile, Brain, Crown, Loader2,
 } from 'lucide-react'
 import {
   getTopic, getMockMatch,
   type DebateMatch, type DebateRound, type Highlight, type TauntMoment, type FinalResult, type ThinkingStep,
 } from '../services/debateArenaService'
 import { type AICharacter } from '../services/characters'
+import { initThemeDebate, runThemeDebate } from '../services/themeDebateService'
 import DanmakuOverlay from '../components/DanmakuOverlay'
 import { pickDanmaku, toQueueItems, type DanmakuQueueItem, type DanmakuTrigger } from '../services/danmakuService'
 import CharacterIcon from '../components/CharacterIcon'
@@ -63,14 +64,31 @@ export default function AIArena() {
   const { topicId } = useParams<{ topicId: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const topic = getTopic(topicId || 'college') || getTopic('college')!
 
+  const themeId = searchParams.get('theme')
   const affirmCharId = searchParams.get('affirm') || 'baize'
   const negateCharId = searchParams.get('negate') || 'xiezhi'
   const roundsParam = parseInt(searchParams.get('rounds') || '5', 10)
 
-  // Use mock match (instant, no API) with selected characters and round count
-  const [match, setMatch] = useState<DebateMatch>(() => getMockMatch(topic.id, affirmCharId, negateCharId, roundsParam))
+  // 初始化 match：theme 模式返回空 match（rounds 待异步加载），非 theme 模式返回 mock match
+  const [match, setMatch] = useState<DebateMatch>(() => {
+    if (themeId) {
+      const init = initThemeDebate(themeId, topicId || 'college')
+      if (init) {
+        return {
+          topic: init.topic,
+          affirmChar: init.affirmChar,
+          negateChar: init.negateChar,
+          rounds: [],
+          totalRounds: roundsParam,
+        }
+      }
+    }
+    // 非 theme 模式或主题包初始化失败：回退到 mock
+    const fallbackTopic = getTopic(topicId || 'college') || getTopic('college')!
+    return getMockMatch(fallbackTopic.id, affirmCharId, negateCharId, roundsParam)
+  })
+  const topic = match.topic
   const affirmChar = match.affirmChar
   const negateChar = match.negateChar
 
@@ -82,6 +100,11 @@ export default function AIArena() {
   const [showResult, setShowResult] = useState(false)
   const [showClosing, setShowClosing] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
+
+  // ===== theme 模式异步加载 =====
+  const [isLoadingDebate, setIsLoadingDebate] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
 
   // ===== Danmaku =====
   const [danmakuEnabled, setDanmakuEnabled] = useState(true)
@@ -97,6 +120,37 @@ export default function AIArena() {
   const handleDanmakuComplete = useCallback((id: string) => {
     setDanmakuQueue(prev => prev.filter(d => d.id !== id))
   }, [])
+
+  // ===== 异步加载主题包辩论 rounds =====
+  useEffect(() => {
+    if (!themeId) return
+    // 已经有 rounds（非首次加载）则跳过
+    if (match.rounds.length > 0) return
+
+    let cancelled = false
+    const init = initThemeDebate(themeId, topicId || 'college')
+    if (!init) return
+
+    setIsLoadingDebate(true)
+    setLoadError(null)
+
+    runThemeDebate(init.pack, init.topic, init.affirmChar, init.negateChar, roundsParam)
+      .then(fullMatch => {
+        if (!cancelled) {
+          setMatch(fullMatch)
+          setIsLoadingDebate(false)
+        }
+      })
+      .catch(err => {
+        if (!cancelled) {
+          setLoadError(err.message || '辩论加载失败，请检查 LLM 配置')
+          setIsLoadingDebate(false)
+        }
+      })
+
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [themeId, topicId, roundsParam, reloadKey])
 
   const totalRounds = match.totalRounds
   const isComplete = revealed.length >= totalRounds && revealed.every(r => r.phase === 'scored')
@@ -211,13 +265,31 @@ export default function AIArena() {
   }
 
   const handleReset = () => {
-    setMatch(getMockMatch(topic.id, affirmCharId, negateCharId, roundsParam))
     setRevealed([])
     setIsAutoPlaying(false)
     setShowResult(false)
     setShowClosing(false)
     setDanmakuQueue([])
     prevPhaseRef.current = ''
+
+    if (themeId) {
+      // theme 模式：重置为空 match，触发 useEffect 重新加载
+      const init = initThemeDebate(themeId, topicId || 'college')
+      if (init) {
+        setMatch({
+          topic: init.topic,
+          affirmChar: init.affirmChar,
+          negateChar: init.negateChar,
+          rounds: [],
+          totalRounds: roundsParam,
+        })
+        setLoadError(null)
+        setReloadKey(k => k + 1)
+        return
+      }
+    }
+    // 非 theme 模式：重新生成 mock
+    setMatch(getMockMatch(topic.id, affirmCharId, negateCharId, roundsParam))
   }
 
 
@@ -423,48 +495,69 @@ export default function AIArena() {
         {/* ===== Controls ===== */}
         {!isComplete && (
           <div className="flex gap-2">
-            {!isAutoPlaying && revealed.length === 0 && (
+            {/* Loading 状态（theme 模式异步加载中，或 rounds 尚未就绪） */}
+            {(isLoadingDebate || (themeId && match.rounds.length === 0 && !loadError)) && (
+              <div className="flex-1 py-3.5 rounded-xl bg-surface shadow-card text-[13px] text-ink-500 font-medium flex items-center justify-center gap-2">
+                <Loader2 size={16} className="animate-spin" />
+                AI 正在准备辩论…
+              </div>
+            )}
+            {/* Error 状态 */}
+            {loadError && !isLoadingDebate && (
               <button
-                onClick={handleStart}
-                className="flex-1 py-3.5 rounded-xl bg-seal text-white font-semibold text-[14px] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-seal-glow"
+                onClick={() => setReloadKey(k => k + 1)}
+                className="flex-1 py-3.5 rounded-xl bg-red-50 text-red-600 text-[13px] font-medium active:scale-[0.98] transition-all flex items-center justify-center gap-2"
               >
-                <Play size={16} />
-                开始辩论
+                {loadError} · 点击重试
               </button>
             )}
-            {!isAutoPlaying && revealed.length > 0 && (
-              <button
-                onClick={advance}
-                className="flex-1 py-3 rounded-xl bg-surface shadow-card text-[13px] text-ink-700 font-medium active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-              >
-                <Play size={14} />
-                {lastRevealed?.phase === 'think-affirm' ? `${affirmChar.name}发言` : lastRevealed?.phase === 'affirm' ? `${negateChar.name}思考` : lastRevealed?.phase === 'think-negate' ? `${negateChar.name}发言` : lastRevealed?.phase === 'negate' ? '评委打分' : '下一回合'}
-              </button>
+            {/* 正常控制（rounds 已就绪） */}
+            {!isLoadingDebate && !loadError && match.rounds.length > 0 && (
+              <>
+                {!isAutoPlaying && revealed.length === 0 && (
+                  <button
+                    onClick={handleStart}
+                    className="flex-1 py-3.5 rounded-xl bg-seal text-white font-semibold text-[14px] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-seal-glow"
+                  >
+                    <Play size={16} />
+                    开始辩论
+                  </button>
+                )}
+                {!isAutoPlaying && revealed.length > 0 && (
+                  <button
+                    onClick={advance}
+                    className="flex-1 py-3 rounded-xl bg-surface shadow-card text-[13px] text-ink-700 font-medium active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  >
+                    <Play size={14} />
+                    {lastRevealed?.phase === 'think-affirm' ? `${affirmChar.name}发言` : lastRevealed?.phase === 'affirm' ? `${negateChar.name}思考` : lastRevealed?.phase === 'think-negate' ? `${negateChar.name}发言` : lastRevealed?.phase === 'negate' ? '评委打分' : '下一回合'}
+                  </button>
+                )}
+                {!isAutoPlaying && (
+                  <button
+                    onClick={handleStart}
+                    className="py-3 px-4 rounded-xl bg-surface shadow-card text-[13px] text-ink-700 font-medium active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                  >
+                    <FastForward size={14} />
+                    自动播放
+                  </button>
+                )}
+                {isAutoPlaying && (
+                  <button
+                    onClick={() => setIsAutoPlaying(false)}
+                    className="flex-1 py-3 rounded-xl bg-surface shadow-card text-[13px] text-ink-700 font-medium active:scale-[0.98] transition-all"
+                  >
+                    暂停
+                  </button>
+                )}
+                <button
+                  onClick={handleFastForward}
+                  className="py-3 px-4 rounded-xl bg-paper-dark text-[12px] text-ink-500 font-medium active:scale-[0.97] transition-transform flex items-center justify-center gap-1.5"
+                >
+                  <FastForward size={12} />
+                  跳过
+                </button>
+              </>
             )}
-            {!isAutoPlaying && (
-              <button
-                onClick={handleStart}
-                className="py-3 px-4 rounded-xl bg-surface shadow-card text-[13px] text-ink-700 font-medium active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-              >
-                <FastForward size={14} />
-                自动播放
-              </button>
-            )}
-            {isAutoPlaying && (
-              <button
-                onClick={() => setIsAutoPlaying(false)}
-                className="flex-1 py-3 rounded-xl bg-surface shadow-card text-[13px] text-ink-700 font-medium active:scale-[0.98] transition-all"
-              >
-                暂停
-              </button>
-            )}
-            <button
-              onClick={handleFastForward}
-              className="py-3 px-4 rounded-xl bg-paper-dark text-[12px] text-ink-500 font-medium active:scale-[0.97] transition-transform flex items-center justify-center gap-1.5"
-            >
-              <FastForward size={12} />
-              跳过
-            </button>
           </div>
         )}
 
