@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Workspace, WorkspaceStatus, PlatformContent, WorkspaceSource, WorkspaceTag } from '../types/workspace'
-import { createEmptyWorkspace, ALL_PLATFORMS } from '../types/workspace'
+import { createEmptyWorkspace } from '../types/workspace'
 import type { CanonicalDraft } from '../types/canonicalDraft'
 
 interface WorkspaceStore {

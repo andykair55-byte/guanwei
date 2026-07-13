@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
 import { useAuthStore } from '../../stores/authStore'
 import { useSidebarStore, ICON_MAP, ALL_NAV_ITEMS } from '../../stores/sidebarStore'
-import { Plus, Leaf, Star, Archive, ChevronRight } from 'lucide-react'
+import { Plus, Leaf } from 'lucide-react'
 import type { Workspace, WorkspaceStatus } from '../../types/workspace'
 
 interface WorkspaceSidebarProps {
@@ -64,23 +64,6 @@ function WorkspaceItem({ ws, active, onClick }: { ws: Workspace; active: boolean
           </div>
         </div>
       </div>
-    </button>
-  )
-}
-
-function SectionHeader({ icon: Icon, label, count, onClick }: { icon: any; label: string; count?: number; onClick?: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center justify-between px-3 py-1.5 text-[11px] text-ink-400 hover:text-ink-600 transition-colors"
-    >
-      <div className="flex items-center gap-1.5">
-        <Icon size={12} />
-        <span>{label}</span>
-      </div>
-      {count !== undefined && (
-        <span className="text-ink-300">查看全部({count}) <ChevronRight size={10} className="inline" /></span>
-      )}
     </button>
   )
 }

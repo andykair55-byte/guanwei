@@ -209,7 +209,7 @@ async function parseGoal(workspaceId: string, input: string): Promise<void> {
     } else {
       await buildPlan(workspaceId)
     }
-  } catch (e) {
+  } catch {
     state.spec.needSearch = true
     state.spec.depth = 'standard'
     await buildPlan(workspaceId)
@@ -483,7 +483,7 @@ async function executePlan(workspaceId: string, mode: 'assist' | 'auto'): Promis
           })),
           { platforms: allContent.map(p => p.platform) }
         )
-      } catch (e) {
+      } catch {
         addEvent(workspaceId, 'error', 'system', '平台适配部分失败', '部分平台版本生成失败，可以单独重试。')
       }
       state.currentStep++

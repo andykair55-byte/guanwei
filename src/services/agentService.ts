@@ -54,7 +54,7 @@ function withTimeout<T>(promise: Promise<T>, agentType: string): Promise<T> {
 // 去重：同一 Agent 同一 Workspace 只能有一个运行中任务
 const runningAgents = new Map<string, AbortController>()
 
-function startAgent(workspaceId: string, agentType: string): AbortController | null {
+export function startAgent(workspaceId: string, agentType: string): AbortController | null {
   const key = `${workspaceId}:${agentType}`
   const existing = runningAgents.get(key)
   if (existing) {
@@ -65,7 +65,7 @@ function startAgent(workspaceId: string, agentType: string): AbortController | n
   return controller
 }
 
-function endAgent(workspaceId: string, agentType: string): void {
+export function endAgent(workspaceId: string, agentType: string): void {
   const key = `${workspaceId}:${agentType}`
   runningAgents.delete(key)
 }

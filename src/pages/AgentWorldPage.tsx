@@ -139,7 +139,7 @@ export default function AgentWorldPage() {
     } else if (actionId === 'reverify') {
       addEventSimple(currentId, 'info', 'verify', '重新核查', '正在重新核查存疑信息...')
     }
-  }, [currentId, mode, addEventSimple, availablePlatforms])
+  }, [currentId, mode, addEventSimple, availablePlatforms, handleGenerateAll])
 
   const handleQuickReply = useCallback((text: string) => {
     handleSend(text)

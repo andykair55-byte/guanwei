@@ -54,8 +54,6 @@ export interface Workspace {
   updatedAt: string
 }
 
-const DEFAULT_PLATFORMS = ['guanwei', 'zhihu', 'xiaohongshu']
-
 export function createEmptyWorkspace(
   topic: string = '',
   source: WorkspaceSource = { type: 'manual' },
