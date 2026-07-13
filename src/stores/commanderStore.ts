@@ -34,6 +34,17 @@ export interface LogEntry {
   level: 'info' | 'success' | 'warning' | 'error'
 }
 
+// 追问卡片状态
+export type QuestionCardStatus = 'pending' | 'answered' | 'superseded'
+
+// 追问卡片
+export interface QuestionCard {
+  id: string
+  question: string
+  status: QuestionCardStatus
+  createdAt: number
+}
+
 // 依赖图定义
 const DEPENDENCIES: Record<AgentType, AgentType[]> = {
   orchestrator: [],           // 主Agent无依赖
@@ -82,6 +93,13 @@ interface CommanderStore {
   addLog: (agentType: AgentType, message: string, level?: LogEntry['level']) => void
   clearLogs: () => void
 
+  // 追问卡片
+  questionCards: QuestionCard[]
+  addQuestionCard: (card: QuestionCard) => void
+  answerQuestionCard: (id: string) => void
+  supersedeQuestionCard: (id: string) => void
+  clearQuestionCards: () => void
+
   // 回调注册（供 agentService 使用）
   onAgentComplete?: (type: AgentType, output: unknown) => void
   setOnAgentComplete: (cb: (type: AgentType, output: unknown) => void) => void
@@ -107,6 +125,7 @@ export const useCommanderStore = create<CommanderStore>((set, get) => ({
   logs: [],
   currentAgent: null,
   onAgentComplete: undefined,
+  questionCards: [],
 
   setMode: (mode) => set({ mode }),
 
@@ -130,6 +149,7 @@ export const useCommanderStore = create<CommanderStore>((set, get) => ({
       agents: createInitialAgents(),
       currentAgent: null,
       logs: [],
+      questionCards: [],
     })
   },
 
@@ -192,6 +212,24 @@ export const useCommanderStore = create<CommanderStore>((set, get) => ({
   })),
 
   clearLogs: () => set({ logs: [] }),
+
+  addQuestionCard: (card) => set((state) => ({
+    questionCards: [...state.questionCards, card],
+  })),
+
+  answerQuestionCard: (id) => set((state) => ({
+    questionCards: state.questionCards.map(c =>
+      c.id === id ? { ...c, status: 'answered' as QuestionCardStatus } : c
+    ),
+  })),
+
+  supersedeQuestionCard: (id) => set((state) => ({
+    questionCards: state.questionCards.map(c =>
+      c.id === id ? { ...c, status: 'superseded' as QuestionCardStatus } : c
+    ),
+  })),
+
+  clearQuestionCards: () => set({ questionCards: [] }),
 
   setOnAgentComplete: (cb) => set({ onAgentComplete: cb }),
 }))

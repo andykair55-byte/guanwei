@@ -2,12 +2,22 @@ import { create } from 'zustand'
 import type { ActivityEvent, AgentTypeLabel, EventType, EventAction } from '../types/activity'
 import { createEvent } from '../types/activity'
 
+const MAX_EVENTS_PER_WORKSPACE = 200
+
 interface ActivityStore {
   eventsByWorkspace: Record<string, ActivityEvent[]>
   filter: 'all' | AgentTypeLabel
 
   addEvent: (workspaceId: string, event: ActivityEvent) => void
-  addEventSimple: (workspaceId: string, type: EventType, agentType: AgentTypeLabel, title: string, content: string, actions?: EventAction[], data?: Record<string, unknown>) => ActivityEvent
+  addEventSimple: (
+    workspaceId: string,
+    type: EventType,
+    agentType: AgentTypeLabel,
+    title: string,
+    content: string,
+    actions?: EventAction[],
+    data?: Record<string, unknown>
+  ) => ActivityEvent
   clearEvents: (workspaceId: string) => void
   setFilter: (filter: 'all' | AgentTypeLabel) => void
   getEvents: (workspaceId: string) => ActivityEvent[]
@@ -18,12 +28,19 @@ export const useActivityStore = create<ActivityStore>((set, get) => ({
   eventsByWorkspace: {},
   filter: 'all',
 
-  addEvent: (workspaceId, event) => set((state) => ({
-    eventsByWorkspace: {
-      ...state.eventsByWorkspace,
-      [workspaceId]: [...(state.eventsByWorkspace[workspaceId] || []), event],
-    },
-  })),
+  addEvent: (workspaceId, event) => set((state) => {
+    const current = state.eventsByWorkspace[workspaceId] || []
+    let updated = [...current, event]
+    if (updated.length > MAX_EVENTS_PER_WORKSPACE) {
+      updated = updated.slice(updated.length - MAX_EVENTS_PER_WORKSPACE)
+    }
+    return {
+      eventsByWorkspace: {
+        ...state.eventsByWorkspace,
+        [workspaceId]: updated,
+      },
+    }
+  }),
 
   addEventSimple: (workspaceId, type, agentType, title, content, actions, data) => {
     const event = createEvent(type, agentType, title, content, actions, data)

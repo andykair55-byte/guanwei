@@ -4,10 +4,11 @@ import { persist } from 'zustand/middleware'
 export interface Snapshot {
   id: string
   timestamp: number
-  label: string           // 操作描述（如"采纳搜索结果"、"自动生成完成"）
-  content: string         // 编辑器内容快照
-  draftTopic: string      // 主题快照
-  agentType?: string      // 触发快照的Agent
+  label: string
+  content: string
+  draftTopic: string
+  agentType?: string
+  locked: boolean
 }
 
 const MAX_SNAPSHOTS = 50
@@ -21,19 +22,32 @@ interface SnapshotStore {
     draftTopic: string
     label: string
     agentType?: string
+    locked?: boolean
   }) => void
 
   restoreSnapshot: (id: string) => Snapshot | null
+
+  toggleLock: (id: string) => void
 
   listSnapshots: () => Snapshot[]
 
   clearAll: () => void
 
   canUndo: () => boolean
+
   undo: () => Snapshot | null
 }
 
 let snapshotIdCounter = 0
+
+function evictSnapshots(snapshots: Snapshot[]): Snapshot[] {
+  if (snapshots.length <= MAX_SNAPSHOTS) return snapshots
+  const unlocked = snapshots.filter(s => !s.locked)
+  const locked = snapshots.filter(s => s.locked)
+  const toRemove = unlocked.length - (MAX_SNAPSHOTS - locked.length)
+  if (toRemove <= 0) return snapshots
+  return [...unlocked.slice(toRemove), ...locked]
+}
 
 export const useSnapshotStore = create<SnapshotStore>()(
   persist(
@@ -41,7 +55,7 @@ export const useSnapshotStore = create<SnapshotStore>()(
       snapshots: [],
       currentSnapshotId: null,
 
-      createSnapshot: ({ content, draftTopic, label, agentType }) => {
+      createSnapshot: ({ content, draftTopic, label, agentType, locked = false }) => {
         const snapshot: Snapshot = {
           id: `snap-${Date.now()}-${++snapshotIdCounter}`,
           timestamp: Date.now(),
@@ -49,13 +63,10 @@ export const useSnapshotStore = create<SnapshotStore>()(
           content,
           draftTopic,
           agentType,
+          locked,
         }
         set((state) => {
-          const newSnapshots = [...state.snapshots, snapshot]
-          // 超过上限淘汰最旧的
-          if (newSnapshots.length > MAX_SNAPSHOTS) {
-            newSnapshots.shift()
-          }
+          const newSnapshots = evictSnapshots([...state.snapshots, snapshot])
           return {
             snapshots: newSnapshots,
             currentSnapshotId: snapshot.id,
@@ -67,18 +78,18 @@ export const useSnapshotStore = create<SnapshotStore>()(
         const snapshot = get().snapshots.find(s => s.id === id)
         if (!snapshot) return null
 
-        // 创建当前状态的快照（以便再次回退）
         const current = get().snapshots.find(s => s.id === get().currentSnapshotId)
         if (current && current.id !== id) {
           const restorePoint: Snapshot = {
             id: `snap-${Date.now()}-${++snapshotIdCounter}`,
             timestamp: Date.now(),
-            label: `回退前的状态`,
+            label: '回退前的状态',
             content: current.content,
             draftTopic: current.draftTopic,
+            locked: false,
           }
           set((state) => ({
-            snapshots: [...state.snapshots, restorePoint].slice(-MAX_SNAPSHOTS),
+            snapshots: evictSnapshots([...state.snapshots, restorePoint]),
             currentSnapshotId: id,
           }))
         } else {
@@ -87,6 +98,12 @@ export const useSnapshotStore = create<SnapshotStore>()(
 
         return snapshot
       },
+
+      toggleLock: (id) => set((state) => ({
+        snapshots: state.snapshots.map(s =>
+          s.id === id ? { ...s, locked: !s.locked } : s
+        ),
+      })),
 
       listSnapshots: () => get().snapshots,
 
