@@ -16,31 +16,32 @@ import type { LucideIcon } from 'lucide-react'
    ═══════════════════════════════════════════════════════ */
 function Toggle({ checked, onChange, size = 'md' }: { checked: boolean; onChange: (v: boolean) => void; size?: 'sm' | 'md' }) {
   const dims = size === 'sm'
-    ? { w: 38, h: 22, knob: 16, travel: 18 }
-    : { w: 46, h: 26, knob: 22, travel: 22 }
+    ? { w: 44, h: 24, knob: 18, travel: 20 }
+    : { w: 52, h: 28, knob: 22, travel: 24 }
   return (
     <button
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className="relative shrink-0 transition-all focus:outline-none"
+      className="relative shrink-0 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-seal/50"
       style={{
         width: dims.w,
         height: dims.h,
-        background: checked ? '#ef4444' : '#d1d5db',
-        borderRadius: '4px',
+        background: checked ? '#10b981' : '#d1d5db',
+        borderRadius: dims.h / 2,
         boxShadow: checked
-          ? 'inset 0 -2px 0 rgba(0,0,0,0.2), inset 0 2px 0 rgba(255,255,255,0.2)'
-          : 'inset 0 -2px 0 rgba(0,0,0,0.1), inset 0 2px 0 rgba(255,255,255,0.5)',
+          ? '0 1px 3px rgba(16,185,129,0.3), inset 0 -1px 0 rgba(0,0,0,0.1)'
+          : '0 1px 3px rgba(0,0,0,0.1), inset 0 -1px 0 rgba(0,0,0,0.05)',
       }}
     >
       <span
-        className="absolute top-[3px] left-[3px] bg-white rounded-sm transition-transform"
+        className="absolute top-[3px] left-[3px] bg-white transition-transform"
         style={{
           width: dims.knob,
-          height: dims.knob - 6,
+          height: dims.knob,
+          borderRadius: dims.knob / 2,
           transform: checked ? `translateX(${dims.travel}px)` : 'translateX(0)',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
         }}
       />
     </button>

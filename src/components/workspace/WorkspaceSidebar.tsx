@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useWorkspaceStore } from '../../stores/workspaceStore'
 import { useAuthStore } from '../../stores/authStore'
@@ -64,6 +64,46 @@ export default function WorkspaceSidebar({ className }: WorkspaceSidebarProps) {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set(DEFAULT_COLLAPSED))
   const [searchQuery, setSearchQuery] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [sidebarWidth, setSidebarWidth] = useState<number>(280)
+  const isDragging = useRef(false)
+  const startX = useRef(0)
+  const startWidth = useRef(280)
+
+  const MIN_WIDTH = 220
+  const MAX_WIDTH = 400
+
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    isDragging.current = true
+    startX.current = e.clientX
+    startWidth.current = sidebarWidth
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+  }, [sidebarWidth])
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return
+      const diff = e.clientX - startX.current
+      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startWidth.current + diff))
+      setSidebarWidth(newWidth)
+      document.documentElement.style.setProperty('--sidebar-w', `${newWidth}px`)
+    }
+
+    const handleMouseUp = () => {
+      if (!isDragging.current) return
+      isDragging.current = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      window.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
 
   const toggleGroup = (key: string) => {
     setCollapsedGroups(prev => {
@@ -107,6 +147,8 @@ export default function WorkspaceSidebar({ className }: WorkspaceSidebarProps) {
 
   return (
     <aside className={`ws-sidebar ${className || ''}`}>
+      {/* Resize Handle */}
+      <div className="ws-resize-handle" onMouseDown={handleResizeStart} />
       {/* Header */}
       <div className="ws-sidebar-header">
         <div className="ws-sidebar-brand">
@@ -142,7 +184,6 @@ export default function WorkspaceSidebar({ className }: WorkspaceSidebarProps) {
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="搜索工作空间…"
           />
-          <span className="ws-search-shortcut">⌘K</span>
         </div>
       </div>
 
@@ -312,7 +353,11 @@ export default function WorkspaceSidebar({ className }: WorkspaceSidebarProps) {
 
         {/* User Card */}
         <div className="ws-user-card">
-          <div className="ws-user-avatar">{avatarChar}</div>
+          {user?.avatar ? (
+            <img src={user.avatar} alt={displayName} className="w-7 h-7 rounded-full object-cover flex-shrink-0" style={{ width: 28, height: 28 }} />
+          ) : (
+            <div className="ws-user-avatar">{avatarChar}</div>
+          )}
           <div className="ws-user-info">
             <div className="ws-user-name">{displayName}</div>
             <div className="ws-user-rank">Lv.4 洞察者 · 1280/2000</div>

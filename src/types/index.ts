@@ -216,6 +216,9 @@ export interface ApiMelon {
   category: string;
   cover_image: string;
   creator_id: number;
+  creator_nickname?: string;
+  creator_avatar?: string;
+  creator_rank?: string;
   result: boolean | null;
   status: string;
   reveal_time: string | null;

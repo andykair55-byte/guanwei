@@ -89,7 +89,9 @@
 
   --font-sans: 'Inter', 'Noto Sans SC', 'PingFang SC', -apple-system, system-ui, sans-serif;
 
-  --sidebar-w: 240px;
+  --sidebar-w: 280px;
+  --sidebar-min-w: 220px;
+  --sidebar-max-w: 400px;
   --activity-w: 320px;
 }
 
@@ -106,8 +108,26 @@
   flex-direction: column;
   background: var(--bg);
   border-right: 1px solid var(--border);
-  height: 100vh;
-  overflow: hidden;
+  position: relative;
+}
+
+.ws-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  transition: background 0.15s;
+}
+.ws-resize-handle:hover {
+  background: var(--primary);
+  opacity: 0.6;
+}
+.ws-resize-handle:active {
+  background: var(--primary);
+  opacity: 0.8;
 }
 
 /* Header */
@@ -223,10 +243,12 @@
 .ws-item-meta {
   font-size: 11px; color: var(--fg-muted); margin-top: 1px;
   display: flex; align-items: center; gap: 6px;
+  overflow: visible;
 }
 .ws-item-tag {
-  font-size: 10px; padding: 0 5px; border-radius: var(--radius-full);
+  font-size: 10px; padding: 1px 6px; border-radius: var(--radius-full);
   font-weight: 500; letter-spacing: 0.01em;
+  flex-shrink: 0; white-space: nowrap;
 }
 .ws-item-tag.hotspot { background: var(--tag-hotspot-bg); color: var(--tag-hotspot-fg); }
 .ws-item-tag.science { background: var(--tag-science-bg); color: var(--tag-science-fg); }
@@ -342,8 +364,12 @@
 .ws-platform-bar {
   display: flex; align-items: center; gap: 6px;
   padding: 8px 20px; border-bottom: 1px solid var(--border-light);
-  overflow-x: auto; flex-shrink: 0;
+  overflow-x: auto; flex-shrink: 0; scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+  min-width: 0;
 }
+.ws-platform-bar::-webkit-scrollbar { height: 3px; }
+.ws-platform-bar::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
 .ws-platform-tab {
   display: flex; align-items: center; gap: 5px;
   padding: 5px 12px; border-radius: var(--radius-full);
@@ -357,6 +383,18 @@
 }
 .ws-platform-tab:not(.active) { color: var(--fg-secondary); }
 .ws-platform-tab:not(.active):hover { background: var(--bg-hover); }
+.ws-platform-tab-group {
+  display: inline-flex; align-items: center; position: relative; flex-shrink: 0;
+}
+.ws-platform-remove {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 50%; border: none;
+  background: transparent; color: var(--fg-muted); cursor: pointer;
+  margin-left: -3px; opacity: 0; transition: opacity 0.15s, background 0.12s;
+  flex-shrink: 0;
+}
+.ws-platform-tab-group:hover .ws-platform-remove { opacity: 1; }
+.ws-platform-remove:hover { background: var(--danger); color: white; }
 .ws-platform-dot { width: 6px; height: 6px; border-radius: 50%; }
 .ws-platform-dot.green { background: var(--status-active); }
 .ws-platform-icon {
@@ -537,6 +575,13 @@
 }
 .ws-degrade-banner svg { width: 15px; height: 15px; flex-shrink: 0; }
 
+.ws-demo-banner {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px; background: #eff6ff; border-bottom: 1px solid #bfdbfe;
+  font-size: 12px; color: #1e40af; flex-shrink: 0; line-height: 1.5;
+}
+.ws-demo-banner svg { width: 15px; height: 15px; flex-shrink: 0; }
+
 /* ── Pipeline Progress Bar ── */
 .ws-pipeline-bar {
   display: flex;
@@ -715,21 +760,57 @@
 }
 .ws-scroll-bottom-btn:hover { background: var(--primary-dark); }
 
-/* ── Platform dropdown ── */
+/* ── 添加平台弹窗 ── */
 .ws-platform-dropdown-wrap { position: relative; }
-.ws-platform-dropdown {
-  position: absolute; top: 100%; left: 0; margin-top: 4px;
-  background: var(--bg); border: 1px solid var(--border);
-  border-radius: var(--radius); box-shadow: 0 4px 12px var(--shadow-toast);
-  min-width: 120px; z-index: 50; overflow: hidden; display: none;
+.ws-platform-modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,0.35);
+  display: flex; align-items: center; justify-content: center;
+  animation: ws-modal-fadein 0.15s ease-out;
 }
-.ws-platform-dropdown.show { display: block; }
-.ws-platform-dropdown-item {
-  width: 100%; text-align: left; padding: 7px 12px;
-  font-size: 12px; color: var(--fg-secondary);
+@keyframes ws-modal-fadein { from { opacity: 0; } to { opacity: 1; } }
+.ws-platform-modal {
+  background: var(--bg); border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+  width: 360px; max-width: calc(100vw - 40px);
+  overflow: hidden; animation: ws-modal-slidein 0.15s ease-out;
+}
+@keyframes ws-modal-slidein { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.ws-platform-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 10px; font-size: 14px; font-weight: 600; color: var(--fg);
+}
+.ws-platform-modal-close {
+  width: 22px; height: 22px; border-radius: 50%; border: none;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; color: var(--fg-muted); cursor: pointer;
   transition: background 0.12s;
 }
-.ws-platform-dropdown-item:hover { background: var(--bg-hover); color: var(--fg); }
+.ws-platform-modal-close:hover { background: var(--bg-hover); color: var(--fg); }
+.ws-platform-modal-body {
+  padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 6px;
+}
+.ws-platform-modal-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 10px 12px; border-radius: var(--radius); border: 1px solid var(--border-light);
+  background: var(--bg-secondary); cursor: pointer; transition: all 0.12s;
+  font-family: inherit;
+}
+.ws-platform-modal-item:hover { background: var(--bg-hover); border-color: var(--border); }
+.ws-platform-modal-icon {
+  width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: var(--white);
+}
+.ws-platform-modal-name {
+  font-size: 13px; font-weight: 600; color: var(--fg);
+}
+.ws-platform-modal-desc {
+  margin-left: auto; font-size: 11px; color: var(--fg-muted); white-space: nowrap;
+}
+.ws-platform-modal-empty {
+  text-align: center; padding: 24px 0; font-size: 13px; color: var(--fg-muted);
+}
 
 /* ─ Toast ── */
 .ws-toast-container {

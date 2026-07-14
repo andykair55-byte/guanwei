@@ -1,15 +1,20 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import {
   MessageCircle,
   Heart,
+  Bookmark,
+  Share2,
   Filter,
+  Lightbulb,
   MoreHorizontal,
   PenLine,
+  X,
+  MessageSquare,
   Flame,
   HandHeart,
   HelpCircle,
-  Lightbulb,
 } from 'lucide-react'
 import {
   getCommunityPosts,
@@ -79,88 +84,114 @@ interface PostDisplayData {
   content: string
 }
 
-// ─── CommunityCard 组件（瓜田同款卡片网格） ───────────────────
+// ─── PostItem 组件 ───────────────────────────────────────────
 
-interface CommunityCardProps {
+interface PostItemProps {
   post: PostDisplayData
   index: number
-  onClick: () => void
+  onOpen: (postId: string) => void
+  itemRef: (el: HTMLElement | null) => void
 }
 
-function CommunityCard({ post, index, onClick }: CommunityCardProps) {
+function PostItem({ post, index, onOpen, itemRef }: PostItemProps) {
+  const [liked, setLiked] = useState(false)
+  const [collected, setCollected] = useState(false)
+  const [likeCount, setLikeCount] = useState(post.likes)
+  const [collectCount, setCollectCount] = useState(post.collects)
   const typeConfig = TYPE_CONFIG[post.type]
-  const tag = typeTagConfig[post.type]
-  const TagIcon = tag?.icon
 
-  const timeAgo = (() => {
-    const diff = Date.now() - new Date(post.createdAt).getTime()
-    const hours = Math.floor(diff / (1000 * 60 * 60))
-    if (hours < 1) return '刚刚'
-    if (hours < 24) return `${hours}小时前`
-    return `${Math.floor(hours / 24)}天前`
-  })()
+  const handleClick = (e: React.MouseEvent<HTMLElement>) => {
+    onOpen(post.id)
+  }
 
   return (
     <article
-      className="group cursor-pointer animate-fade-in-up"
-      style={{ animationDelay: `${index * 40}ms` }}
-      onClick={onClick}
+      ref={itemRef}
+      className="px-8 py-5 hover:bg-gray-50/70 transition-colors cursor-pointer border-b border-gray-100/70 animate-fade-in-up group"
+      style={{ animationDelay: `${index * 30}ms` }}
+      onClick={handleClick}
     >
-      {/* 封面图 */}
-      <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-gray-100 mb-3 shadow-sm group-hover:shadow-md transition-shadow duration-300">
-        <img
-          src={post.thumbnail}
-          alt={post.title}
-          className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-          loading="lazy"
-        />
-        {/* 类型标签 - 左上角 */}
-        {tag && TagIcon && (
-          <span className={`absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold rounded-full ${tag.bg} ${tag.text} shadow-sm`}>
-            <TagIcon size={10} />
-            {tag.label}
-          </span>
-        )}
-      </div>
-
-      {/* 标题 */}
-      <h3 className="text-[14px] font-semibold text-gray-800 leading-snug line-clamp-2 mb-2.5 group-hover:text-rose-500 transition-colors duration-200">
-        {post.title}
-      </h3>
-
-      {/* 作者信息行 */}
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex gap-4">
+        {/* 左侧头像 */}
         <img
           src={post.authorAvatar}
           alt={post.authorName}
-          className="w-5 h-5 rounded-full object-cover flex-shrink-0 bg-gray-100"
-          loading="lazy"
+          className="w-11 h-11 rounded-full flex-shrink-0 object-cover bg-gray-100 mt-0.5 ring-1 ring-gray-100"
         />
-        <span className="text-[12px] text-gray-600 font-medium truncate">
-          {post.authorName}
-        </span>
-        <span className="text-gray-300 text-[12px]">·</span>
-        <span className="text-[12px] text-gray-400 flex-shrink-0">{timeAgo}</span>
-      </div>
 
-      {/* 底部数据行 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3 text-gray-400">
-          <div className="flex items-center gap-1">
-            <MessageCircle size={13} strokeWidth={2} />
-            <span className="text-[12px]">{formatCount(post.comments)}</span>
+        {/* 中间内容区 */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          {/* 作者行 */}
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[15px] font-semibold text-gray-800">{post.authorName}</span>
+            <span
+              className="text-[11px] font-medium px-2 py-0.5 rounded-md"
+              style={{ backgroundColor: typeConfig.bgColor, color: typeConfig.color }}
+            >
+              {typeConfig.label}
+            </span>
+            <span className="text-[12px] text-gray-400">{formatTime(post.createdAt)}</span>
           </div>
-          <div className="flex items-center gap-1">
-            <Heart size={13} strokeWidth={2} />
-            <span className="text-[12px]">{formatCount(post.likes)}</span>
+
+          {/* 标题 */}
+          <h3 className="text-[17px] font-semibold text-gray-900 leading-snug mb-1.5 line-clamp-1 group-hover:text-red-600 transition-colors">
+            {post.title}
+          </h3>
+
+          {/* 摘要 */}
+          <p className="text-[14px] text-gray-500 leading-relaxed mb-3 line-clamp-2">
+            {post.summary}
+          </p>
+
+          {/* 互动栏 */}
+          <div className="flex items-center gap-7 text-[13px] text-gray-400 mt-auto">
+            <button
+              onClick={(e) => { e.stopPropagation() }}
+              className="flex items-center gap-1.5 hover:text-gray-600 transition-colors"
+            >
+              <MessageCircle size={16} strokeWidth={1.75} />
+              <span>{formatCount(post.comments)}</span>
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setLiked(!liked)
+                setLikeCount(liked ? likeCount - 1 : likeCount + 1)
+              }}
+              className={`flex items-center gap-1.5 transition-colors ${liked ? 'text-red-500' : 'hover:text-red-500'}`}
+            >
+              <Heart size={16} strokeWidth={1.75} className={liked ? 'fill-current' : ''} />
+              <span>{formatCount(likeCount)}</span>
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setCollected(!collected)
+                setCollectCount(collected ? collectCount - 1 : collectCount + 1)
+              }}
+              className={`flex items-center gap-1.5 transition-colors ${collected ? 'text-amber-500' : 'hover:text-amber-500'}`}
+            >
+              <Bookmark size={16} strokeWidth={1.75} className={collected ? 'fill-current' : ''} />
+              <span>{formatCount(collectCount)}</span>
+            </button>
+            <button
+              onClick={(e) => e.stopPropagation()}
+              className="flex items-center gap-1.5 hover:text-gray-600 transition-colors"
+            >
+              <Share2 size={16} strokeWidth={1.75} />
+            </button>
           </div>
         </div>
-        <span
-          className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
-          style={{ backgroundColor: typeConfig.bgColor, color: typeConfig.color }}
-        >
-          {typeConfig.label}
-        </span>
+
+        {/* 右侧缩略图 */}
+        <div className="flex-shrink-0 w-[140px] h-[100px] rounded-xl overflow-hidden bg-gray-100 mt-0.5 shadow-sm">
+          <img
+            src={post.thumbnail}
+            alt=""
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+          />
+        </div>
       </div>
     </article>
   )
@@ -207,6 +238,186 @@ function BannerIllustration() {
   )
 }
 
+// ─── PostDetailModal（居中弹窗，背景模糊） ────────────────────────
+
+interface PostDetailModalProps {
+  post: PostDisplayData | null
+  onClose: () => void
+}
+
+function PostDetailModal({ post, onClose }: PostDetailModalProps) {
+  const [visible, setVisible] = useState(false)
+  const [liked, setLiked] = useState(false)
+  const [bookmarked, setBookmarked] = useState(false)
+  const [likeCount, setLikeCount] = useState(post?.likes || 0)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // 挂载后触发入场动画，并重置滚动位置
+  useEffect(() => {
+    scrollRef.current?.scrollTo(0, 0)
+    const raf = requestAnimationFrame(() => setVisible(true))
+    return () => cancelAnimationFrame(raf)
+  }, [])
+
+  const handleClose = useCallback(() => {
+    setVisible(false)
+    setTimeout(() => onClose(), 250)
+  }, [onClose])
+
+  // ESC 关闭
+  useEffect(() => {
+    if (!post) return
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose()
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [post, handleClose])
+
+  if (!post) return null
+
+  const tag = typeTagConfig[post.type]
+  const TagIcon = tag?.icon
+  const showVerificationNote = post.type === 'help'
+
+  const modal = (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ pointerEvents: 'auto' }}
+    >
+      {/* 背景遮罩 + 模糊 */}
+      <div
+        className="absolute inset-0 transition-all duration-250 ease-out"
+        style={{
+          background: visible ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0)',
+          backdropFilter: visible ? 'blur(6px)' : 'blur(0px)',
+          WebkitBackdropFilter: visible ? 'blur(6px)' : 'blur(0px)',
+        }}
+        onClick={handleClose}
+      />
+
+      {/* 弹窗卡片 */}
+      <div
+        className="relative bg-white shadow-2xl flex flex-col overflow-hidden"
+        style={{
+          width: Math.min(680, window.innerWidth - 40),
+          maxHeight: 'calc(100vh - 60px)',
+          borderRadius: '16px',
+          opacity: visible ? 1 : 0,
+          transform: visible ? 'scale(1) translateY(0)' : 'scale(0.92) translateY(12px)',
+          transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)',
+          zIndex: 1,
+        }}
+      >
+        {/* 关闭按钮 */}
+        <button
+          onClick={handleClose}
+          className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition-all backdrop-blur-sm"
+          style={{ opacity: visible ? 1 : 0, transition: 'opacity 200ms ease 100ms' }}
+        >
+          <X size={18} />
+        </button>
+
+        {/* 详情内容（可滚动） */}
+        <div ref={scrollRef} className="w-full overflow-y-auto" style={{ maxHeight: 'calc(100vh - 60px)' }}>
+          {/* 帖子图片 */}
+          <div className="relative w-full h-64 overflow-hidden bg-gray-100 flex-shrink-0">
+            <img
+              src={post.thumbnail}
+              alt={post.title}
+              className="w-full h-full object-cover"
+            />
+            {tag && TagIcon && (
+              <span className={`absolute top-4 left-4 flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-bold rounded-lg ${tag.bg} ${tag.text} backdrop-blur-md`}>
+                <TagIcon size={14} />
+                {tag.label}
+              </span>
+            )}
+          </div>
+
+          <div className="px-6 py-5">
+            {/* 标题 */}
+            <h1 className="text-[22px] font-bold text-gray-900 leading-snug mb-4">
+              {post.title}
+            </h1>
+
+            {/* 作者信息 */}
+            <div className="flex items-center gap-3 mb-5">
+              <img
+                src={post.authorAvatar}
+                alt={post.authorName}
+                className="w-11 h-11 rounded-full bg-gray-100 ring-1 ring-gray-200"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-[15px] font-semibold text-gray-900 truncate">{post.authorName}</p>
+                <p className="text-[12px] text-gray-400">{formatTime(post.createdAt)}</p>
+              </div>
+              <button className="px-4 py-2 rounded-full bg-red-500 text-white text-[13px] font-semibold hover:bg-red-600 transition-colors">
+                关注
+              </button>
+            </div>
+
+            {/* 正文 */}
+            <div className="text-[15px] text-gray-700 leading-[1.8] space-y-3 mb-5 whitespace-pre-line">
+              {post.content}
+            </div>
+
+            {/* 话题标签 */}
+            <div className="flex flex-wrap gap-2 mb-5">
+              <span className="text-[13px] text-red-500 bg-red-50 px-3 py-1 rounded-lg font-medium">
+                #{TYPE_CONFIG[post.type].label}
+              </span>
+            </div>
+
+            {/* 互动栏 */}
+            <div className="py-4 border-t border-gray-100 flex items-center gap-6">
+              <button
+                onClick={() => {
+                  setLiked(!liked)
+                  setLikeCount(prev => liked ? prev - 1 : prev + 1)
+                }}
+                className={`flex items-center gap-2 text-[14px] font-semibold transition-all ${
+                  liked ? 'text-red-500' : 'text-gray-600 hover:text-red-500'
+                }`}
+              >
+                <Heart size={20} className={liked ? 'fill-current' : ''} />
+                {formatCount(likeCount)}
+              </button>
+              <button className="flex items-center gap-2 text-[14px] font-semibold text-gray-600 hover:text-gray-900 transition-colors">
+                <MessageSquare size={20} />
+                {formatCount(post.comments)}
+              </button>
+              <button
+                onClick={() => setBookmarked(!bookmarked)}
+                className={`flex items-center gap-2 text-[14px] font-semibold transition-all ml-auto ${
+                  bookmarked ? 'text-amber-500' : 'text-gray-600 hover:text-amber-500'
+                }`}
+              >
+                <Bookmark size={20} className={bookmarked ? 'fill-current' : ''} />
+                收藏
+              </button>
+            </div>
+
+            {/* 评论区 */}
+            <div className="pt-3 border-t border-gray-100">
+              <div className="flex items-center gap-2 mb-3">
+                <MessageSquare size={18} className="text-gray-500" />
+                <h2 className="text-[15px] font-bold text-gray-900">评论区</h2>
+                <span className="text-[13px] text-gray-400">共 {formatCount(post.comments)} 条</span>
+              </div>
+              <div className="bg-gray-50 rounded-xl border border-gray-100">
+                <CommentSection melonId={post.id} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  return createPortal(modal, document.body)
+}
+
 // ─── 主组件 ─────────────────────────────────────────────────
 
 export default function CommunityPage() {
@@ -219,6 +430,10 @@ export default function CommunityPage() {
   const [hasMore, setHasMore] = useState(true)
   const [initialLoading, setInitialLoading] = useState(true)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
+  const postRefs = useRef<Map<string, HTMLElement>>(new Map())
+
+  // 弹窗状态
+  const [modalPost, setModalPost] = useState<PostDisplayData | null>(null)
 
   // 初始化加载
   useEffect(() => {
@@ -234,6 +449,13 @@ export default function CommunityPage() {
     }, 200)
     return () => clearTimeout(timer)
   }, [selectedMainTab])
+
+  // 组件卸载时清理 scroll lock
+  useEffect(() => () => {
+    document.documentElement.style.overflow = ''
+    const main = document.querySelector('main')
+    if (main) (main as HTMLElement).style.overflow = ''
+  }, [])
 
   // 计算展示数据
   const displayPosts: PostDisplayData[] = useMemo(() => {
@@ -358,13 +580,37 @@ export default function CommunityPage() {
     return () => observer.disconnect()
   }, [handleLoadMore, hasMore, initialLoading])
 
-  // 点击帖子跳转详情页
-  const handleCardClick = useCallback((postId: string) => {
-    navigate(`/community/${postId}`)
-  }, [navigate])
+  // 打开帖子详情
+  const handleOpenPost = useCallback((postId: string) => {
+    const post = displayPosts.find(p => p.id === postId)
+    if (post) {
+      setModalPost(post)
+      // 锁住背景滚动
+      document.documentElement.style.overflow = 'hidden'
+      const main = document.querySelector('main')
+      if (main) (main as HTMLElement).style.overflow = 'hidden'
+    }
+  }, [displayPosts])
+
+  // 关闭帖子详情
+  const handleClosePost = useCallback(() => {
+    setModalPost(null)
+    document.documentElement.style.overflow = ''
+    const main = document.querySelector('main')
+    if (main) (main as HTMLElement).style.overflow = ''
+  }, [])
+
+  // 存储帖子 DOM 引用
+  const setPostRef = useCallback((id: string) => (el: HTMLElement | null) => {
+    if (el) {
+      postRefs.current.set(id, el)
+    } else {
+      postRefs.current.delete(id)
+    }
+  }, [])
 
   return (
-    <div className="min-h-full bg-white">
+    <div className="min-h-full" style={{ background: 'linear-gradient(180deg, #FDF2F8 0%, #ffffff 320px)' }}>
       {/* 顶部 Banner */}
       <div className="mx-6 mt-5 mb-4 rounded-2xl overflow-hidden relative"
         style={{
@@ -459,39 +705,25 @@ export default function CommunityPage() {
         </button>
       </div>
 
-      {/* 帖子列表 - 卡片网格 */}
-      <div className="px-6 py-6 max-w-[1400px] mx-auto">
+      {/* 帖子列表 */}
+      <div>
         {initialLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-              <div key={i}>
-                <div className="aspect-[4/3] rounded-xl bg-gray-100 animate-pulse mb-3" />
-                <div className="h-4 bg-gray-100 rounded animate-pulse w-4/5 mb-2.5" />
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-5 h-5 rounded-full bg-gray-100 animate-pulse" />
-                  <div className="h-3 bg-gray-100 rounded animate-pulse w-20" />
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-3 bg-gray-100 rounded animate-pulse" />
-                    <div className="w-8 h-3 bg-gray-100 rounded animate-pulse" />
-                  </div>
-                  <div className="w-12 h-4 bg-gray-100 rounded-full animate-pulse" />
-                </div>
-              </div>
-            ))}
+          <div className="py-16 flex flex-col items-center justify-center gap-3">
+            <div className="w-7 h-7 border-2 border-gray-100 border-t-gray-400 rounded-full animate-spin" />
+            <span className="text-[13px] text-gray-400">加载中...</span>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <>
             {displayPosts.map((post, i) => (
-              <CommunityCard
+              <PostItem
                 key={post.id}
                 post={post}
                 index={i}
-                onClick={() => handleCardClick(post.id)}
+                onOpen={handleOpenPost}
+                itemRef={setPostRef(post.id)}
               />
             ))}
-          </div>
+          </>
         )}
 
         {/* 加载更多 sentinel */}
@@ -513,6 +745,13 @@ export default function CommunityPage() {
           )}
         </div>
       </div>
+
+      {/* 帖子详情弹窗（用 key 强制 remount 确保动画正确） */}
+      <PostDetailModal
+        key={modalPost ? modalPost.id : 'closed'}
+        post={modalPost}
+        onClose={handleClosePost}
+      />
     </div>
   )
 }

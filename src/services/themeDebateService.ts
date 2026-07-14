@@ -4,6 +4,7 @@
 
 import { callLLM } from '../stores/llmStore'
 import { getThemePack } from './themePackService'
+import { MOCK_ROUNDS } from './debateArenaService'
 import type { ThemePack, ThemeCharacter, ThemeTopic } from '../types/themePack'
 import type { AICharacter, DebateStance } from './characters'
 import type {
@@ -125,6 +126,43 @@ async function generateThemeRound(
   const prevSummary = prevRounds.length > 0
     ? prevRounds.map((r, i) => `第${i + 1}轮 正方：${r.affirm.content}\n第${i + 1}轮 反方：${r.negate.content}`).join('\n')
     : '（首轮，无历史记录）'
+
+  // 优先使用 mock 预设数据（深度辩题内容）
+  const mockData = MOCK_ROUNDS[topic.id]
+  if (mockData && mockData[roundNum - 1]) {
+    const r = mockData[roundNum - 1]
+    const score: RoundScore = {
+      affirmScore: r.score[0],
+      negateScore: r.score[1],
+      winner: r.score[0] > r.score[1] ? 'affirm' : r.score[1] > r.score[0] ? 'negate' : 'draw',
+      reason: r.judgeReason,
+    }
+    const round: DebateRound = {
+      affirm: {
+        charId: affirmChar.id,
+        charName: affirmChar.name,
+        content: r.affirm,
+        thinkingSteps: r.affirmThinking || [],
+      },
+      negate: {
+        charId: negateChar.id,
+        charName: negateChar.name,
+        content: r.negate,
+        thinkingSteps: r.negateThinking || [],
+      },
+      score,
+      highlight: r.highlightSide ? {
+        side: r.highlightSide,
+        type: r.highlightType || 'killer-analogy',
+        label: r.highlightLabel || '名场面',
+        quote: r.highlightQuote || r.affirm.slice(0, 20),
+      } : undefined,
+      taunt: undefined,
+    }
+    // 模拟异步延迟，让前端有时间展示思考动画
+    await new Promise(resolve => setTimeout(resolve, 800))
+    return round
+  }
 
   const systemPrompt = `你是一场历史名人辩论赛的导演。你需要同时扮演正反双方，生成一轮精彩的辩论。
 

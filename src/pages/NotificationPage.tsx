@@ -112,10 +112,10 @@ export default function NotificationPage() {
   const hasUnread = notifications.some(n => !n.read)
 
   return (
-    <div className="h-full flex flex-col bg-white max-w-2xl mx-auto w-full">
+    <div className="h-full flex flex-col bg-white w-full">
       {/* ── 头部 ── */}
       <header className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm">
-        <div className="flex items-center justify-between px-4 h-12">
+        <div className="flex items-center justify-between px-6 h-12 max-w-4xl mx-auto w-full">
           <button
             onClick={() => navigate(-1)}
             className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#f5f5f5] transition-colors"
@@ -135,7 +135,7 @@ export default function NotificationPage() {
         </div>
 
         {/* ── 胶囊式 Tab 栏 ── */}
-        <div className="flex items-center gap-2 px-4 pb-3 overflow-x-auto scrollbar-none">
+        <div className="flex items-center gap-2 px-6 pb-3 overflow-x-auto scrollbar-none max-w-4xl mx-auto w-full">
           {TABS.map(tab => {
             const isActive = activeTab === tab.key
             return (
@@ -162,7 +162,7 @@ export default function NotificationPage() {
       {/* ── 内容区 ── */}
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-32">
+          <div className="flex flex-col items-center justify-center py-32 max-w-4xl mx-auto w-full">
             <div className="w-12 h-12 rounded-full bg-[#f5f5f5] flex items-center justify-center mb-3">
               <Bell size={22} className="text-[#ccc]" />
             </div>
@@ -177,7 +177,7 @@ export default function NotificationPage() {
               return (
                 <div
                   key={notif.id}
-                  className="flex items-start gap-3 px-4 py-3.5 border-b border-[#f0f0f0] hover:bg-[#fafafa] transition-colors cursor-pointer"
+                  className="flex items-start gap-3 px-6 py-3.5 border-b border-[#f0f0f0] hover:bg-[#fafafa] transition-colors cursor-pointer max-w-4xl mx-auto w-full"
                 >
                   {/* 头像区域 */}
                   <div className="relative flex-shrink-0">

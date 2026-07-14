@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { Flame, ChevronRight, Sparkles, Lightbulb, ArrowUp, ArrowDown, Bot, MessageCircle, TrendingUp } from 'lucide-react'
+import { Flame, ChevronRight, Sparkles, Lightbulb, ArrowUp, ArrowDown, MessageCircle, TrendingUp, Workflow, Clock, CheckCircle2, Loader2, Circle } from 'lucide-react'
 
 // ── 通用数据 ──────────────────────────────────────
 const hotEvents = [
@@ -50,10 +50,10 @@ const platformStats = [
 ]
 
 const agentStatusList = [
-  { id: 1, name: '研究员Agent', status: '搜索资料中...', progress: 72, color: 'from-emerald-400 to-emerald-600' },
-  { id: 2, name: '记忆管理员Agent', status: '整理记忆中...', progress: 66, color: 'from-emerald-400 to-teal-500' },
-  { id: 3, name: '教师Agent', status: '生成讲解中...', progress: 58, color: 'from-teal-400 to-emerald-500' },
-  { id: 4, name: '审阅员Agent', status: '检查内容中...', progress: 20, color: 'from-emerald-300 to-emerald-500' },
+  { id: 1, name: '研究员', status: '搜索资料中...', progress: 72, pixel: 'analyst' as const },
+  { id: 2, name: '记忆管理员', status: '整理记忆中...', progress: 66, pixel: 'checker' as const },
+  { id: 3, name: '教师', status: '生成讲解中...', progress: 58, pixel: 'recommender' as const },
+  { id: 4, name: '审阅员', status: '检查内容中...', progress: 20, pixel: 'guardian' as const },
 ]
 
 // ── 社区专属数据 ──────────────────────────────────────
@@ -89,16 +89,171 @@ interface DesktopRightPanelProps {
 }
 
 // ── 瓜田专属右侧边栏 ──────────────────────────────────────
-function MelonRightPanel() {
+// ── 工作间右侧边栏（管线历史） ──────────────────────────
+// 收藏的工作间 demo 管线数据
+const pipelineHistory = [
+  {
+    id: 'ws-1',
+    title: '网红奶茶使用过期原料',
+    status: 'completed' as const,
+    updatedAt: '2小时前',
+    stages: [
+      { name: '资料搜集', status: 'done' as const, agent: '搜索' },
+      { name: '观点提炼', status: 'done' as const, agent: '研究' },
+      { name: '事实核查', status: 'done' as const, agent: '审阅' },
+      { name: '内容生成', status: 'done' as const, agent: '写作' },
+    ],
+  },
+  {
+    id: 'ws-2',
+    title: 'AI换脸诈骗新套路',
+    status: 'running' as const,
+    updatedAt: '刚刚',
+    stages: [
+      { name: '资料搜集', status: 'done' as const, agent: '搜索' },
+      { name: '观点提炼', status: 'done' as const, agent: '研究' },
+      { name: '事实核查', status: 'running' as const, agent: '审阅' },
+      { name: '内容生成', status: 'pending' as const, agent: '写作' },
+    ],
+  },
+]
+
+function WorkspaceRightPanel() {
   const navigate = useNavigate()
+
+  const stageIcon = (status: string) => {
+    if (status === 'done') return <CheckCircle2 size={12} className="text-emerald-500" strokeWidth={2.5} />
+    if (status === 'running') return <Loader2 size={12} className="text-amber-500 animate-spin" strokeWidth={2.5} />
+    return <Circle size={12} className="text-gray-300" strokeWidth={2} />
+  }
 
   return (
     <aside className="w-full flex-shrink-0 h-full overflow-y-auto scrollbar-thin border-l border-[#ececec] px-5 py-6 space-y-6 bg-white">
+      {/* 管线历史 */}
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <PixelIcon type="chart" color="#10b981" />
+            <h3 className="text-[15px] font-bold text-[#111] tracking-tight">管线历史</h3>
+          </div>
+          <span className="text-[11px] text-ink-400">{pipelineHistory.length} 个工作间</span>
+        </div>
+
+        <div className="space-y-3">
+          {pipelineHistory.map((ws) => (
+            <div
+              key={ws.id}
+              className="p-3.5 rounded-xl bg-gray-50/50 border border-gray-100 cursor-pointer hover:border-emerald-200 hover:bg-emerald-50/30 transition-all group"
+              onClick={() => navigate('/agent-world')}
+            >
+              <div className="flex items-center justify-between mb-2.5">
+                <p className="text-[13px] font-semibold text-ink-800 truncate flex-1 group-hover:text-emerald-700 transition-colors">
+                  {ws.title}
+                </p>
+                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ml-2 ${
+                  ws.status === 'completed'
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : 'bg-amber-100 text-amber-700'
+                }`}>
+                  {ws.status === 'completed' ? '已完成' : '进行中'}
+                </span>
+              </div>
+
+              {/* 管线阶段进度 */}
+              <div className="flex items-center gap-1">
+                {ws.stages.map((stage, i) => (
+                  <div key={i} className="flex items-center gap-1 flex-1 min-w-0">
+                    <div className="flex-shrink-0">{stageIcon(stage.status)}</div>
+                    <span className={`text-[10px] truncate ${
+                      stage.status === 'done' ? 'text-emerald-600 font-medium' :
+                      stage.status === 'running' ? 'text-amber-600 font-medium' :
+                      'text-gray-400'
+                    }`}>
+                      {stage.agent}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-1 mt-2 text-[10px] text-gray-400">
+                <Clock size={10} />
+                <span>{ws.updatedAt}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <div className="h-px bg-[#f0f0f0]" />
+
+      {/* 智能体状态 */}
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <PixelIcon type="robot" color="#10b981" />
+          <h3 className="text-[15px] font-bold text-[#111] tracking-tight">智能体状态</h3>
+        </div>
+
+        <div className="space-y-2.5">
+          {agentStatusList.map((agent) => (
+            <div key={agent.id} className="flex items-center gap-2.5 p-2.5 rounded-lg bg-gray-50/50">
+              <PixelAgentAvatar type={agent.pixel} active={agent.progress < 100 && agent.progress > 0} />
+              <div className="flex-1 min-w-0">
+                <div className="text-[12px] font-semibold text-gray-800 truncate">{agent.name}</div>
+                <div className="text-[10px] text-gray-500 truncate">{agent.status}</div>
+              </div>
+              <div className="w-8 text-right text-[11px] font-mono text-gray-600">{agent.progress}%</div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </aside>
+  )
+}
+
+function MelonRightPanel() {
+  const navigate = useNavigate()
+  const [tipIndex, setTipIndex] = useState(0)
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTipIndex(i => (i + 1) % creativeTips.length)
+    }, 5000)
+    return () => clearInterval(id)
+  }, [])
+
+  return (
+    <aside className="w-full flex-shrink-0 h-full overflow-y-auto scrollbar-thin border-l border-[#ececec] px-5 py-6 space-y-6 bg-white">
+      {/* 创作提示（顶部） */}
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <PixelIcon type="chat" color="#10b981" />
+          <h3 className="text-[15px] font-bold text-[#111] tracking-tight">创作提示</h3>
+        </div>
+
+        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-100/50">
+          <p key={tipIndex} className="text-[13px] text-emerald-800/80 leading-relaxed animate-fade-in-up">
+            {creativeTips[tipIndex]}
+          </p>
+          <div className="flex items-center gap-1.5 mt-3">
+            {creativeTips.map((_, i) => (
+              <div
+                key={i}
+                className={`h-1 rounded-full transition-all duration-300 ${
+                  i === tipIndex ? 'w-4 bg-emerald-400' : 'w-1 bg-emerald-200'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="h-px bg-[#f0f0f0]" />
+
       {/* 热点辩论 */}
       <section>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <span className="text-base">🔥</span>
+            <PixelIcon type="flame" color="#ef4444" />
             <h3 className="text-[15px] font-bold text-[#111] tracking-tight">热点辩论</h3>
           </div>
           <button
@@ -152,7 +307,7 @@ function MelonRightPanel() {
       {/* 平台数据 */}
       <section>
         <div className="flex items-center gap-2 mb-4">
-          <span className="text-base">📊</span>
+          <PixelIcon type="chart" color="#3b82f6" />
           <h3 className="text-[15px] font-bold text-[#111] tracking-tight">平台数据</h3>
         </div>
 
@@ -179,7 +334,7 @@ function MelonRightPanel() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <span className="text-base">🤖</span>
+            <PixelIcon type="robot" color="#10b981" />
             <h3 className="text-[15px] font-bold text-[#111] tracking-tight">智能体状态</h3>
           </div>
           <button
@@ -197,9 +352,7 @@ function MelonRightPanel() {
               className="p-3 rounded-xl bg-gray-50/50 border border-gray-100"
             >
               <div className="flex items-center gap-2.5 mb-2">
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center flex-shrink-0">
-                  <Bot size={14} className="text-emerald-600" strokeWidth={2} />
-                </div>
+                <PixelAgentAvatar type={agent.pixel} active={agent.progress < 100 && agent.progress > 0} />
                 <div className="flex-1 min-w-0">
                   <div className="text-[12px] font-semibold text-gray-800 truncate">{agent.name}</div>
                   <div className="text-[10px] text-gray-500 truncate">{agent.status}</div>
@@ -208,8 +361,11 @@ function MelonRightPanel() {
               {/* 进度条 */}
               <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                 <div
-                  className={`h-full bg-gradient-to-r ${agent.color} rounded-full transition-all duration-500`}
-                  style={{ width: `${agent.progress}%` }}
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${agent.progress}%`,
+                    background: 'linear-gradient(to right, #34d399, #059669)',
+                  }}
                 />
               </div>
             </div>
@@ -217,6 +373,65 @@ function MelonRightPanel() {
         </div>
       </section>
     </aside>
+  )
+}
+
+// ── 像素风通用图标（section 标题用） ──────────────────────
+function PixelIcon({ type, color = '#10b981' }: { type: 'flame' | 'chart' | 'robot' | 'chat'; color?: string }) {
+  const patterns: Record<string, string[]> = {
+    flame: [
+      '00100',
+      '01110',
+      '11111',
+      '01110',
+      '00100',
+    ],
+    chart: [
+      '10001',
+      '11011',
+      '10101',
+      '11111',
+      '10001',
+    ],
+    robot: [
+      '01010',
+      '00000',
+      '11111',
+      '10101',
+      '11111',
+    ],
+    chat: [
+      '01110',
+      '10001',
+      '10001',
+      '01110',
+      '00100',
+    ],
+  }
+
+  const pattern = patterns[type]
+
+  return (
+    <div
+      className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0"
+      style={{
+        background: `${color}12`,
+        border: `1px solid ${color}30`,
+        imageRendering: 'pixelated',
+      }}
+    >
+      <div className="grid grid-cols-5 gap-px" style={{ imageRendering: 'pixelated' }}>
+        {pattern.join('').split('').map((cell, i) => (
+          <div
+            key={i}
+            className="w-[2px] h-[2px]"
+            style={{
+              backgroundColor: cell === '1' ? color : 'transparent',
+            }}
+          />
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -440,7 +655,7 @@ function CommunityRightPanel() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <span className="text-base">💬</span>
+            <PixelIcon type="chat" color="#f43f5e" />
             <h3 className="text-[15px] font-bold text-[#111] tracking-tight">热点讨论</h3>
           </div>
           <button
@@ -486,7 +701,7 @@ function CommunityRightPanel() {
       {/* 平台数据 */}
       <section>
         <div className="flex items-center gap-2 mb-4">
-          <span className="text-base">📊</span>
+          <PixelIcon type="chart" color="#3b82f6" />
           <h3 className="text-[15px] font-bold text-[#111] tracking-tight">社区数据</h3>
         </div>
 
@@ -513,7 +728,7 @@ function CommunityRightPanel() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <span className="text-base">🤖</span>
+            <PixelIcon type="robot" color="#10b981" />
             <h3 className="text-[15px] font-bold text-[#111] tracking-tight">智能体状态</h3>
           </div>
           <button
@@ -536,9 +751,10 @@ export default function DesktopRightPanel({ collapsed = false }: DesktopRightPan
   const location = useLocation()
   const [tipIndex, setTipIndex] = useState(0)
 
-  // 判断是否在瓜田页面（仅 /melon 列表页，不含详情页）
-  const isMelonPage = location.pathname === '/melon'
-  const isCommunityPage = location.pathname === '/community'
+  // 判断是否在核心内容页面（统一右侧边栏：创作提示+热点辩论+平台数据+智能体状态）
+  const isCorePage = ['/melon', '/community', '/verify', '/hot'].some(p => location.pathname === p || location.pathname.startsWith(p + '/'))
+  // 工作间页面
+  const isWorkspacePage = location.pathname === '/agent-world' || location.pathname.startsWith('/agent-world/')
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -574,14 +790,14 @@ export default function DesktopRightPanel({ collapsed = false }: DesktopRightPan
     )
   }
 
-  // 瓜田页面显示专属内容
-  if (isMelonPage) {
+  // 核心内容页面统一显示瓜田风格右侧边栏
+  if (isCorePage) {
     return <MelonRightPanel />
   }
 
-  // 社区页面显示专属内容
-  if (isCommunityPage) {
-    return <CommunityRightPanel />
+  // 工作间页面显示管线历史
+  if (isWorkspacePage) {
+    return <WorkspaceRightPanel />
   }
 
   return (

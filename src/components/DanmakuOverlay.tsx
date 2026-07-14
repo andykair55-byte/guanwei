@@ -14,8 +14,8 @@ interface DanmakuOverlayProps {
 }
 
 /** 轨道高度占比（从上到下 4 等分，留顶部安全区） */
-const TRACK_HEIGHT_PCT = 18   // 每条轨道占 18% 高度
-const TOP_OFFSET_PCT = 8      // 顶部留 8% 安全区
+const TRACK_HEIGHT_PCT = 15   // 每条轨道占 15% 高度
+const TOP_OFFSET_PCT = 15     // 顶部留 15% 安全区，避开 Header
 
 export default function DanmakuOverlay({ items, enabled, onItemComplete }: DanmakuOverlayProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -78,7 +78,8 @@ export default function DanmakuOverlay({ items, enabled, onItemComplete }: Danma
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 pointer-events-none overflow-hidden z-40"
+      className="fixed pointer-events-none overflow-hidden z-30"
+      style={{ top: '60px', left: 0, right: 0, bottom: 0 }}
       aria-hidden="true"
     />
   )

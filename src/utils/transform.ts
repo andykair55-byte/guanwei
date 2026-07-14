@@ -37,6 +37,12 @@ export function transformMelon(apiMelon: ApiMelon): Melon {
     evidenceCount: apiMelon.evidence_count || 0,
     isLiked: apiMelon.is_liked || false,
     createdAt: apiMelon.created_at,
+    author: apiMelon.creator_nickname ? {
+      id: String(apiMelon.creator_id),
+      nickname: apiMelon.creator_nickname,
+      avatar: apiMelon.creator_avatar || `https://picsum.photos/seed/u${apiMelon.creator_id}/80/80`,
+      rank: apiMelon.creator_rank,
+    } : undefined,
   }
 }
 

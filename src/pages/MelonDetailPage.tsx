@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   X, Heart, MessageCircle, Bookmark, Share2, Send,
   Users, Clock, Flame, Eye, ThumbsUp, ThumbsDown,
-  Check, ChevronRight, Swords, Link2, PenLine,
+  Check, Link2, PenLine,
   AlertCircle, ArrowLeft, Star
 } from 'lucide-react'
 import { api } from '../services/api'
@@ -407,8 +407,8 @@ export default function MelonDetailPage() {
   // ── Web 端：小红书风格左右分栏大卡片 ─────────────
   if (isWeb) {
     return (
-      <div className="h-full w-full flex items-center justify-center bg-paper-50 p-8 overflow-auto">
-        <div className="w-full max-w-6xl bg-white rounded-2xl shadow-2xl overflow-hidden flex animate-fade-in-up" style={{ height: 'calc(100vh - 120px)', maxHeight: '800px' }}>
+      <div className="h-full w-full flex items-center justify-center bg-paper-50 p-6 overflow-auto">
+        <div className="w-full max-w-[1400px] bg-white rounded-2xl shadow-2xl overflow-hidden flex animate-fade-in-up" style={{ height: 'calc(100vh - 100px)', minHeight: '600px' }}>
           {/* 左侧：图片 + 内容区 */}
           <div className="relative w-[60%] flex-shrink-0 bg-ink-900 overflow-hidden">
             {/* 关闭按钮 */}
@@ -553,106 +553,139 @@ export default function MelonDetailPage() {
                     </span>
                   </div>
 
-                  {/* 投票区 */}
-                  <div className="bg-paper-50 rounded-xl p-4 border border-ink-100">
-                    <p className="text-[13px] font-semibold text-ink-900 mb-3">
-                      {isRevealed ? '最终结果' : '你的判断是什么？'}
-                    </p>
-
-                    {/* 比例条 */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-[11px] font-bold text-seal w-10">{truePercent}%</span>
-                      <div className="flex-1 h-2.5 rounded-full overflow-hidden bg-paper-200 flex">
-                        <div className="h-full bg-seal transition-all duration-700 ease-out" style={{ width: `${truePercent}%` }} />
-                        <div className="h-full bg-bamboo transition-all duration-700 ease-out" style={{ width: `${falsePercent}%` }} />
-                      </div>
-                      <span className="text-[11px] font-bold text-bamboo w-10 text-right">{falsePercent}%</span>
-                    </div>
-
-                    {!isRevealed ? (
-                      <>
-                        <div className="flex gap-2 mb-3">
-                          <button
-                            onClick={() => !hasSubmitted && setChoice(true)}
-                            className={`flex-1 py-2.5 rounded-xl border-2 font-semibold text-[14px] transition-all flex items-center justify-center gap-1.5 active:scale-[0.97] ${
-                              choice === true
-                                ? 'bg-seal border-seal text-white shadow-seal-glow'
-                                : 'bg-white border-ink-200 text-ink-700 hover:border-seal/50'
-                            } ${hasSubmitted ? 'cursor-not-allowed opacity-80' : ''}`}
-                          >
-                            {choice === true && <Check size={15} />}
-                            真
-                          </button>
-                          <button
-                            onClick={() => !hasSubmitted && setChoice(false)}
-                            className={`flex-1 py-2.5 rounded-xl border-2 font-semibold text-[14px] transition-all flex items-center justify-center gap-1.5 active:scale-[0.97] ${
-                              choice === false
-                                ? 'bg-bamboo border-bamboo text-white'
-                                : 'bg-white border-ink-200 text-ink-700 hover:border-bamboo/50'
-                            } ${hasSubmitted ? 'cursor-not-allowed opacity-80' : ''}`}
-                          >
-                            {choice === false && <Check size={15} />}
-                            假
-                          </button>
-                        </div>
-
-                        {choice !== null && !hasSubmitted && (
-                          <div className="mb-3">
-                            <label className="block text-[12px] text-ink-400 mb-1.5">填写佐证（选填）</label>
-                            <textarea
-                              value={evidence}
-                              onChange={(e) => setEvidence(e.target.value.slice(0, 500))}
-                              placeholder="说说你判断的依据..."
-                              rows={2}
-                              className="w-full px-3 py-2 rounded-lg bg-white text-[13px] text-ink-700 placeholder:text-ink-300 resize-none leading-relaxed border border-ink-200 focus:border-seal/50 transition-colors"
-                            />
-                            <div className="text-right text-[11px] text-ink-400 mt-0.5">{evidence.length}/500</div>
-                          </div>
-                        )}
-
-                        {hasSubmitted ? (
-                          <div className="flex items-center justify-center gap-2 py-2.5 bg-bamboo/10 text-bamboo rounded-xl font-medium text-[13px]">
-                            <Check size={15} />
-                            <span>已提交，等待开奖</span>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={handleSubmit}
-                            disabled={choice === null || submitting}
-                            className="w-full py-2.5 rounded-xl font-semibold text-[14px] text-white bg-seal active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-seal-glow"
-                          >
-                            {submitting ? '提交中...' : '提交判断'}
-                          </button>
-                        )}
-                      </>
-                    ) : (
-                      <div className="text-center py-3">
-                        <div className={`inline-flex items-center justify-center w-14 h-14 rounded-xl text-xl font-bold ${
-                          melon.result === true ? 'bg-seal/10 text-seal' : 'bg-bamboo/10 text-bamboo'
-                        }`}>
-                          {melon.result === true ? '真' : '假'}
-                        </div>
-                      </div>
-                    )}
-
-                    <p className="text-[11px] text-ink-400 text-center mt-2">
-                      共 {formatCount(melon.totalParticipants)} 人参与
-                    </p>
-                  </div>
-
-                  {/* 辩论场入口 */}
+                  {/* 投票区 - 重新设计 */}
                   <div
-                    className="flex items-center gap-3 p-3 bg-gradient-to-r from-seal/5 to-bamboo/5 rounded-xl border border-ink-100 cursor-pointer hover:border-seal/30 transition-colors group"
-                    onClick={() => navigate(`/debate/${melon.id}/${encodeURIComponent(melon.title)}`)}
+                    className="relative rounded-2xl p-5 overflow-hidden border border-ink-100"
+                    style={{
+                      background: 'linear-gradient(135deg, #f0fdf4 0%, #ffffff 50%, #fef2f2 100%)',
+                    }}
                   >
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-seal to-bamboo flex items-center justify-center shadow-seal-glow flex-shrink-0">
-                      <Swords size={18} className="text-white" />
+                    {/* 背景纹理 */}
+                    <div
+                      className="absolute inset-0 opacity-[0.04] pointer-events-none"
+                      style={{
+                        backgroundImage:
+                          'radial-gradient(circle at 20% 50%, #10b981 1px, transparent 1px), radial-gradient(circle at 80% 50%, #f43f5e 1px, transparent 1px)',
+                        backgroundSize: '24px 24px',
+                      }}
+                    />
+
+                    <div className="relative">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-[14px] font-bold text-ink-900">
+                          {isRevealed ? '最终结果' : '你的判断是什么？'}
+                        </p>
+                        <span className="text-[11px] text-ink-400 font-mono">
+                          {formatCount(melon.totalParticipants)} 人参与
+                        </span>
+                      </div>
+
+                      {/* 比例条 */}
+                      <div className="mb-3.5">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-seal" />
+                            <span className="text-[13px] font-bold text-seal">真 {truePercent}%</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[13px] font-bold text-bamboo">假 {falsePercent}%</span>
+                            <div className="w-2 h-2 rounded-full bg-bamboo" />
+                          </div>
+                        </div>
+                        <div className="relative h-3 rounded-full overflow-hidden bg-paper-100 flex">
+                          <div
+                            className="h-full transition-all duration-700 ease-out"
+                            style={{
+                              width: `${truePercent}%`,
+                              background: 'linear-gradient(to right, #10b981, #059669)',
+                            }}
+                          />
+                          <div
+                            className="h-full transition-all duration-700 ease-out"
+                            style={{
+                              width: `${falsePercent}%`,
+                              background: 'linear-gradient(to right, #f43f5e, #e11d48)',
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {!isRevealed ? (
+                        <>
+                          {/* 真假选择卡片 */}
+                          <div className="grid grid-cols-2 gap-2.5 mb-3">
+                            <button
+                              onClick={() => !hasSubmitted && setChoice(true)}
+                              className={`relative py-3.5 rounded-xl border-2 font-bold text-[15px] transition-all flex flex-col items-center gap-1 active:scale-[0.97] overflow-hidden ${
+                                choice === true
+                                  ? 'border-seal bg-seal text-white shadow-md shadow-seal/30'
+                                  : 'border-ink-200 bg-white/80 text-ink-700 hover:border-seal/50 hover:bg-seal/5'
+                              } ${hasSubmitted ? 'cursor-not-allowed opacity-80' : ''}`}
+                            >
+                              <ThumbsUp size={18} strokeWidth={2.5} />
+                              <span>真</span>
+                            </button>
+                            <button
+                              onClick={() => !hasSubmitted && setChoice(false)}
+                              className={`relative py-3.5 rounded-xl border-2 font-bold text-[15px] transition-all flex flex-col items-center gap-1 active:scale-[0.97] overflow-hidden ${
+                                choice === false
+                                  ? 'border-bamboo bg-bamboo text-white shadow-md shadow-bamboo/30'
+                                  : 'border-ink-200 bg-white/80 text-ink-700 hover:border-bamboo/50 hover:bg-bamboo/5'
+                              } ${hasSubmitted ? 'cursor-not-allowed opacity-80' : ''}`}
+                            >
+                              <ThumbsDown size={18} strokeWidth={2.5} />
+                              <span>假</span>
+                            </button>
+                          </div>
+
+                          {choice !== null && !hasSubmitted && (
+                            <div className="mb-3">
+                              <label className="block text-[12px] text-ink-400 mb-1.5">填写佐证（选填）</label>
+                              <textarea
+                                value={evidence}
+                                onChange={(e) => setEvidence(e.target.value.slice(0, 500))}
+                                placeholder="说说你判断的依据..."
+                                rows={2}
+                                className="w-full px-3 py-2 rounded-xl bg-white/80 text-[13px] text-ink-700 placeholder:text-ink-300 resize-none leading-relaxed border border-ink-200 focus:border-seal/50 focus:bg-white transition-all"
+                              />
+                              <div className="text-right text-[11px] text-ink-400 mt-0.5">{evidence.length}/500</div>
+                            </div>
+                          )}
+
+                          {hasSubmitted ? (
+                            <div className="flex items-center justify-center gap-2 py-3 bg-bamboo/10 text-bamboo rounded-xl font-semibold text-[14px]">
+                              <Check size={16} strokeWidth={2.5} />
+                              <span>已提交，等待开奖</span>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={handleSubmit}
+                              disabled={choice === null || submitting}
+                              className="w-full py-3 rounded-xl font-bold text-[14px] text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
+                              style={{
+                                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                boxShadow: '0 4px 12px -2px rgba(16, 185, 129, 0.4)',
+                              }}
+                            >
+                              {submitting ? '提交中...' : '提交判断'}
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <div className="text-center py-4">
+                          <div
+                            className={`inline-flex items-center justify-center w-18 h-18 rounded-2xl text-2xl font-bold ${
+                              melon.result === true
+                                ? 'bg-seal/10 text-seal shadow-md shadow-seal/20'
+                                : 'bg-bamboo/10 text-bamboo shadow-md shadow-bamboo/20'
+                            }`}
+                            style={{ width: '72px', height: '72px' }}
+                          >
+                            {melon.result === true ? '真' : '假'}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[14px] font-semibold text-ink-900">加入辩论</p>
-                      <p className="text-[11px] text-ink-500">来和大家辩一辩真假</p>
-                    </div>
-                    <ChevronRight size={16} className="text-ink-300 group-hover:text-seal transition-colors" />
                   </div>
 
                   {/* 开奖后的实锤报告 */}

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { MessageCircle, Users, Sparkles, Swords, Network, TrendingUp, Clock, Award, Flame, PenLine } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { MessageCircle, Users, Sparkles, Swords, TrendingUp, Clock, Award, Flame, PenLine } from 'lucide-react'
 import { api } from '../services/api'
 import { transformMelonList } from '../utils/transform'
 import PostDetailModal from '../components/PostDetailModal'
@@ -330,12 +330,11 @@ function MelonCard({
     <article
       ref={cardRef}
       data-melon-id={melon.id}
-      className="group cursor-pointer animate-fade-in-up"
-      style={{ animationDelay: `${index * 40}ms` }}
+      className="group cursor-pointer"
       onClick={onClick}
     >
       {/* 封面图 */}
-      <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-paper-100 mb-3 shadow-sm group-hover:shadow-md transition-shadow duration-300">
+      <div className="relative aspect-[16/10] overflow-hidden rounded-xl bg-paper-100 mb-2.5 shadow-sm group-hover:shadow-md transition-shadow duration-300">
         <img
           src={melon.coverImage}
           alt={melon.title}
@@ -349,7 +348,7 @@ function MelonCard({
       </div>
 
       {/* 标题 */}
-      <h3 className="text-[14px] font-semibold text-gray-800 leading-snug line-clamp-2 mb-2.5 group-hover:text-emerald-600 transition-colors duration-200">
+      <h3 className="text-[13px] font-semibold text-gray-800 leading-snug line-clamp-2 mb-2 group-hover:text-emerald-600 transition-colors duration-200">
         {melon.title}
       </h3>
 
@@ -391,7 +390,6 @@ function MelonCard({
 // ── 主组件 ──────────────────────────────────────
 export default function MelonFieldPage() {
   const navigate = useNavigate()
-  const { id: urlMelonId } = useParams<{ id: string }>()
   const [melons, setMelons] = useState<Melon[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('推荐')
   const [loading, setLoading] = useState(true)
@@ -440,21 +438,18 @@ export default function MelonFieldPage() {
     return () => observer.disconnect()
   }, [melons.length, loadingMore])
 
-  // URL 同步：打开弹窗时更新 URL
+  // 打开弹窗（和社区一致：不改 URL，仅弹窗展示）
   const openModal = useCallback((melon: Melon, rect: DOMRect) => {
     setSelectedMelon(melon)
     setOriginRect(rect)
     setModalOpen(true)
-    // 使用 replace 避免历史记录堆叠
-    navigate(`/melon/${melon.id}`, { replace: false })
-  }, [navigate])
+  }, [])
 
-  // 关闭弹窗并回退 URL
+  // 关闭弹窗
   const closeModal = useCallback(() => {
     setModalOpen(false)
     setSelectedMelon(null)
-    navigate('/melon', { replace: true })
-  }, [navigate])
+  }, [])
 
   // 处理卡片点击
   const handleCardClick = useCallback((melon: Melon) => (e: React.MouseEvent) => {
@@ -471,75 +466,6 @@ export default function MelonFieldPage() {
       cardRefs.current.delete(id)
     }
   }, [])
-
-  // 初始状态：如果 URL 中有 id，自动打开对应弹窗
-  useEffect(() => {
-    if (urlMelonId && !modalOpen && melons.length > 0) {
-      const melon = melons.find(m => m.id === urlMelonId)
-      if (melon) {
-        // 找到卡片元素获取位置，如果找不到则使用屏幕中心的默认位置
-        const cardEl = cardRefs.current.get(urlMelonId)
-        if (cardEl) {
-          const rect = cardEl.getBoundingClientRect()
-          setSelectedMelon(melon)
-          setOriginRect(rect)
-          setModalOpen(true)
-        } else {
-          // 卡片不在视口中，使用屏幕中心的一个默认小矩形作为 FLIP 起点
-          const defaultRect: DOMRect = {
-            left: window.innerWidth / 2 - 100,
-            top: window.innerHeight / 2 - 75,
-            width: 200,
-            height: 150,
-            right: window.innerWidth / 2 + 100,
-            bottom: window.innerHeight / 2 + 75,
-            x: window.innerWidth / 2 - 100,
-            y: window.innerHeight / 2 - 75,
-            toJSON: () => '',
-          }
-          setSelectedMelon(melon)
-          setOriginRect(defaultRect)
-          setModalOpen(true)
-        }
-      }
-    }
-  }, [urlMelonId, modalOpen, melons])
-
-  // 浏览器前进后退时同步弹窗状态
-  useEffect(() => {
-    const handlePopState = () => {
-      const path = window.location.pathname
-      const match = path.match(/^\/melon\/(.+)$/)
-      if (match) {
-        const melonId = match[1]
-        const melon = melons.find(m => m.id === melonId)
-        if (melon && !modalOpen) {
-          const cardEl = cardRefs.current.get(melonId)
-          const rect = cardEl
-            ? cardEl.getBoundingClientRect()
-            : {
-                left: window.innerWidth / 2 - 100,
-                top: window.innerHeight / 2 - 75,
-                width: 200,
-                height: 150,
-                right: window.innerWidth / 2 + 100,
-                bottom: window.innerHeight / 2 + 75,
-                x: window.innerWidth / 2 - 100,
-                y: window.innerHeight / 2 - 75,
-                toJSON: () => '',
-              } as DOMRect
-          setSelectedMelon(melon)
-          setOriginRect(rect)
-          setModalOpen(true)
-        }
-      } else if (path === '/melon' && modalOpen) {
-        setModalOpen(false)
-        setSelectedMelon(null)
-      }
-    }
-    window.addEventListener('popstate', handlePopState)
-    return () => window.removeEventListener('popstate', handlePopState)
-  }, [melons, modalOpen])
 
   const tabs = ['推荐', '娱乐', '科技', '社会', '生活', '财经', '历史', '学习']
 
@@ -594,6 +520,13 @@ export default function MelonFieldPage() {
                 >
                   <Sparkles size={14} />
                   <span>去求证</span>
+                </button>
+                <button
+                  onClick={() => navigate('/publish')}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/80 backdrop-blur-sm text-emerald-800 text-[13px] font-semibold border border-emerald-300/60 hover:bg-white hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all"
+                >
+                  <PenLine size={14} strokeWidth={2.5} />
+                  <span>发帖</span>
                 </button>
                 <button
                   onClick={() => navigate('/entertainment/arena')}
@@ -690,12 +623,12 @@ export default function MelonFieldPage() {
 
       {/* 主内容区 */}
       <main className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="px-6 py-6 max-w-[1400px] mx-auto">
+        <div className="px-6 py-6">
           {loading ? (
-            <div className="grid grid-cols-4 gap-6">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+            <div className="grid grid-cols-5 gap-5">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
                 <div key={i}>
-                  <div className="aspect-[4/3] rounded-xl bg-paper-100 animate-pulse mb-3" />
+                  <div className="aspect-[16/10] rounded-xl bg-paper-100 animate-pulse mb-2.5" />
                   <div className="h-4 bg-paper-100 rounded animate-pulse w-4/5 mb-2.5" />
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-5 h-5 rounded-full bg-paper-100 animate-pulse" />
@@ -713,7 +646,7 @@ export default function MelonFieldPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-4 gap-6">
+              <div className="grid grid-cols-5 gap-5">
                 {melons.map((melon, i) => (
                   <MelonCard
                     key={melon.id}
@@ -735,26 +668,6 @@ export default function MelonFieldPage() {
           )}
         </div>
       </main>
-
-      {/* 底部操作栏 */}
-      <div className="flex-shrink-0 border-t border-gray-100 px-6 py-3 bg-white">
-        <div className="flex items-center justify-center gap-10">
-          <button onClick={() => navigate('/verify')} className="flex items-center gap-2 text-[13px] text-gray-500 hover:text-emerald-500 transition-colors font-medium">
-            <Sparkles size={16} strokeWidth={2} />
-            <span>AI求证</span>
-          </button>
-          <div className="w-px h-4 bg-gray-100" />
-          <button onClick={() => navigate('/entertainment/arena')} className="flex items-center gap-2 text-[13px] text-gray-500 hover:text-red-500 transition-colors font-medium">
-            <Swords size={16} strokeWidth={2} />
-            <span>辩论对决</span>
-          </button>
-          <div className="w-px h-4 bg-gray-100" />
-          <button onClick={() => navigate('/hot')} className="flex items-center gap-2 text-[13px] text-gray-500 hover:text-blue-500 transition-colors font-medium">
-            <Network size={16} strokeWidth={2} />
-            <span>知识图谱</span>
-          </button>
-        </div>
-      </div>
 
       {/* 弹窗详情页 */}
       {selectedMelon && (

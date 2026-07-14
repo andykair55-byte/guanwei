@@ -152,8 +152,8 @@ const DEFAULT_COLORS: Record<string, string> = {
   'mengzi': '#d4a017',
   'xunzi': '#7b68ae',
   'zhou-yu': '#e74c3c',
-  'lu-xun': '#2c3e50',
-  'hu-shi': '#2980b9',
+  'doubao': '#3370ff',
+  'deepseek': '#1a1a6e',
 }
 
 interface PixelAvatarProps {

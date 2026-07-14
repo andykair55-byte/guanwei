@@ -398,7 +398,9 @@ export function generateMelons(): Melon[] {
     const totalParticipants = trueCount + falseCount
     const daysAgo = randomInt(0, 5)
     const createdAt = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString()
-    const author = melonAuthors[i % melonAuthors.length]
+    // 约75%有作者，25%匿名
+    const hasAuthor = (i % 4) !== 0
+    const author = hasAuthor ? melonAuthors[i % melonAuthors.length] : undefined
 
     return {
       id: `melon-${i + 1}`,
@@ -418,7 +420,7 @@ export function generateMelons(): Melon[] {
       commentCount: randomInt(10, 500),
       evidenceCount: randomInt(5, 50),
       isLiked: false,
-      author: { ...author },
+      author: author ? { ...author } : undefined,
     }
   })
 }

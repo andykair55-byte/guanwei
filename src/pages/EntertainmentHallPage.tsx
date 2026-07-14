@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Bot, Swords, Users, Gamepad2, Scale,
@@ -52,6 +53,7 @@ interface Category {
 export default function EntertainmentHallPage() {
   const navigate = useNavigate()
   const isDesktop = useIsDesktop()
+  const [activeCategoryId, setActiveCategoryId] = useState<string>('all')
 
   const categories: Category[] = [
     // ── 🤖 AI 竞技场 ──
@@ -147,7 +149,7 @@ export default function EntertainmentHallPage() {
   )
 
   return (
-    <div className="flex flex-col min-h-full bg-white">
+    <div className="flex flex-col min-h-full" style={{ background: 'linear-gradient(180deg, #F5F3FF 0%, #ffffff 320px)' }}>
       {/* ═══════ 顶部 Banner（社区风格）═══════ */}
       <div
         className="mx-6 mt-5 mb-5 rounded-2xl overflow-hidden relative"
@@ -267,8 +269,23 @@ export default function EntertainmentHallPage() {
       {/* ═══════ 分类 Tab 栏（社区风格）═══════ */}
       <div className="sticky top-0 bg-white/95 backdrop-blur-md z-10 border-b border-gray-100">
         <div className="flex items-center gap-2 px-6 py-3 overflow-x-auto scrollbar-none">
-          {categories.map((cat, idx) => {
-            const isActive = idx === 0
+          <button
+            className={`px-4 py-2 text-[13px] font-semibold rounded-full transition-all duration-200 whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 ${
+              activeCategoryId === 'all'
+                ? 'text-white shadow-md'
+                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+            }`}
+            style={activeCategoryId === 'all' ? {
+              background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
+              boxShadow: '0 2px 10px -2px rgba(168, 85, 247, 0.5)',
+            } : {}}
+            onClick={() => setActiveCategoryId('all')}
+          >
+            <Gamepad2 size={14} strokeWidth={2} />
+            全部
+          </button>
+          {categories.map((cat) => {
+            const isActive = activeCategoryId === cat.id
             return (
               <button
                 key={cat.id}
@@ -281,6 +298,7 @@ export default function EntertainmentHallPage() {
                   background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)',
                   boxShadow: '0 2px 10px -2px rgba(168, 85, 247, 0.5)',
                 } : {}}
+                onClick={() => setActiveCategoryId(cat.id)}
               >
                 <cat.icon size={14} strokeWidth={2} />
                 {cat.label}
@@ -292,7 +310,9 @@ export default function EntertainmentHallPage() {
 
       {/* ═══════ 游戏卡片区 ═══════ */}
       <div className="flex-1 px-6 py-6 pb-10">
-        {categories.map((cat, ci) => (
+        {categories
+          .filter(cat => activeCategoryId === 'all' || cat.id === activeCategoryId)
+          .map((cat, ci) => (
           <div key={cat.id} className="mb-8 last:mb-0">
             {/* 分类标题 */}
             <div className="flex items-center justify-between mb-4">

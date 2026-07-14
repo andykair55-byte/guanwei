@@ -22,6 +22,7 @@ export const MelonDetailPage = lazy(() => import('../pages/MelonDetailPage'))
 export const MelonRankPage = lazy(() => import('../pages/MelonRankPage'))
 export const CommunityPage = lazy(() => import('../pages/CommunityPage'))
 export const CommunityDetailPage = lazy(() => import('../pages/CommunityDetailPage'))
+export const CityAidPage = lazy(() => import('../pages/CityAidPage'))
 export const PublishPage = lazy(() => import('../pages/PublishPage'))
 export const VerifyPage = lazy(() => import('../pages/VerifyPage'))
 export const ProfilePage = lazy(() => import('../pages/ProfilePage'))
@@ -85,6 +86,7 @@ export const layoutRoutes: RouteConfig[] = [
   { path: '/melon/:id',        platform: 'both' },
   { path: '/melon/rank',       platform: 'both' },
   { path: '/community',        platform: 'both' },
+  { path: '/community/aid',    platform: 'both' },
   { path: '/community/:id',    platform: 'both' },
   { path: '/verify',           platform: 'both' },
   { path: '/publish',          platform: 'both' },

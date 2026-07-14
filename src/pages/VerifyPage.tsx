@@ -252,7 +252,7 @@ function VerifyPage() {
   // ===== 默认输入 =====
   const defaultPadding = notchHeight > 0 ? `${notchHeight + 8}px` : undefined
   return (
-    <div className="flex flex-col min-h-full bg-white">
+    <div className="flex flex-col min-h-full" style={{ background: 'linear-gradient(180deg, #FFFBEB 0%, #ffffff 320px)' }}>
       {/* ═══════ 顶部 Banner（社区风格）═══════ */}
       <div
         className="mx-6 mt-5 mb-5 rounded-2xl overflow-hidden relative"

@@ -32,6 +32,8 @@ const PLATFORM_BRAND_BG: Record<PlatformId, string> = {
   weibo: '#e6162d', douyin: '#111111', tieba: '#00a1d6'
 }
 
+const ALL_EXTERNAL_PLATFORMS = ['zhihu', 'xiaohongshu', 'weibo', 'douyin', 'tieba'] as const
+
 const DEMO_TOPIC = 'AI换脸诈骗频发：技术滥用下的信任危机'
 
 export default function AgentWorldPage() {
@@ -60,8 +62,11 @@ export default function AgentWorldPage() {
   const setCanonicalTopic = useCanonicalStore(s => s.setTopic)
   const createSnapshot = useSnapshotStore(s => s.createSnapshot)
   const addEventSimple = useActivityStore(s => s.addEventSimple)
+  const loadDemoEvents = useActivityStore(s => s.loadDemoEvents)
+  const clearEvents = useActivityStore(s => s.clearEvents)
 
   const [activePlatform, setActivePlatform] = useState<PlatformId>('guanwei')
+  const canAddMorePlatforms = ALL_EXTERNAL_PLATFORMS.some(p => !availablePlatforms.includes(p))
   const [generatingPlatform, setGeneratingPlatform] = useState<PlatformId | null>(null)
   const [copied, setCopied] = useState(false)
   const [lastSaved, setLastSaved] = useState(Date.now())
@@ -196,7 +201,7 @@ export default function AgentWorldPage() {
     }
 
     const topic = titleParam || ''
-    const ws = createWorkspace(topic)
+    const ws = createWorkspace({ topic })
     switchWorkspace(ws.id)
 
     if (topic) {
@@ -215,6 +220,15 @@ export default function AgentWorldPage() {
     resetCommander()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 当前 workspace 没有历史事件时，自动加载 Demo 指挥调度流程（评委/新用户引导）
+  useEffect(() => {
+    if (!currentId) return
+    const existing = useActivityStore.getState().eventsByWorkspace[currentId] || []
+    if (existing.length === 0) {
+      loadDemoEvents(currentId)
+    }
+  }, [currentId, loadDemoEvents])
+
   // Mark data as ready after initial load (demo data + DOM paint)
   useEffect(() => {
     const id = requestAnimationFrame(() => setDataPending(false))
@@ -229,8 +243,13 @@ export default function AgentWorldPage() {
 
   const handleSend = useCallback(async (text: string) => {
     if (!currentId) return
+    // 如果当前还是 Demo 示例数据，先清空再记录真实操作
+    const existing = useActivityStore.getState().eventsByWorkspace[currentId] || []
+    if (existing.length > 0 && existing.every(e => e.id.startsWith('demo-evt-'))) {
+      clearEvents(currentId)
+    }
     await handleUserInput(currentId, text, mode)
-  }, [currentId, mode])
+  }, [currentId, mode, clearEvents])
 
   const handleGeneratePlatform = useCallback(async (platform: PlatformId) => {
     if (!current) return
@@ -382,9 +401,6 @@ export default function AgentWorldPage() {
               </svg>
               <span style={{ position: 'absolute', top: 5, right: 5, width: 6, height: 6, borderRadius: '50%', background: 'var(--danger)', border: '1.5px solid var(--bg)' }} />
             </button>
-            <div className="ws-user-avatar" style={{ width: 26, height: 26, fontSize: 11 }}>
-              {current.title.charAt(0)}
-            </div>
           </div>
         </header>
 
@@ -398,50 +414,91 @@ export default function AgentWorldPage() {
             通用稿（主稿）
           </button>
           {availablePlatforms.filter(p => p !== 'guanwei').map(p => (
-            <button
-              key={p}
-              className={`ws-platform-tab${activePlatform === p ? ' active' : ''}`}
-              onClick={() => handlePlatformChange(p)}
-            >
-              <span className="ws-platform-icon" style={{ background: PLATFORM_BRAND_BG[p] }}>
-                {PLATFORM_SHORT[p]}
-              </span>
-              {PLATFORM_TEMPLATES[p].name}
-              {current?.platformContents?.[p]?.generated && (
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--status-active)" strokeWidth="2.5">
-                  <polyline points="20 6 9 17 4 12" />
+            <div key={p} className="ws-platform-tab-group">
+              <button
+                className={`ws-platform-tab${activePlatform === p ? ' active' : ''}`}
+                onClick={() => handlePlatformChange(p)}
+              >
+                <span className="ws-platform-icon" style={{ background: PLATFORM_BRAND_BG[p] }}>
+                  {PLATFORM_SHORT[p]}
+                </span>
+                {PLATFORM_TEMPLATES[p].name}
+                {current?.platformContents?.[p]?.generated && (
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--status-active)" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </button>
+              <button
+                className="ws-platform-remove"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  if (currentId) {
+                    useWorkspaceStore.getState().removePlatform(currentId, p)
+                    if (activePlatform === p) setActivePlatform('guanwei')
+                  }
+                }}
+                title={`移除${PLATFORM_TEMPLATES[p].name}`}
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M18 6 6 18M6 6l12 12" />
                 </svg>
-              )}
-            </button>
+              </button>
+            </div>
           ))}
           <div className="ws-platform-dropdown-wrap">
-            <button
-              className="ws-platform-tab"
-              style={{ border: '1.5px dashed var(--border)', color: 'var(--fg-placeholder)' }}
-              onClick={() => setShowPlatformMenu(!showPlatformMenu)}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-            </button>
-            <div className={`ws-platform-dropdown${showPlatformMenu ? ' show' : ''}`}>
-              {(['zhihu', 'xiaohongshu', 'weibo', 'douyin', 'tieba'] as PlatformId[])
-                .filter(p => !availablePlatforms.includes(p))
-                .map(p => (
-                  <button
-                    key={p}
-                    className="ws-platform-dropdown-item"
-                    onClick={() => {
-                      if (currentId) {
-                        useWorkspaceStore.getState().addPlatform(currentId, p)
-                      }
-                      setShowPlatformMenu(false)
-                    }}
-                  >
-                    {PLATFORM_TEMPLATES[p].name}
-                  </button>
-                ))}
-            </div>
+            {canAddMorePlatforms && (
+              <button
+                className="ws-platform-tab"
+                style={{ border: '1.5px dashed var(--border)', color: 'var(--fg-placeholder)' }}
+                onClick={() => setShowPlatformMenu(true)}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </button>
+            )}
+
+            {/* ── 添加平台弹窗 ── */}
+            {showPlatformMenu && (
+              <div className="ws-platform-modal-overlay" onClick={() => setShowPlatformMenu(false)}>
+                <div className="ws-platform-modal" onClick={e => e.stopPropagation()}>
+                  <div className="ws-platform-modal-header">
+                    <span>添加发布平台</span>
+                    <button className="ws-platform-modal-close" onClick={() => setShowPlatformMenu(false)}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="M18 6 6 18M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="ws-platform-modal-body">
+                    {(ALL_EXTERNAL_PLATFORMS as PlatformId[])
+                      .filter(p => !availablePlatforms.includes(p))
+                      .map(p => (
+                        <button
+                          key={p}
+                          className="ws-platform-modal-item"
+                          onClick={() => {
+                            if (currentId) {
+                              useWorkspaceStore.getState().addPlatform(currentId, p)
+                              setShowPlatformMenu(false)
+                            }
+                          }}
+                        >
+                          <span className="ws-platform-modal-icon" style={{ background: PLATFORM_BRAND_BG[p] }}>
+                            {PLATFORM_SHORT[p]}
+                          </span>
+                          <span className="ws-platform-modal-name">{PLATFORM_TEMPLATES[p].name}</span>
+                          <span className="ws-platform-modal-desc">{PLATFORM_TEMPLATES[p].description}</span>
+                        </button>
+                      ))}
+                    {ALL_EXTERNAL_PLATFORMS.every(p => availablePlatforms.includes(p)) && (
+                      <div className="ws-platform-modal-empty">所有平台已添加</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           <div className="ws-publish-confirm-bar">
             <span style={{ fontSize: 11, color: 'var(--fg-muted)' }}>发布到</span>

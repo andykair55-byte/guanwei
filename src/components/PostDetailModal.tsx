@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import {
   X, Heart, MessageCircle, Bookmark, Share2, Send,
   Users, Clock, Flame, Eye, ThumbsUp, ThumbsDown,
-  Check, Swords, ChevronRight, Link2, Star
+  Check, Link2, Star
 } from 'lucide-react'
 import type { Melon, Comment, Evidence, Report } from '../types'
 
@@ -248,7 +249,7 @@ export interface PostDetailModalProps {
 export default function PostDetailModal({ melon, isOpen, originRect, onClose }: PostDetailModalProps) {
   const navigate = useNavigate()
   const modalRef = useRef<HTMLDivElement>(null)
-  const [animState, setAnimState] = useState<'initial' | 'animating' | 'open' | 'closing'>('initial')
+
   const [choice, setChoice] = useState<boolean | null>(null)
   const [evidence, setEvidence] = useState('')
   const [hasSubmitted, setHasSubmitted] = useState(false)
@@ -280,91 +281,10 @@ export default function PostDetailModal({ melon, isOpen, originRect, onClose }: 
     }
   }, [melon.id, isOpen, melon.isLiked, melon.likeCount])
 
-  // FLIP 动画
-  useEffect(() => {
-    if (!isOpen || !modalRef.current || !originRect) return
-
-    // First: 设置初始位置（被点击卡片的位置和尺寸）
-    const modal = modalRef.current
-    const firstRect = originRect
-
-    // 计算弹窗最终位置（居中）
-    const viewportW = window.innerWidth
-    const viewportH = window.innerHeight
-    const maxW = Math.min(1200, viewportW * 0.85)
-    const maxH = Math.min(viewportH * 0.9, 750)
-    const finalW = maxW
-    const finalH = maxH
-    const finalLeft = (viewportW - finalW) / 2
-    const finalTop = (viewportH - finalH) / 2
-
-    // Invert: 先设置为 First 位置
-    const scaleX = firstRect.width / finalW
-    const scaleY = firstRect.height / finalH
-    const translateX = firstRect.left - finalLeft
-    const translateY = firstRect.top - finalTop
-
-    modal.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scaleX}, ${scaleY})`
-    modal.style.opacity = '0.8'
-    modal.style.transformOrigin = 'top left'
-
-    setAnimState('initial')
-
-    // Play: 两帧后触发动画到最终位置
-    let raf1 = 0
-    let raf2 = 0
-    raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
-        setAnimState('animating')
-        modal.style.transition = 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1), opacity 300ms cubic-bezier(0.4, 0, 0.2, 1), border-radius 300ms cubic-bezier(0.4, 0, 0.2, 1)'
-        modal.style.transform = 'translate(0, 0) scale(1, 1)'
-        modal.style.opacity = '1'
-
-        const onTransitionEnd = (e: TransitionEvent) => {
-          if (e.propertyName === 'transform') {
-            setAnimState('open')
-            modal.style.transition = ''
-            modal.removeEventListener('transitionend', onTransitionEnd)
-          }
-        }
-        modal.addEventListener('transitionend', onTransitionEnd)
-      })
-    })
-
-    return () => {
-      cancelAnimationFrame(raf1)
-      cancelAnimationFrame(raf2)
-    }
-  }, [isOpen, originRect])
-
-  // 关闭动画
+  // 直接关闭
   const handleClose = useCallback(() => {
-    if (!modalRef.current || !originRect || animState === 'closing') return
-
-    const modal = modalRef.current
-    const viewportW = window.innerWidth
-    const viewportH = window.innerHeight
-    const maxW = Math.min(1200, viewportW * 0.85)
-    const maxH = Math.min(viewportH * 0.9, 750)
-    const finalW = maxW
-    const finalH = maxH
-    const finalLeft = (viewportW - finalW) / 2
-    const finalTop = (viewportH - finalH) / 2
-
-    const scaleX = originRect.width / finalW
-    const scaleY = originRect.height / finalH
-    const translateX = originRect.left - finalLeft
-    const translateY = originRect.top - finalTop
-
-    setAnimState('closing')
-    modal.style.transition = 'transform 280ms cubic-bezier(0.4, 0, 0.2, 1), opacity 280ms cubic-bezier(0.4, 0, 0.2, 1), border-radius 280ms cubic-bezier(0.4, 0, 0.2, 1)'
-    modal.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scaleX}, ${scaleY})`
-    modal.style.opacity = '0.6'
-
-    setTimeout(() => {
-      onClose()
-    }, 280)
-  }, [originRect, animState, onClose])
+    onClose()
+  }, [onClose])
 
   // ESC 关闭
   useEffect(() => {
@@ -480,24 +400,21 @@ export default function PostDetailModal({ melon, isOpen, originRect, onClose }: 
   const submitterIdx = parseInt(melon.id.replace(/\D/g, '')) || 1
   const submitter = getSubmitter(submitterIdx)
 
-  return (
+  const modal = (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
       {/* 背景遮罩 */}
       <div
-        className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${
-          animState === 'initial' ? 'opacity-0' : 'opacity-100'
-        } ${animState === 'closing' ? 'opacity-0' : ''}`}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={handleClose}
       />
 
       {/* 弹窗主体 */}
       <div
         ref={modalRef}
-        className="relative w-full max-w-[1200px] bg-white rounded-2xl shadow-2xl overflow-hidden flex will-change-transform"
+        className="relative w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden flex"
         style={{
-          height: 'min(90vh, 750px)',
-          maxWidth: '85vw',
-          opacity: animState === 'initial' ? 0.8 : 1,
+          height: 'min(88vh, 720px)',
+          maxWidth: '92vw',
         }}
       >
         {/* 关闭按钮 */}
@@ -646,106 +563,138 @@ export default function PostDetailModal({ melon, isOpen, originRect, onClose }: 
                     </span>
                   </div>
 
-                  {/* 投票区 */}
-                  <div className="bg-paper-50 rounded-xl p-3 border border-ink-100">
-                    <p className="text-[12.5px] font-semibold text-ink-900 mb-2">
-                      {isRevealed ? '最终结果' : '你的判断是什么？'}
-                    </p>
-
-                    {/* 比例条 */}
-                    <div className="flex items-center gap-2 mb-2.5">
-                      <span className="text-[11px] font-bold text-seal w-8">{truePercent}%</span>
-                      <div className="flex-1 h-2 rounded-full overflow-hidden bg-paper-200 flex">
-                        <div className="h-full bg-seal transition-all duration-700 ease-out" style={{ width: `${truePercent}%` }} />
-                        <div className="h-full bg-bamboo transition-all duration-700 ease-out" style={{ width: `${falsePercent}%` }} />
-                      </div>
-                      <span className="text-[11px] font-bold text-bamboo w-8 text-right">{falsePercent}%</span>
-                    </div>
-
-                    {!isRevealed ? (
-                      <>
-                        <div className="flex gap-2 mb-2.5">
-                          <button
-                            onClick={() => !hasSubmitted && setChoice(true)}
-                            className={`flex-1 py-2 rounded-lg border-2 font-semibold text-[13px] transition-all flex items-center justify-center gap-1.5 active:scale-[0.97] ${
-                              choice === true
-                                ? 'bg-seal border-seal text-white shadow-seal-glow'
-                                : 'bg-white border-ink-200 text-ink-700 hover:border-seal/50'
-                            } ${hasSubmitted ? 'cursor-not-allowed opacity-80' : ''}`}
-                          >
-                            {choice === true && <Check size={14} />}
-                            真
-                          </button>
-                          <button
-                            onClick={() => !hasSubmitted && setChoice(false)}
-                            className={`flex-1 py-2 rounded-lg border-2 font-semibold text-[13px] transition-all flex items-center justify-center gap-1.5 active:scale-[0.97] ${
-                              choice === false
-                                ? 'bg-bamboo border-bamboo text-white'
-                                : 'bg-white border-ink-200 text-ink-700 hover:border-bamboo/50'
-                            } ${hasSubmitted ? 'cursor-not-allowed opacity-80' : ''}`}
-                          >
-                            {choice === false && <Check size={14} />}
-                            假
-                          </button>
-                        </div>
-
-                        {choice !== null && !hasSubmitted && (
-                          <div className="mb-2.5">
-                            <label className="block text-[11px] text-ink-400 mb-1">填写佐证（选填）</label>
-                            <textarea
-                              value={evidence}
-                              onChange={(e) => setEvidence(e.target.value.slice(0, 500))}
-                              placeholder="说说你判断的依据..."
-                              rows={2}
-                              className="w-full px-2.5 py-1.5 rounded-lg bg-white text-[12.5px] text-ink-700 placeholder:text-ink-300 resize-none leading-relaxed border border-ink-200 focus:border-seal/50 transition-colors"
-                            />
-                            <div className="text-right text-[10px] text-ink-400 mt-0.5">{evidence.length}/500</div>
-                          </div>
-                        )}
-
-                        {hasSubmitted ? (
-                          <div className="flex items-center justify-center gap-2 py-2 bg-bamboo/10 text-bamboo rounded-lg font-medium text-[12.5px]">
-                            <Check size={14} />
-                            <span>已提交，等待开奖</span>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={handleSubmitGuess}
-                            disabled={choice === null}
-                            className="w-full py-2 rounded-lg font-semibold text-[13px] text-white bg-seal active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-seal-glow"
-                          >
-                            提交判断
-                          </button>
-                        )}
-                      </>
-                    ) : (
-                      <div className="text-center py-2">
-                        <div className={`inline-flex items-center justify-center w-12 h-12 rounded-lg text-lg font-bold ${
-                          melon.result === true ? 'bg-seal/10 text-seal' : 'bg-bamboo/10 text-bamboo'
-                        }`}>
-                          {melon.result === true ? '真' : '假'}
-                        </div>
-                      </div>
-                    )}
-
-                    <p className="text-[10.5px] text-ink-400 text-center mt-1.5">
-                      共 {formatCount(melon.totalParticipants)} 人参与
-                    </p>
-                  </div>
-
-                  {/* 辩论场入口 */}
+                  {/* 投票区 - 重新设计 */}
                   <div
-                    className="flex items-center gap-3 p-2.5 bg-gradient-to-r from-seal/5 to-bamboo/5 rounded-xl border border-ink-100 cursor-pointer hover:border-seal/30 transition-colors group"
-                    onClick={() => { handleClose(); navigate(`/debate/${melon.id}/${encodeURIComponent(melon.title)}`) }}
+                    className="relative rounded-2xl p-4 overflow-hidden border border-ink-100"
+                    style={{
+                      background: 'linear-gradient(135deg, #f0fdf4 0%, #ffffff 50%, #fef2f2 100%)',
+                    }}
                   >
-                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-seal to-bamboo flex items-center justify-center shadow-seal-glow flex-shrink-0">
-                      <Swords size={16} className="text-white" />
+                    {/* 背景纹理 */}
+                    <div
+                      className="absolute inset-0 opacity-[0.04] pointer-events-none"
+                      style={{
+                        backgroundImage:
+                          'radial-gradient(circle at 20% 50%, #10b981 1px, transparent 1px), radial-gradient(circle at 80% 50%, #f43f5e 1px, transparent 1px)',
+                        backgroundSize: '24px 24px',
+                      }}
+                    />
+
+                    <div className="relative">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-[13px] font-bold text-ink-900">
+                          {isRevealed ? '最终结果' : '你的判断是什么？'}
+                        </p>
+                        <span className="text-[10px] text-ink-400 font-mono">
+                          {formatCount(melon.totalParticipants)} 人参与
+                        </span>
+                      </div>
+
+                      {/* 比例条 */}
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-seal" />
+                            <span className="text-[12px] font-bold text-seal">真 {truePercent}%</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[12px] font-bold text-bamboo">假 {falsePercent}%</span>
+                            <div className="w-2 h-2 rounded-full bg-bamboo" />
+                          </div>
+                        </div>
+                        <div className="relative h-2.5 rounded-full overflow-hidden bg-paper-100 flex">
+                          <div
+                            className="h-full transition-all duration-700 ease-out"
+                            style={{
+                              width: `${truePercent}%`,
+                              background: 'linear-gradient(to right, #10b981, #059669)',
+                            }}
+                          />
+                          <div
+                            className="h-full transition-all duration-700 ease-out"
+                            style={{
+                              width: `${falsePercent}%`,
+                              background: 'linear-gradient(to right, #f43f5e, #e11d48)',
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {!isRevealed ? (
+                        <>
+                          {/* 真假选择卡片 */}
+                          <div className="grid grid-cols-2 gap-2 mb-2.5">
+                            <button
+                              onClick={() => !hasSubmitted && setChoice(true)}
+                              className={`relative py-3 rounded-xl border-2 font-bold text-[14px] transition-all flex flex-col items-center gap-1 active:scale-[0.97] overflow-hidden ${
+                                choice === true
+                                  ? 'border-seal bg-seal text-white shadow-md shadow-seal/30'
+                                  : 'border-ink-200 bg-white/80 text-ink-700 hover:border-seal/50 hover:bg-seal/5'
+                              } ${hasSubmitted ? 'cursor-not-allowed opacity-80' : ''}`}
+                            >
+                              <ThumbsUp size={16} strokeWidth={2.5} />
+                              <span>真</span>
+                            </button>
+                            <button
+                              onClick={() => !hasSubmitted && setChoice(false)}
+                              className={`relative py-3 rounded-xl border-2 font-bold text-[14px] transition-all flex flex-col items-center gap-1 active:scale-[0.97] overflow-hidden ${
+                                choice === false
+                                  ? 'border-bamboo bg-bamboo text-white shadow-md shadow-bamboo/30'
+                                  : 'border-ink-200 bg-white/80 text-ink-700 hover:border-bamboo/50 hover:bg-bamboo/5'
+                              } ${hasSubmitted ? 'cursor-not-allowed opacity-80' : ''}`}
+                            >
+                              <ThumbsDown size={16} strokeWidth={2.5} />
+                              <span>假</span>
+                            </button>
+                          </div>
+
+                          {choice !== null && !hasSubmitted && (
+                            <div className="mb-2.5">
+                              <label className="block text-[11px] text-ink-400 mb-1">填写佐证（选填）</label>
+                              <textarea
+                                value={evidence}
+                                onChange={(e) => setEvidence(e.target.value.slice(0, 500))}
+                                placeholder="说说你判断的依据..."
+                                rows={2}
+                                className="w-full px-3 py-2 rounded-xl bg-white/80 text-[12.5px] text-ink-700 placeholder:text-ink-300 resize-none leading-relaxed border border-ink-200 focus:border-seal/50 focus:bg-white transition-all"
+                              />
+                              <div className="text-right text-[10px] text-ink-400 mt-0.5">{evidence.length}/500</div>
+                            </div>
+                          )}
+
+                          {hasSubmitted ? (
+                            <div className="flex items-center justify-center gap-2 py-2.5 bg-bamboo/10 text-bamboo rounded-xl font-semibold text-[13px]">
+                              <Check size={14} strokeWidth={2.5} />
+                              <span>已提交，等待开奖</span>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={handleSubmitGuess}
+                              disabled={choice === null}
+                              className="w-full py-2.5 rounded-xl font-bold text-[13px] text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98]"
+                              style={{
+                                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                boxShadow: '0 4px 12px -2px rgba(16, 185, 129, 0.4)',
+                              }}
+                            >
+                              提交判断
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <div className="text-center py-3">
+                          <div
+                            className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl text-2xl font-bold ${
+                              melon.result === true
+                                ? 'bg-seal/10 text-seal shadow-md shadow-seal/20'
+                                : 'bg-bamboo/10 text-bamboo shadow-md shadow-bamboo/20'
+                            }`}
+                          >
+                            {melon.result === true ? '真' : '假'}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-ink-900">加入辩论</p>
-                      <p className="text-[11px] text-ink-500">来和大家辩一辩真假</p>
-                    </div>
-                    <ChevronRight size={14} className="text-ink-300 group-hover:text-seal transition-colors" />
                   </div>
 
                   {/* 开奖后的实锤报告 */}
@@ -939,4 +888,6 @@ export default function PostDetailModal({ melon, isOpen, originRect, onClose }: 
       </div>
     </div>
   )
+
+  return createPortal(modal, document.body)
 }

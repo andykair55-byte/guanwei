@@ -92,6 +92,7 @@ export default function ActivityStream({ onAction, className }: ActivityStreamPr
       research: '观点提炼',
       verify: '事实核查',
       writing: '内容生成',
+      platform: '平台适配',
       other: '其他',
     }
 
@@ -105,6 +106,7 @@ export default function ActivityStream({ onAction, className }: ActivityStreamPr
   }, [allEvents, filter])
 
   const hasDegradedEvents = allEvents.some(e => e.type === 'info' && (e.content.includes('降级') || e.content.includes('degraded')))
+  const isDemoHistory = allEvents.length > 0 && allEvents.every(e => e.id.startsWith('demo-evt-'))
 
   useEffect(() => {
     if (autoScroll && containerRef.current) {
@@ -152,6 +154,18 @@ export default function ActivityStream({ onAction, className }: ActivityStreamPr
           </button>
         ))}
       </div>
+
+      {/* Demo 历史提示：评委/新用户首次进入时展示示例流程 */}
+      {isDemoHistory && (
+        <div className="ws-demo-banner">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 16v-4" />
+            <path d="M12 8h.01" />
+          </svg>
+          <span>示例数据：这是 AI 指挥调度的完整流程，开始创作后将替换为你的实际操作记录</span>
+        </div>
+      )}
 
       {/* 降级横幅 */}
       {hasDegradedEvents && (

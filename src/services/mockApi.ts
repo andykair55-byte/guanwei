@@ -122,13 +122,16 @@ export const mockApi = {
     }
     return {
       total: items.length,
-      items: items.map(m => ({
+      items: items.map((m, idx) => ({
         id: parseInt(m.id.replace('melon-', '')) || 1,
         title: m.title,
         description: m.description,
         cover_image: m.coverImage,
         category: m.category,
-        creator_id: 1,
+        creator_id: parseInt(m.author?.id?.replace(/\D/g, '') || '1') || (idx + 1),
+        creator_nickname: m.author?.nickname,
+        creator_avatar: m.author?.avatar,
+        creator_rank: m.author?.rank,
         result: m.result ?? null,
         status: m.status,
         reveal_time: m.revealTime,

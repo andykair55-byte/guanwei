@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import {
   X, Heart, MessageCircle, Bookmark, BookmarkCheck, Share2, Send,
-  Users, Clock, Eye, TrendingUp, Radio, ChevronRight,
+  Users, TrendingUp, Radio, ChevronRight,
   Bell, Link2, User, Activity, Flame
 } from 'lucide-react'
 
@@ -161,9 +162,9 @@ const EVENTS_DATA: Record<number, HotEvent> = {
 
 // ── 配置 ──────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { dot: string; text: string; bg: string; label: string }> = {
-  '发酵中': { dot: 'bg-seal', text: 'text-seal', bg: 'bg-seal/10', label: '发酵中' },
-  '已解决': { dot: 'bg-bamboo', text: 'text-bamboo', bg: 'bg-bamboo/10', label: '已解决' },
-  '持续追踪': { dot: 'bg-gold', text: 'text-gold', bg: 'bg-gold/10', label: '持续追踪' },
+  '发酵中': { dot: 'bg-white', text: 'text-white', bg: 'bg-seal', label: '发酵中' },
+  '已解决': { dot: 'bg-white', text: 'text-white', bg: 'bg-bamboo', label: '已解决' },
+  '持续追踪': { dot: 'bg-white', text: 'text-white', bg: 'bg-gold', label: '持续追踪' },
 }
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
@@ -339,7 +340,6 @@ export interface HotDetailModalProps {
 export default function HotDetailModal({ event, isOpen, originRect, onClose }: HotDetailModalProps) {
   const navigate = useNavigate()
   const modalRef = useRef<HTMLDivElement>(null)
-  const [animState, setAnimState] = useState<'initial' | 'animating' | 'open' | 'closing'>('initial')
 
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [isSubscribed, setIsSubscribed] = useState(false)
@@ -364,7 +364,7 @@ export default function HotDetailModal({ event, isOpen, originRect, onClose }: H
       const subs = JSON.parse(localStorage.getItem('hotSubscriptions') || '[]')
       setIsSubscribed(subs.includes(event.id))
     }
-  }, [event.id, isOpen, event.id])
+  }, [event.id, isOpen])
 
   // 保存收藏/订阅状态
   useEffect(() => {
@@ -391,87 +391,10 @@ export default function HotDetailModal({ event, isOpen, originRect, onClose }: H
     localStorage.setItem('hotSubscriptions', JSON.stringify(subs))
   }, [isSubscribed, event.id, isOpen])
 
-  // FLIP 动画
-  useEffect(() => {
-    if (!isOpen || !modalRef.current || !originRect) return
-
-    const modal = modalRef.current
-    const firstRect = originRect
-
-    const viewportW = window.innerWidth
-    const viewportH = window.innerHeight
-    const maxW = Math.min(1200, viewportW * 0.85)
-    const maxH = Math.min(viewportH * 0.9, 750)
-    const finalW = maxW
-    const finalH = maxH
-    const finalLeft = (viewportW - finalW) / 2
-    const finalTop = (viewportH - finalH) / 2
-
-    const scaleX = firstRect.width / finalW
-    const scaleY = firstRect.height / finalH
-    const translateX = firstRect.left - finalLeft
-    const translateY = firstRect.top - finalTop
-
-    modal.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scaleX}, ${scaleY})`
-    modal.style.opacity = '0.8'
-    modal.style.transformOrigin = 'top left'
-
-    setAnimState('initial')
-
-    let raf1 = 0
-    let raf2 = 0
-    raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
-        setAnimState('animating')
-        modal.style.transition = 'transform 300ms cubic-bezier(0.4, 0, 0.2, 1), opacity 300ms cubic-bezier(0.4, 0, 0.2, 1), border-radius 300ms cubic-bezier(0.4, 0, 0.2, 1)'
-        modal.style.transform = 'translate(0, 0) scale(1, 1)'
-        modal.style.opacity = '1'
-
-        const onTransitionEnd = (e: TransitionEvent) => {
-          if (e.propertyName === 'transform') {
-            setAnimState('open')
-            modal.style.transition = ''
-            modal.removeEventListener('transitionend', onTransitionEnd)
-          }
-        }
-        modal.addEventListener('transitionend', onTransitionEnd)
-      })
-    })
-
-    return () => {
-      cancelAnimationFrame(raf1)
-      cancelAnimationFrame(raf2)
-    }
-  }, [isOpen, originRect])
-
-  // 关闭动画
+  // 直接关闭
   const handleClose = useCallback(() => {
-    if (!modalRef.current || !originRect || animState === 'closing') return
-
-    const modal = modalRef.current
-    const viewportW = window.innerWidth
-    const viewportH = window.innerHeight
-    const maxW = Math.min(1200, viewportW * 0.85)
-    const maxH = Math.min(viewportH * 0.9, 750)
-    const finalW = maxW
-    const finalH = maxH
-    const finalLeft = (viewportW - finalW) / 2
-    const finalTop = (viewportH - finalH) / 2
-
-    const scaleX = originRect.width / finalW
-    const scaleY = originRect.height / finalH
-    const translateX = originRect.left - finalLeft
-    const translateY = originRect.top - finalTop
-
-    setAnimState('closing')
-    modal.style.transition = 'transform 280ms cubic-bezier(0.4, 0, 0.2, 1), opacity 280ms cubic-bezier(0.4, 0, 0.2, 1), border-radius 280ms cubic-bezier(0.4, 0, 0.2, 1)'
-    modal.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scaleX}, ${scaleY})`
-    modal.style.opacity = '0.6'
-
-    setTimeout(() => {
-      onClose()
-    }, 280)
-  }, [originRect, animState, onClose])
+    onClose()
+  }, [onClose])
 
   // ESC 关闭
   useEffect(() => {
@@ -562,24 +485,21 @@ export default function HotDetailModal({ event, isOpen, originRect, onClose }: H
   const statusCfg = STATUS_CONFIG[event.status] || STATUS_CONFIG['发酵中']
   const catColor = CATEGORY_COLORS[event.category] || { bg: 'bg-seal', text: 'text-white' }
 
-  return (
+  const modal = (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
       {/* 背景遮罩 */}
       <div
-        className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${
-          animState === 'initial' ? 'opacity-0' : 'opacity-100'
-        } ${animState === 'closing' ? 'opacity-0' : ''}`}
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={handleClose}
       />
 
       {/* 弹窗主体 */}
       <div
         ref={modalRef}
-        className="relative w-full max-w-[1200px] bg-white rounded-2xl shadow-2xl overflow-hidden flex will-change-transform"
+        className="relative w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden flex"
         style={{
-          height: 'min(90vh, 750px)',
-          maxWidth: '85vw',
-          opacity: animState === 'initial' ? 0.8 : 1,
+          height: 'min(88vh, 720px)',
+          maxWidth: '92vw',
         }}
       >
         {/* 关闭按钮 */}
@@ -591,9 +511,9 @@ export default function HotDetailModal({ event, isOpen, originRect, onClose }: H
         </button>
 
         {/* 左侧：封面 + 时间线区 */}
-        <div className="relative w-1/2 flex-shrink-0 flex flex-col bg-paper-50 overflow-hidden">
+        <div className="relative w-[45%] flex-shrink-0 flex flex-col bg-paper-50 overflow-hidden">
           {/* 封面图区域 */}
-          <div className="relative h-[42%] flex-shrink-0 overflow-hidden">
+          <div className="relative h-[38%] flex-shrink-0 overflow-hidden">
             <img
               src={event.coverImage}
               alt={event.title}
@@ -613,11 +533,11 @@ export default function HotDetailModal({ event, isOpen, originRect, onClose }: H
             </div>
 
             {/* 底部标题 */}
-            <div className="absolute bottom-0 left-0 right-0 p-5 z-10">
-              <h1 className="text-[22px] font-bold text-white leading-tight mb-2 line-clamp-2">
+            <div className="absolute bottom-0 left-0 right-0 p-4 z-10">
+              <h1 className="text-[20px] font-bold text-white leading-tight mb-2 line-clamp-2">
                 {event.title}
               </h1>
-              <div className="flex items-center gap-4 text-white/80 text-[12px]">
+              <div className="flex items-center gap-3 text-white/80 text-[11.5px]">
                 <span className="flex items-center gap-1.5">
                   <Flame size={12} className="text-rose-400" />
                   热度 {formatCount(event.viewCount)}
@@ -635,13 +555,13 @@ export default function HotDetailModal({ event, isOpen, originRect, onClose }: H
           </div>
 
           {/* 时间线区域 */}
-          <div className="flex-1 overflow-y-auto scrollbar-thin p-5">
-            <div className="flex items-center gap-2 mb-4">
+          <div className="flex-1 overflow-y-auto scrollbar-thin p-4">
+            <div className="flex items-center gap-2 mb-3">
               <div className="w-6 h-6 rounded-lg bg-seal/10 flex items-center justify-center">
                 <Activity size={13} className="text-seal" />
               </div>
-              <h2 className="text-[15px] font-bold text-ink-900">事件时间线</h2>
-              <span className="text-[12px] text-ink-400">{event.nodes.length} 个关键节点</span>
+              <h2 className="text-[14px] font-bold text-ink-900">事件时间线</h2>
+              <span className="text-[11px] text-ink-400">{event.nodes.length} 个关键节点</span>
             </div>
 
             <div className="relative pl-5">
@@ -662,25 +582,25 @@ export default function HotDetailModal({ event, isOpen, originRect, onClose }: H
                       />
 
                       <div
-                        className={`bg-white rounded-xl border transition-all cursor-pointer ${
-                          isExpanded ? 'border-seal/30 shadow-md' : 'border-ink-100 hover:border-ink-200 hover:shadow-sm'
+                        className={`bg-white rounded-lg border transition-all cursor-pointer ${
+                          isExpanded ? 'border-seal/30 shadow-sm' : 'border-ink-100 hover:border-ink-200'
                         }`}
                         onClick={() => setExpandedNode(isExpanded ? null : i)}
                       >
-                        <div className="p-3">
-                          <div className="flex items-start gap-3">
+                        <div className="p-2.5">
+                          <div className="flex items-start gap-2.5">
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-[11px] font-mono text-ink-400 font-bold">{node.date}</span>
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <span className="text-[10.5px] font-mono text-ink-400 font-bold">{node.date}</span>
                                 {isLatest && (
-                                  <span className="text-[10px] text-seal bg-seal/10 px-1.5 py-0.5 rounded font-medium">
+                                  <span className="text-[9.5px] text-seal bg-seal/10 px-1.5 py-0.5 rounded font-medium">
                                     最新
                                   </span>
                                 )}
                               </div>
-                              <p className="text-[13.5px] font-semibold text-ink-900">{node.label}</p>
+                              <p className="text-[12.5px] font-semibold text-ink-900">{node.label}</p>
                               {node.detail && (
-                                <p className={`text-[12.5px] text-ink-500 mt-1 leading-relaxed ${
+                                <p className={`text-[11.5px] text-ink-500 mt-0.5 leading-relaxed ${
                                   !isExpanded ? 'line-clamp-1' : ''
                                 }`}>
                                   {node.detail}
@@ -698,16 +618,16 @@ export default function HotDetailModal({ event, isOpen, originRect, onClose }: H
 
                         {/* 展开的来源 */}
                         {isExpanded && node.sources && node.sources.length > 0 && (
-                          <div className="px-3 pb-3 pt-0">
+                          <div className="px-2.5 pb-2.5 pt-0">
                             <div className="pt-2 border-t border-ink-50">
-                              <p className="text-[11px] text-ink-400 mb-2">信息来源：</p>
-                              <div className="flex flex-wrap gap-1.5">
+                              <p className="text-[10.5px] text-ink-400 mb-1.5">信息来源：</p>
+                              <div className="flex flex-wrap gap-1">
                                 {node.sources.map((src, j) => (
                                   <span
                                     key={j}
-                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-paper-50 text-[11px] text-ink-600 border border-ink-100"
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-paper-50 text-[10.5px] text-ink-600 border border-ink-100"
                                   >
-                                    <Link2 size={10} />
+                                    <Link2 size={9} />
                                     {src}
                                   </span>
                                 ))}
@@ -718,7 +638,7 @@ export default function HotDetailModal({ event, isOpen, originRect, onClose }: H
                       </div>
 
                       {/* 节点间距 */}
-                      {i < event.nodes.length - 1 && <div className="h-3" />}
+                      {i < event.nodes.length - 1 && <div className="h-2" />}
                     </div>
                   )
                 })}
@@ -977,6 +897,8 @@ export default function HotDetailModal({ event, isOpen, originRect, onClose }: H
       </div>
     </div>
   )
+
+  return createPortal(modal, document.body)
 }
 
 // 导出事件数据类型和数据，供 HotPage 使用

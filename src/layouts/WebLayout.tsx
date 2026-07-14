@@ -11,12 +11,15 @@ const LEFT_WIDTH_COLLAPSED = 64
 const RIGHT_WIDTH_EXPANDED = 300
 const RIGHT_WIDTH_COLLAPSED = 52
 
-const IMMERSIVE_ROUTES = ['/notifications', '/messages', '/agent-world', '/community/', '/melon/', '/hot/', '/entertainment']
+const IMMERSIVE_ROUTES = ['/notifications', '/messages', '/community/', '/melon/', '/hot/', '/agent-world']
+// 仅隐藏右侧面板（保留左侧导航）
+const RIGHT_HIDDEN_ROUTES = ['/profile', '/settings', '/entertainment/arena/ai-battle']
 const NO_TOPNAV_ROUTES: string[] = []
 
 export default function WebLayout() {
   const location = useLocation()
   const isImmersive = IMMERSIVE_ROUTES.some(r => location.pathname.startsWith(r))
+  const hideRightOnly = RIGHT_HIDDEN_ROUTES.some(r => location.pathname === r || location.pathname.startsWith(r + '/'))
   const hideTopNav = NO_TOPNAV_ROUTES.some(r => location.pathname.startsWith(r))
   const hideTraeBot = isImmersive
 
@@ -124,7 +127,7 @@ export default function WebLayout() {
             </div>
           </main>
 
-          {!isImmersive && (
+          {!isImmersive && !hideRightOnly && (
             <div
               className="hidden lg:flex flex-shrink-0 relative z-20"
               style={{
@@ -168,7 +171,7 @@ export default function WebLayout() {
         </button>
       )}
 
-      {!isImmersive && rightCollapsed && (
+      {!isImmersive && !hideRightOnly && rightCollapsed && (
         <button
           onClick={toggleRight}
           className="hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 w-5 h-14 bg-white border border-r-0 border-[#e0e0e0] rounded-l items-center justify-center hover:border-[#c0392b] hover:text-[#c0392b] z-40 shadow-sm transition-colors"

@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
 import {
   Users, Clock, ChevronRight, Activity, Eye,
-  Bookmark, BookmarkCheck, Flame, TrendingUp, Radio, Zap
+  Bookmark, BookmarkCheck, Flame, TrendingUp, Radio
 } from 'lucide-react'
 import HotDetailModal, { EVENTS_DATA, type HotEvent } from '../components/HotDetailModal'
 
@@ -252,12 +251,11 @@ function MiniTimeline({ nodes, totalNodes, color }: { nodes: TimelineNode[]; tot
 
 // ── 事件卡片组件 ──────────────────────────────────────
 function EventCard({
-  event, isBookmarked, onToggleBookmark, index, onClick, cardRef,
+  event, isBookmarked, onToggleBookmark, onClick, cardRef,
 }: {
   event: HotEventCard
   isBookmarked: boolean
   onToggleBookmark: () => void
-  index: number
   onClick: (e: React.MouseEvent) => void
   cardRef: (el: HTMLElement | null) => void
 }) {
@@ -269,8 +267,7 @@ function EventCard({
     <article
       ref={cardRef}
       data-event-id={event.id}
-      className="group cursor-pointer animate-fade-in-up bg-white rounded-2xl border border-ink-100/80 overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-ink-200 hover:-translate-y-0.5"
-      style={{ animationDelay: `${index * 40}ms` }}
+      className="group cursor-pointer bg-white rounded-2xl border border-ink-100/80 overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-ink-200 hover:-translate-y-0.5"
       onClick={onClick}
     >
       {/* 封面图 */}
@@ -409,8 +406,6 @@ function cardToDetailEvent(card: HotEventCard): HotEvent {
 
 // ── 主组件 ────────────────────────────────────────────
 export default function HotPage() {
-  const navigate = useNavigate()
-  const { id: urlEventId } = useParams<{ id: string }>()
   const [selectedTab, setSelectedTab] = useState('全部')
   const [bookmarkedIds, setBookmarkedIds] = useState<number[]>([])
   const [displayedEvents, setDisplayedEvents] = useState<HotEventCard[]>(BASE_EVENTS)
@@ -465,20 +460,18 @@ export default function HotPage() {
     return () => observer.disconnect()
   }, [displayedEvents.length, generatePage])
 
-  // 打开弹窗
+  // 打开弹窗（和社区一致：不改 URL，仅弹窗展示）
   const openModal = useCallback((event: HotEvent, rect: DOMRect) => {
     setSelectedEvent(event)
     setOriginRect(rect)
     setModalOpen(true)
-    navigate(`/hot/${event.id}`, { replace: false })
-  }, [navigate])
+  }, [])
 
   // 关闭弹窗
   const closeModal = useCallback(() => {
     setModalOpen(false)
     setSelectedEvent(null)
-    navigate('/hot', { replace: true })
-  }, [navigate])
+  }, [])
 
   // 处理卡片点击
   const handleCardClick = useCallback((card: HotEventCard) => (e: React.MouseEvent) => {
@@ -496,76 +489,6 @@ export default function HotPage() {
       cardRefs.current.delete(id)
     }
   }, [])
-
-  // 初始状态：如果 URL 中有 id，自动打开对应弹窗
-  useEffect(() => {
-    if (urlEventId && !modalOpen && displayedEvents.length > 0) {
-      const id = Number(urlEventId)
-      const card = displayedEvents.find(e => e.id === id)
-      if (card) {
-        const cardEl = cardRefs.current.get(id)
-        const detailEvent = cardToDetailEvent(card)
-        if (cardEl) {
-          const rect = cardEl.getBoundingClientRect()
-          setSelectedEvent(detailEvent)
-          setOriginRect(rect)
-          setModalOpen(true)
-        } else {
-          const defaultRect: DOMRect = {
-            left: window.innerWidth / 2 - 150,
-            top: window.innerHeight / 2 - 100,
-            width: 300,
-            height: 200,
-            right: window.innerWidth / 2 + 150,
-            bottom: window.innerHeight / 2 + 100,
-            x: window.innerWidth / 2 - 150,
-            y: window.innerHeight / 2 - 100,
-            toJSON: () => '',
-          }
-          setSelectedEvent(detailEvent)
-          setOriginRect(defaultRect)
-          setModalOpen(true)
-        }
-      }
-    }
-  }, [urlEventId, modalOpen, displayedEvents])
-
-  // 浏览器前进后退同步
-  useEffect(() => {
-    const handlePopState = () => {
-      const path = window.location.pathname
-      const match = path.match(/^\/hot\/(\d+)$/)
-      if (match) {
-        const id = Number(match[1])
-        const card = displayedEvents.find(e => e.id === id)
-        if (card && !modalOpen) {
-          const cardEl = cardRefs.current.get(id)
-          const detailEvent = cardToDetailEvent(card)
-          const rect = cardEl
-            ? cardEl.getBoundingClientRect()
-            : {
-                left: window.innerWidth / 2 - 150,
-                top: window.innerHeight / 2 - 100,
-                width: 300,
-                height: 200,
-                right: window.innerWidth / 2 + 150,
-                bottom: window.innerHeight / 2 + 100,
-                x: window.innerWidth / 2 - 150,
-                y: window.innerHeight / 2 - 100,
-                toJSON: () => '',
-              } as DOMRect
-          setSelectedEvent(detailEvent)
-          setOriginRect(rect)
-          setModalOpen(true)
-        }
-      } else if (path === '/hot' && modalOpen) {
-        setModalOpen(false)
-        setSelectedEvent(null)
-      }
-    }
-    window.addEventListener('popstate', handlePopState)
-    return () => window.removeEventListener('popstate', handlePopState)
-  }, [displayedEvents, modalOpen])
 
   return (
     <div className="flex flex-col h-full relative overflow-hidden"
@@ -702,15 +625,14 @@ export default function HotPage() {
 
       {/* 主内容区 - 卡片网格 */}
       <main className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="px-6 py-5 max-w-[1400px] mx-auto">
+        <div className="px-6 py-5">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {filtered.map((event, i) => (
+            {filtered.map((event) => (
               <EventCard
                 key={event.id}
                 event={event}
                 isBookmarked={bookmarkedIds.includes(event.id)}
                 onToggleBookmark={() => toggleBookmark(event.id)}
-                index={i}
                 onClick={handleCardClick(event)}
                 cardRef={setCardRef(event.id)}
               />
