@@ -11,14 +11,14 @@ const LEFT_WIDTH_COLLAPSED = 64
 const RIGHT_WIDTH_EXPANDED = 300
 const RIGHT_WIDTH_COLLAPSED = 52
 
-const IMMERSIVE_ROUTES = ['/notifications', '/messages', '/agent-world', '/community/', '/melon/', '/hot/']
+const IMMERSIVE_ROUTES = ['/notifications', '/messages', '/agent-world', '/community/', '/melon/', '/hot/', '/entertainment']
 const NO_TOPNAV_ROUTES: string[] = []
 
 export default function WebLayout() {
   const location = useLocation()
   const isImmersive = IMMERSIVE_ROUTES.some(r => location.pathname.startsWith(r))
   const hideTopNav = NO_TOPNAV_ROUTES.some(r => location.pathname.startsWith(r))
-  const hideTraeBot = isImmersive || location.pathname.startsWith('/entertainment')
+  const hideTraeBot = isImmersive
 
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [rightCollapsed, setRightCollapsed] = useState(false)

@@ -14,30 +14,6 @@ const GROUP_LABELS: Record<number, { label: string; hint?: string }> = {
   3: { label: '发现' },
 }
 
-/** 像素风用户头像 SVG —— 使用 rect 绘制像素小人（毛线帽 + 脸 + 身体） */
-const PIXEL_USER_AVATAR = (
-  <svg width="28" height="28" viewBox="0 0 28 28" style={{ imageRendering: 'pixelated' as const }}>
-    {/* 毛线帽 */}
-    <rect x={10} y={2} width={8} height={2} fill="#5B7DBE" />
-    <rect x={8} y={4} width={12} height={2} fill="#4A6FA5" />
-    <rect x={8} y={6} width={12} height={2} fill="#3D5A8C" />
-    {/* 脸部 */}
-    <rect x={8} y={8} width={12} height={2} fill="#F5C6A0" />
-    <rect x={8} y={10} width={2} height={2} fill="#F5C6A0" />
-    <rect x={10} y={10} width={2} height={2} fill="#2C3E50" />
-    <rect x={12} y={10} width={4} height={2} fill="#F5C6A0" />
-    <rect x={16} y={10} width={2} height={2} fill="#2C3E50" />
-    <rect x={18} y={10} width={2} height={2} fill="#F5C6A0" />
-    <rect x={8} y={12} width={12} height={2} fill="#F5C6A0" />
-    <rect x={8} y={14} width={12} height={2} fill="#E8AD82" />
-    {/* 脖子 */}
-    <rect x={10} y={16} width={8} height={2} fill="#F5C6A0" />
-    {/* 上衣 */}
-    <rect x={4} y={18} width={20} height={4} fill="#5DADE2" />
-    <rect x={6} y={22} width={16} height={4} fill="#4A9CD8" />
-  </svg>
-)
-
 export default function DesktopSidebar({ collapsed = false }: DesktopSidebarProps) {
   const navigate = useNavigate()
   const location = useLocation()
@@ -101,7 +77,13 @@ export default function DesktopSidebar({ collapsed = false }: DesktopSidebarProp
             title={user?.nickname || '个人中心'}
             className="w-10 h-10 rounded-full bg-ink-900 flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-ink-200 transition-all"
           >
-            {PIXEL_USER_AVATAR}
+            {user?.avatar ? (
+              <img src={user.avatar} alt={user.nickname || '用户'} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-[13px] font-semibold text-paper-0">
+                {(user?.nickname || '?').slice(0, 1)}
+              </span>
+            )}
           </button>
         </div>
       </aside>
@@ -194,8 +176,14 @@ export default function DesktopSidebar({ collapsed = false }: DesktopSidebarProp
           >
             <div className="flex items-center gap-3 px-2.5 py-2.5 rounded-xl hover:bg-paper-50 transition-colors">
               <div className="relative">
-                <div className="w-10 h-10 rounded-full bg-ink-900 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
-                  {PIXEL_USER_AVATAR}
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-ink-900 to-ink-700 flex items-center justify-center flex-shrink-0 overflow-hidden shadow-sm">
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt={user.nickname || '用户'} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-[13px] font-semibold text-paper-0">
+                      {(user?.nickname || '?').slice(0, 1)}
+                    </span>
+                  )}
                 </div>
                 <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-bamboo border-2 border-paper-0" />
               </div>
