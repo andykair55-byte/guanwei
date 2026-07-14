@@ -5,6 +5,7 @@ import WorkspaceSidebar from '../components/workspace/WorkspaceSidebar'
 import ActivityStream from '../components/workspace/ActivityStream'
 import CommanderInput from '../components/workspace/CommanderInput'
 import VersionBar from '../components/workspace/VersionBar'
+import OnboardingGuide from '../components/workspace/OnboardingGuide'
 import MarkdownEditor from '../components/create/MarkdownEditor'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useActivityStore } from '../stores/activityStore'
@@ -49,6 +50,8 @@ export default function AgentWorldPage() {
   const switchWorkspace = useWorkspaceStore(s => s.switchWorkspace)
   const updatePlatformContent = useWorkspaceStore(s => s.updatePlatformContent)
   const updateTopic = useWorkspaceStore(s => s.updateTopic)
+  const onboardingCompleted = useWorkspaceStore(s => s.onboardingCompleted)
+  const completeOnboarding = useWorkspaceStore(s => s.completeOnboarding)
 
   const mode = useCommanderStore(s => s.mode)
   const setMode = useCommanderStore(s => s.setMode)
@@ -65,6 +68,7 @@ export default function AgentWorldPage() {
   const [showPlatformMenu, setShowPlatformMenu] = useState(false)
   const [publishingPlatforms, setPublishingPlatforms] = useState<Set<string>>(new Set())
   const [saveLabel, setSaveLabel] = useState('已保存')
+  const [dataPending, setDataPending] = useState(true)
   const initRef = useRef(false)
 
   useEffect(() => {
@@ -210,6 +214,12 @@ export default function AgentWorldPage() {
     }
     resetCommander()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Mark data as ready after initial load (demo data + DOM paint)
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setDataPending(false))
+    return () => cancelAnimationFrame(id)
+  }, [])
 
   const editorContent = current?.platformContents?.[activePlatform]?.content || ''
   const editorTitle = current?.platformContents?.[activePlatform]?.title || current?.title || ''
@@ -509,6 +519,11 @@ export default function AgentWorldPage() {
 
       {/* Toast Container */}
       <div className="ws-toast-container" id="ws-toast-container" />
+
+      {/* First-time onboarding guide */}
+      {!dataPending && !onboardingCompleted && (
+        <OnboardingGuide onComplete={completeOnboarding} />
+      )}
     </div>
   )
 }

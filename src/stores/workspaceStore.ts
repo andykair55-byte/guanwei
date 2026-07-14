@@ -34,6 +34,10 @@ interface WorkspaceStore {
   getByStatus: (status: WorkspaceStatus) => Workspace[]
   getRecent: (limit?: number) => Workspace[]
   getFavorites: () => Workspace[]
+
+  onboardingCompleted: boolean
+  completeOnboarding: () => void
+  resetOnboarding: () => void
 }
 
 export const useWorkspaceStore = create<WorkspaceStore>()(
@@ -189,6 +193,10 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       },
 
       getFavorites: () => get().workspaces.filter(w => w.isFavorite),
+
+      onboardingCompleted: false,
+      completeOnboarding: () => set({ onboardingCompleted: true }),
+      resetOnboarding: () => set({ onboardingCompleted: false }),
     }),
     { name: 'guanwei-workspaces' }
   )
