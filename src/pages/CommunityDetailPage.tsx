@@ -1,15 +1,15 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Share2, Heart, MessageSquare, Bookmark, Flame, HandHeart, HelpCircle } from 'lucide-react'
+import { ArrowLeft, Share2, Heart, MessageSquare, Bookmark, Flame, HandHeart, HelpCircle, MoreHorizontal, Send } from 'lucide-react'
 import { getCommunityPostById, getFeaturedPostContent } from '../services/mockData'
 import CommentSection from '../components/CommentSection'
 import VerificationNoteSection from '../components/VerificationNoteSection'
 import { usePlatform } from '../hooks/usePlatform'
 
 const typeTagConfig = {
-  hot: { icon: Flame, label: '热帖', bg: 'bg-red-500/90', text: 'text-white' },
-  charity: { icon: HandHeart, label: '公益', bg: 'bg-green-500/90', text: 'text-white' },
-  help: { icon: HelpCircle, label: '求助', bg: 'bg-amber-500/90', text: 'text-white' },
+  hot: { icon: Flame, label: '热帖', bg: 'bg-red-500', text: 'text-white' },
+  charity: { icon: HandHeart, label: '公益', bg: 'bg-green-500', text: 'text-white' },
+  help: { icon: HelpCircle, label: '求助', bg: 'bg-amber-500', text: 'text-white' },
   normal: null,
 }
 
@@ -34,7 +34,6 @@ export default function CommunityDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { isWeb } = usePlatform()
-  const wrap = isWeb ? 'max-w-3xl mx-auto px-6' : 'max-w-[480px] mx-auto'
 
   const [liked, setLiked] = useState(false)
   const [bookmarked, setBookmarked] = useState(false)
@@ -61,7 +60,6 @@ export default function CommunityDetailPage() {
     return null
   }, [id, post])
 
-  // 滚动到顶部
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [id])
@@ -97,18 +95,20 @@ export default function CommunityDetailPage() {
     setLikeCount(prev => liked ? prev - 1 : prev + 1)
   }
 
-  // ── Web 端：知乎式阅读布局 ──
+  // ── Web 端：微博/即刻式动态卡片 ──
   if (isWeb) {
     return (
       <div className="min-h-screen bg-paper-50">
         {/* 顶部固定导航 */}
-        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-line/40">
-          <div className="max-w-3xl mx-auto px-6 h-14 flex items-center gap-4">
+        <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-xl border-b border-line/40">
+          <div className="max-w-2xl mx-auto px-5 h-14 flex items-center">
             <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-ink-700 text-sm font-medium hover:text-seal transition-colors">
               <ArrowLeft size={18} />
-              <span>返回社区</span>
+              <span>返回</span>
             </button>
-            <div className="flex-1" />
+            <div className="flex-1 text-center">
+              <span className="text-[14px] font-semibold text-ink-800">帖子详情</span>
+            </div>
             <button onClick={handleShare} className="flex items-center gap-1.5 text-ink-600 text-sm hover:text-seal transition-colors">
               <Share2 size={16} />
               {showCopied && <span className="text-seal text-xs font-medium">已复制</span>}
@@ -116,98 +116,106 @@ export default function CommunityDetailPage() {
           </div>
         </header>
 
-        {/* 主体：左浮动互动栏 + 居中正文 */}
-        <div className="max-w-3xl mx-auto px-6 py-8 flex gap-12">
-          {/* 左侧浮动互动栏 */}
-          <aside className="sticky top-24 self-start flex flex-col items-center gap-4 w-12 flex-shrink-0">
-            <button
-              onClick={handleLike}
-              className={`flex flex-col items-center gap-1 w-12 h-12 rounded-full border transition-all ${
-                liked
-                  ? 'border-seal/30 bg-seal/8 text-seal'
-                  : 'border-line/40 bg-white text-ink-500 hover:border-seal/40 hover:text-seal'
-              }`}
-            >
-              <Heart size={20} className={liked ? 'fill-seal' : ''} />
-            </button>
-            <span className="text-[11px] font-semibold text-ink-500 -mt-2">{formatCount(likeCount || post.likes)}</span>
-
-            <button className="flex flex-col items-center gap-1 w-12 h-12 rounded-full border border-line/40 bg-white text-ink-500 hover:border-ink-300 hover:text-ink-700 transition-all">
-              <MessageSquare size={20} />
-            </button>
-            <span className="text-[11px] font-semibold text-ink-500 -mt-2">{formatCount(postContent.comments)}</span>
-
-            <button
-              onClick={() => setBookmarked(!bookmarked)}
-              className={`flex flex-col items-center gap-1 w-12 h-12 rounded-full border transition-all ${
-                bookmarked
-                  ? 'border-gold/30 bg-gold/8 text-gold'
-                  : 'border-line/40 bg-white text-ink-500 hover:border-gold/40 hover:text-gold'
-              }`}
-            >
-              <Bookmark size={20} className={bookmarked ? 'fill-gold' : ''} />
-            </button>
-            <span className="text-[11px] font-semibold text-ink-500 -mt-2">{formatCount(postContent.collects)}</span>
-          </aside>
-
-          {/* 正文区域 */}
-          <article className="flex-1 min-w-0">
-            {/* 类型标签 */}
-            {tag && TagIcon && (
-              <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold rounded-md ${tag.bg} ${tag.text} mb-4`}>
-                <TagIcon size={11} />
-                {tag.label}
-              </span>
-            )}
-
-            {/* 标题 */}
-            <h1 className="text-[26px] font-bold text-ink-900 leading-tight mb-5 tracking-tight">
-              {post.title}
-            </h1>
-
-            {/* 作者信息 */}
-            <div className="flex items-center gap-3 pb-5 mb-6 border-b border-line/30">
+        {/* 动态卡片主体 */}
+        <div className="max-w-2xl mx-auto px-5 py-6">
+          <div className="bg-white rounded-2xl border border-line/30 overflow-hidden shadow-sm">
+            {/* 作者行 */}
+            <div className="flex items-center gap-3 px-5 pt-5 pb-3">
               <img
                 src={post.authorAvatar}
                 alt={post.authorName}
-                className="w-10 h-10 rounded-full bg-paper-dark ring-1 ring-line/40 cursor-pointer hover:ring-seal/50 transition-all"
+                className="w-11 h-11 rounded-full bg-paper-dark ring-1 ring-line/40 cursor-pointer hover:ring-seal/50 transition-all"
                 onClick={() => navigate(`/user/${post.authorName}`)}
               />
               <div className="flex-1 min-w-0">
-                <p className="text-[15px] font-semibold text-ink-900">{post.authorName}</p>
-                <p className="text-[12px] text-ink-500">{formatTime(post.createdAt)}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-[15px] font-semibold text-ink-900">{post.authorName}</p>
+                  {tag && TagIcon && (
+                    <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-bold rounded ${tag.bg} ${tag.text}`}>
+                      <TagIcon size={9} />
+                      {tag.label}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[12px] text-ink-500 mt-0.5">{formatTime(post.createdAt)}</p>
               </div>
-              <button className="px-4 py-1.5 rounded-lg bg-seal text-white text-[13px] font-bold press-pop hover:bg-seal/90 transition-colors">
-                关注
+              <button className="px-3 py-1 rounded-md bg-seal/8 text-seal text-[12px] font-bold hover:bg-seal/12 transition-colors">
+                + 关注
+              </button>
+              <button className="p-1.5 rounded-md text-ink-400 hover:bg-paper-100 hover:text-ink-600 transition-colors">
+                <MoreHorizontal size={18} />
               </button>
             </div>
 
-            {/* 正文内容 */}
-            <div className="text-[16px] text-ink-800 leading-[1.85] space-y-5 whitespace-pre-line mb-6">
-              {postContent.content}
+            {/* 正文 */}
+            <div className="px-5 pb-4">
+              <p className="text-[16px] text-ink-900 leading-[1.75] whitespace-pre-line font-normal">
+                {postContent.content}
+              </p>
             </div>
 
-            {/* 帖子图片（如有） */}
+            {/* 图片 */}
             {post.image && (
-              <div className="mb-6 rounded-xl overflow-hidden border border-line/20">
-                <img src={post.image} alt={post.title} className="w-full max-h-96 object-cover" />
+              <div className="px-5 pb-4">
+                <div className="rounded-xl overflow-hidden border border-line/20">
+                  <img src={post.image} alt={post.title} className="w-full max-h-[500px] object-cover" />
+                </div>
               </div>
             )}
 
             {/* 话题标签 */}
             {post.tags && post.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-8 pb-6 border-b border-line/30">
+              <div className="flex flex-wrap gap-2 px-5 pb-4">
                 {post.tags.map(t => (
-                  <span key={t} className="text-[13px] text-seal bg-seal/8 px-3 py-1 rounded-lg font-medium hover:bg-seal/12 transition-colors cursor-pointer">
+                  <span key={t} className="text-[13px] text-seal bg-seal/6 px-2.5 py-0.5 rounded-md font-medium hover:bg-seal/10 transition-colors cursor-pointer">
                     #{t}
                   </span>
                 ))}
               </div>
             )}
 
-            {/* 求证笔记 / 讨论区 */}
+            {/* 底部互动栏 */}
+            <div className="flex items-center justify-around px-5 py-3 border-t border-line/20 bg-paper-50/50">
+              <button
+                onClick={handleLike}
+                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[14px] font-medium transition-all ${
+                  liked
+                    ? 'text-seal bg-seal/8'
+                    : 'text-ink-500 hover:bg-paper-100 hover:text-seal'
+                }`}
+              >
+                <Heart size={18} className={liked ? 'fill-seal' : ''} />
+                {formatCount(likeCount || post.likes)}
+              </button>
+              <button className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[14px] font-medium text-ink-500 hover:bg-paper-100 hover:text-ink-700 transition-colors">
+                <MessageSquare size={18} />
+                {formatCount(postContent.comments)}
+              </button>
+              <button
+                onClick={() => setBookmarked(!bookmarked)}
+                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[14px] font-medium transition-all ${
+                  bookmarked
+                    ? 'text-gold bg-gold/8'
+                    : 'text-ink-500 hover:bg-paper-100 hover:text-gold'
+                }`}
+              >
+                <Bookmark size={18} className={bookmarked ? 'fill-gold' : ''} />
+                {formatCount(postContent.collects)}
+              </button>
+              <button
+                onClick={handleShare}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[14px] font-medium text-ink-500 hover:bg-paper-100 hover:text-seal transition-colors"
+              >
+                <Send size={18} />
+                分享
+              </button>
+            </div>
+          </div>
+
+          {/* 评论区 */}
+          <div className="mt-4 bg-white rounded-2xl border border-line/30 overflow-hidden">
             {showVerificationNote ? (
-              <div className="mt-2">
+              <>
                 <VerificationNoteSection
                   melonId={post.id}
                   melonTitle={post.title}
@@ -215,30 +223,29 @@ export default function CommunityDetailPage() {
                   onTabChange={setNoteTab}
                 />
                 {noteTab === 'comments' && (
-                  <div className="mt-3 bg-white rounded-xl border border-line/30">
+                  <div className="border-t border-line/20">
                     <CommentSection melonId={post.id} />
                   </div>
                 )}
-              </div>
+              </>
             ) : (
-              <div className="mt-2">
-                <div className="flex items-center gap-2 mb-3">
+              <>
+                <div className="px-5 py-4 flex items-center gap-2 border-b border-line/20">
                   <MessageSquare size={18} className="text-ink-500" />
-                  <h2 className="text-[16px] font-bold text-ink-900">讨论区</h2>
-                  <span className="text-[13px] text-ink-400">{formatCount(postContent.comments)} 条评论</span>
+                  <h2 className="text-[15px] font-bold text-ink-900">评论</h2>
+                  <span className="text-[13px] text-ink-400">{formatCount(postContent.comments)} 条</span>
                 </div>
-                <div className="bg-white rounded-xl border border-line/30">
-                  <CommentSection melonId={post.id} />
-                </div>
-              </div>
+                <CommentSection melonId={post.id} />
+              </>
             )}
-          </article>
+          </div>
         </div>
       </div>
     )
   }
 
   // ── 移动端：保持原有布局 ──
+  const wrap = 'max-w-[480px] mx-auto'
   return (
     <div className="min-h-screen bg-paper-texture pb-8">
       <div className="sticky top-0 z-20 glass border-b border-line/50">
