@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { Leaf, Users, Clock, Briefcase, Gamepad2, Settings, Search, FileText, Image, Calendar, Shield, Info, MessageSquare, HandHelping } from 'lucide-react'
+import { Leaf, Users, Clock, Briefcase, Gamepad2, Settings, Search, FileText, Image, Calendar, Shield, Info, MessageSquare } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 export interface SidebarNavItem {
@@ -17,7 +17,6 @@ export const ALL_NAV_ITEMS: SidebarNavItem[] = [
   // ── 核心 ──
   { id: 'melon', path: '/melon', label: '瓜田', icon: 'Leaf', isDefault: true, group: 1 },
   { id: 'community', path: '/community', label: '社区', icon: 'Users', isDefault: true, group: 1 },
-  { id: 'city-aid', path: '/community/aid', label: '同城互助', icon: 'HandHelping', isDefault: true, group: 1 },
   { id: 'hot', path: '/hot', label: '时间线', icon: 'Clock', isDefault: true, group: 1 },
   // ── 工具 ──
   { id: 'verify', path: '/verify', label: '求证', icon: 'Search', isDefault: true, group: 2 },
@@ -36,7 +35,7 @@ export const ALL_NAV_ITEMS: SidebarNavItem[] = [
 
 // icon 名称到组件的映射
 export const ICON_MAP: Record<string, LucideIcon> = {
-  Leaf, Users, Clock, Briefcase, Gamepad2, Settings, Search, FileText, Image, Calendar, Shield, Info, MessageSquare, HandHelping,
+  Leaf, Users, Clock, Briefcase, Gamepad2, Settings, Search, FileText, Image, Calendar, Shield, Info, MessageSquare,
 }
 
 interface SidebarStore {

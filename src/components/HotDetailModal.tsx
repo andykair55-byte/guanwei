@@ -493,13 +493,14 @@ export default function HotDetailModal({ event, isOpen, originRect, onClose }: H
         onClick={handleClose}
       />
 
-      {/* 弹窗主体 */}
+      {/* 弹窗主体 - 统一规格：960px 宽，88vh 最大高度 */}
       <div
         ref={modalRef}
-        className="relative w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden flex"
+        className="relative bg-white rounded-2xl shadow-2xl overflow-hidden flex"
         style={{
-          height: 'min(88vh, 720px)',
+          width: '960px',
           maxWidth: '92vw',
+          height: 'min(88vh, 720px)',
         }}
       >
         {/* 关闭按钮 */}
@@ -510,8 +511,8 @@ export default function HotDetailModal({ event, isOpen, originRect, onClose }: H
           <X size={18} />
         </button>
 
-        {/* 左侧：封面 + 时间线区 */}
-        <div className="relative w-[45%] flex-shrink-0 flex flex-col bg-paper-50 overflow-hidden">
+        {/* 左侧：封面 + 时间线区 - 统一 420px 宽 */}
+        <div className="relative flex-shrink-0 flex flex-col bg-gray-50 overflow-hidden" style={{ width: '420px' }}>
           {/* 封面图区域 */}
           <div className="relative h-[38%] flex-shrink-0 overflow-hidden">
             <img

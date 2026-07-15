@@ -37,11 +37,8 @@ backend/*.db
 # Server
 server/
 
-# Debug images
+# debug images
 1.png
-
-# Docs
-docs/
 
 # Mirror (nested git repo)
 engine/Mirror/

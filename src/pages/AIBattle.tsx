@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type ElementType } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, type ElementType } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft, Send, Swords, Trophy, RotateCcw,
@@ -11,10 +11,87 @@ import BetPanel from '../components/debate/BetPanel'
 import DanmakuInput from '../components/debate/DanmakuInput'
 import { getTopic, TOPICS, type ThinkingStep, type RoundScore } from '../services/debateArenaService'
 import { pickDanmaku, toQueueItems, type DanmakuQueueItem, type DanmakuTrigger } from '../services/danmakuService'
-import { getCharacter } from '../services/characters'
+import { getCharacter, type AICharacter } from '../services/characters'
+import { getAllThemeCharacters } from '../services/themePackService'
 import { callLLM } from '../stores/llmStore'
 import { usePlatform } from '../hooks/usePlatform'
 import { useAuthStore } from '../stores/authStore'
+
+/** 自创蛐蛐类型 */
+interface ForgeCharacter {
+  id: string
+  name: string
+  prompt: string
+  avatar: string
+  createdAt: number
+}
+
+/** 从 localStorage 读取自创角色 */
+function getForgeCharacter(id: string): ForgeCharacter | null {
+  try {
+    const list: ForgeCharacter[] = JSON.parse(localStorage.getItem('cricket-forges') || '[]')
+    return list.find(c => c.id === id) || null
+  } catch {
+    return null
+  }
+}
+
+/** 将自创蛐蛐适配为 AICharacter */
+function forgeToCharacter(forge: ForgeCharacter): AICharacter {
+  return {
+    id: forge.id,
+    name: forge.name,
+    title: '自创角色',
+    emoji: '',
+    icon: 'baize',
+    stance: 'negate',
+    temperature: 0.7,
+    visual: {
+      gradientFrom: forge.avatar.split(' ')[0] || 'from-violet-400',
+      gradientTo: forge.avatar.split(' ')[1] || 'to-purple-600',
+      bubbleBg: 'bg-violet-50',
+      bubbleBorder: 'border-violet-200',
+      textColor: 'text-violet-600',
+      glowShadow: 'shadow-violet-200',
+    },
+    personality: forge.prompt.slice(0, 50),
+    systemPrompt: forge.prompt,
+    taunts: { advantage: [], comeback: [], press: [] },
+    celebrations: { winRound: [], winFinal: [], loseFinal: [] },
+    respect: { closingLines: [] },
+    stats: { totalDebates: 0, wins: 0, winRate: '—', favoriteTactic: '自定义' },
+  }
+}
+
+/** 将名人角色适配为 AICharacter */
+function themeCharToCharacter(themeCharId: string): AICharacter | null {
+  const all = getAllThemeCharacters()
+  const found = all.find(c => c.id === themeCharId)
+  if (!found) return null
+  return {
+    id: found.id,
+    name: found.name,
+    title: found.era,
+    emoji: '',
+    icon: 'baize',
+    stance: 'negate',
+    temperature: 0.7,
+    visual: {
+      gradientFrom: 'from-amber-400',
+      gradientTo: 'to-orange-600',
+      bubbleBg: 'bg-amber-50',
+      bubbleBorder: 'border-amber-200',
+      textColor: 'text-amber-600',
+      glowShadow: 'shadow-amber-200',
+    },
+    personality: found.stanceHint,
+    systemPrompt: found.systemPrompt,
+    taunts: { advantage: [], comeback: [], press: [] },
+    celebrations: { winRound: [], winFinal: [], loseFinal: [] },
+    respect: { closingLines: [] },
+    stats: { totalDebates: 0, wins: 0, winRate: '—', favoriteTactic: found.era },
+  }
+}
 
 // ===== Types =====
 
@@ -39,10 +116,25 @@ export default function AIBattle() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { isWeb } = usePlatform()
+
+  // 对手角色解析：优先 forgeId > themeChar > negate(id)
+  const forgeId = searchParams.get('forgeId')
+  const isThemeChar = searchParams.get('themeChar')
   const opponentId = searchParams.get('negate') || 'xiezhi'
   const topicId = searchParams.get('topic') || 'college'
   const topic = getTopic(topicId) || TOPICS[0]
-  const opponent = getCharacter(opponentId)
+
+  const opponent = useMemo(() => {
+    if (forgeId) {
+      const forge = getForgeCharacter(forgeId)
+      if (forge) return forgeToCharacter(forge)
+    }
+    if (isThemeChar) {
+      const tc = themeCharToCharacter(opponentId)
+      if (tc) return tc
+    }
+    return getCharacter(opponentId)
+  }, [forgeId, isThemeChar, opponentId])
 
   // User is affirm, AI is negate
 

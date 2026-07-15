@@ -1,0 +1,63 @@
+{
+  "data": [
+    {
+      "id": "page-guatian-post",
+      "title": "瓜田帖子详情",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1784080000000,
+      "canvasData": {
+        "x": 0,
+        "y": 12,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/guatian-post.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-community-post",
+      "title": "社区帖子详情",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1784080001000,
+      "canvasData": {
+        "x": 620,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/community-post.html",
+        "interactions": []
+      }
+    },
+    {
+      "id": "page-timeline-post",
+      "title": "时间线帖子详情",
+      "type": "page",
+      "version": 1,
+      "createdAt": 1784080002000,
+      "canvasData": {
+        "x": 1240,
+        "y": 0,
+        "group": 0
+      },
+      "devMetadata": {
+        "htmlSrc": "pages/timeline-post.html",
+        "interactions": []
+      }
+    }
+  ],
+  "config": {
+    "autoLayout": false,
+    "deviceType": "desktop",
+    "projectName": "统一帖子详情弹窗",
+    "designLibrary": null,
+    "showEdge": true,
+    "windowSize": {
+      "width": 800,
+      "height": 600
+    }
+  }
+}

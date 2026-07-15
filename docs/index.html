@@ -1,0 +1,1350 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="canvas:aspect-ratio" content="16:9" />
+<title>观微 · 工作间</title>
+<style>
+  /* ── Design Tokens ── */
+  :root {
+    --seed-bg: #ffffff;
+    --seed-fg: #111827;
+    --seed-primary: #10b981;
+    --seed-accent: #059669;
+    --seed-surface: #f9fafb;
+    --seed-radius: 8px;
+
+    --bg: var(--seed-bg);
+    --bg-secondary: var(--seed-surface);
+    --bg-hover: #f3f4f6;
+    --bg-active: #ecfdf5;
+    --fg: var(--seed-fg);
+    --fg-secondary: #6b7280;
+    --fg-muted: #9ca3af;
+    --fg-placeholder: #d1d5db;
+    --border: #e5e7eb;
+    --border-light: #f3f4f6;
+
+    --primary: var(--seed-primary);
+    --primary-light: #ecfdf5;
+    --primary-dark: var(--seed-accent);
+    --primary-text: #065f46;
+
+    --status-active: #10b981;
+    --status-draft: #9ca3af;
+    --status-completed: #3b82f6;
+    --status-tracking: #6d28d9;
+    --status-archived: #d1d5db;
+    --favorite: #f59e0b;
+
+    /* Tag colors */
+    --tag-hotspot-bg: #fef3c7;
+    --tag-hotspot-fg: #92400e;
+    --tag-science-bg: #dbeafe;
+    --tag-science-fg: #1e40af;
+    --tag-opinion-bg: #fce7f3;
+    --tag-opinion-fg: #9d174d;
+
+    /* Agent icon colors */
+    --agent-search-bg: #dbeafe;
+    --agent-search-fg: #2563eb;
+    --agent-research-bg: #ede9fe;
+    --agent-research-fg: #6d28d9;
+    --agent-verify-bg: #fef3c7;
+    --agent-verify-fg: #d97706;
+    --agent-writing-bg: #d1fae5;
+    --agent-writing-fg: #059669;
+    --agent-commander-bg: #fce7f3;
+    --agent-commander-fg: #db2777;
+
+    /* Activity status badge colors */
+    --badge-done-bg: #d1fae5;
+    --badge-done-fg: #065f46;
+    --badge-warn-bg: #fef3c7;
+    --badge-warn-fg: #92400e;
+    --badge-running-bg: #ede9fe;
+    --badge-running-fg: #5b21b6;
+
+    /* Platform brand colors */
+    --brand-zhihu: #0084ff;
+    --brand-xiaohongshu: #ff2442;
+    --brand-weibo: #e6162d;
+    --brand-douyin: #111111;
+    --brand-bilibili: #00a1d6;
+
+    /* Misc UI */
+    --scrollbar-track: #e5e7eb;
+    --scrollbar-thumb: #d1d5db;
+    --text-body: #374151;
+    --highlight-bg: #fef08a;
+    --toast-bg: #1f2937;
+    --danger: #ef4444;
+    --white: #ffffff;
+    --logo-grad-from: #111827;
+    --logo-grad-to: #374151;
+    --rank-grad-to: #34d399;
+    --shadow-action: rgba(0,0,0,0.08);
+    --shadow-toast: rgba(0,0,0,0.15);
+    --shadow-mode: rgba(0,0,0,0.06);
+
+    --radius-sm: 6px;
+    --radius: var(--seed-radius);
+    --radius-lg: 12px;
+    --radius-full: 9999px;
+
+    --font-sans: 'Inter', 'Noto Sans SC', 'PingFang SC', -apple-system, system-ui, sans-serif;
+
+    --sidebar-w: 240px;
+    --activity-w: 320px;
+  }
+
+  /* ── Reset ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+  body {
+    font-family: var(--font-sans);
+    color: var(--fg);
+    background: var(--bg);
+    overflow: hidden;
+    height: 100vh;
+  }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  input { font-family: inherit; border: none; outline: none; background: none; color: inherit; }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--scrollbar-track); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb); }
+
+  /* ── Layout ── */
+  .app { display: flex; height: 100vh; overflow: hidden; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    border-right: 1px solid var(--border);
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Header */
+  .sidebar-header { padding: 14px 14px 10px; border-bottom: 1px solid var(--border-light); }
+  .sidebar-brand { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .sidebar-logo {
+    width: 28px; height: 28px; border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, var(--logo-grad-from), var(--logo-grad-to));
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sidebar-logo svg { width: 16px; height: 16px; }
+  .sidebar-brand-text { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: var(--fg); }
+  .sidebar-brand-sub { font-size: 10px; color: var(--fg-muted); letter-spacing: 0.06em; text-transform: uppercase; margin-top: -2px; }
+
+  .btn-create {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 8px 0; border-radius: var(--radius); font-size: 13px; font-weight: 500;
+    background: var(--primary); color: var(--white);
+    transition: background 0.15s ease;
+  }
+  .btn-create:hover { background: var(--primary-dark); }
+  .btn-create svg { width: 15px; height: 15px; }
+
+  /* Search */
+  .sidebar-search { padding: 8px 14px; }
+  .search-box {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 10px; border-radius: var(--radius-sm);
+    background: var(--bg-secondary); border: 1px solid var(--border);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .search-box:focus-within { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-light); }
+  .search-box svg { width: 14px; height: 14px; color: var(--fg-muted); flex-shrink: 0; }
+  .search-box input {
+    flex: 1; font-size: 12px; color: var(--fg);
+    background: transparent;
+  }
+  .search-box input::placeholder { color: var(--fg-placeholder); }
+  .search-shortcut {
+    font-size: 10px; color: var(--fg-muted); background: var(--bg);
+    padding: 1px 5px; border-radius: 4px; border: 1px solid var(--border);
+    letter-spacing: 0.02em;
+  }
+
+  /* Workspace List */
+  .sidebar-list {
+    flex: 1; overflow-y: auto; padding: 4px 8px 8px;
+  }
+
+  /* Group */
+  .ws-group { margin-bottom: 2px; }
+  .ws-group-header {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 8px 4px; cursor: pointer; user-select: none;
+    border-radius: var(--radius-sm);
+    transition: background 0.12s;
+  }
+  .ws-group-header:hover { background: var(--bg-hover); }
+  .ws-group-chevron {
+    width: 14px; height: 14px; color: var(--fg-muted);
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+  }
+  .ws-group-chevron.collapsed { transform: rotate(-90deg); }
+  .ws-group-label {
+    font-size: 11px; font-weight: 500; color: var(--fg-secondary);
+    letter-spacing: 0.02em; flex: 1;
+  }
+  .ws-group-count {
+    font-size: 10px; font-weight: 500; color: var(--fg-muted);
+    background: var(--bg-secondary); padding: 1px 6px;
+    border-radius: var(--radius-full); min-width: 18px; text-align: center;
+  }
+
+  .ws-group-items {
+    overflow: hidden;
+    transition: max-height 0.25s ease, opacity 0.2s ease;
+  }
+  .ws-group-items.collapsed {
+    max-height: 0 !important; opacity: 0; pointer-events: none;
+  }
+
+  /* Workspace Item */
+  .ws-item {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 7px 8px; border-radius: var(--radius-sm);
+    cursor: pointer; position: relative;
+    transition: background 0.12s;
+  }
+  .ws-item:hover { background: var(--bg-hover); }
+  .ws-item.active { background: var(--bg-active); }
+  .ws-item.active .ws-item-title { color: var(--primary-text); }
+
+  .ws-status-dot {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    margin-top: 5px;
+  }
+  .ws-status-dot.active { background: var(--status-active); }
+  .ws-status-dot.draft { background: var(--status-draft); }
+  .ws-status-dot.completed { background: var(--status-completed); }
+  .ws-status-dot.tracking { background: var(--status-tracking); }
+  .ws-status-dot.archived { background: var(--status-archived); }
+
+  .ws-item-content { flex: 1; min-width: 0; }
+  .ws-item-title {
+    font-size: 13px; font-weight: 500; color: var(--fg);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    line-height: 1.4;
+  }
+  .ws-item-meta {
+    font-size: 11px; color: var(--fg-muted); margin-top: 1px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .ws-item-tag {
+    font-size: 10px; padding: 0 5px; border-radius: var(--radius-full);
+    font-weight: 500; letter-spacing: 0.01em;
+  }
+  .ws-item-tag.hotspot { background: var(--tag-hotspot-bg); color: var(--tag-hotspot-fg); }
+  .ws-item-tag.science { background: var(--tag-science-bg); color: var(--tag-science-fg); }
+  .ws-item-tag.opinion { background: var(--tag-opinion-bg); color: var(--tag-opinion-fg); }
+
+  /* Hover Actions */
+  .ws-item-actions {
+    display: flex; align-items: center; gap: 2px;
+    opacity: 0; transition: opacity 0.12s;
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: 2px;
+    box-shadow: 0 1px 3px var(--shadow-action);
+  }
+  .ws-item:hover .ws-item-actions { opacity: 1; }
+  .ws-item.active .ws-item-actions { background: var(--bg-active); }
+  .ws-action-btn {
+    width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+    border-radius: 4px; color: var(--fg-muted);
+    transition: color 0.12s, background 0.12s;
+  }
+  .ws-action-btn:hover { color: var(--fg); background: var(--bg-hover); }
+  .ws-action-btn.favorited { color: var(--favorite); }
+  .ws-action-btn svg { width: 14px; height: 14px; }
+
+  /* Empty State */
+  .ws-empty {
+    padding: 24px 16px; text-align: center;
+    color: var(--fg-muted); font-size: 12px;
+  }
+  .ws-empty svg { width: 32px; height: 32px; margin-bottom: 8px; opacity: 0.4; }
+
+  /* Bottom Nav */
+  .sidebar-bottom { border-top: 1px solid var(--border); padding: 8px 10px; }
+  .bottom-nav {
+    display: flex; align-items: center; justify-content: space-around;
+    padding: 4px 0 8px;
+  }
+  .nav-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 6px 10px; border-radius: var(--radius-sm);
+    color: var(--fg-muted); transition: color 0.12s, background 0.12s;
+    position: relative;
+  }
+  .nav-btn:hover { color: var(--fg-secondary); background: var(--bg-hover); }
+  .nav-btn.active { color: var(--primary); background: var(--primary-light); }
+  .nav-btn svg { width: 18px; height: 18px; }
+  .nav-btn-label { font-size: 10px; font-weight: 500; letter-spacing: 0.01em; }
+  .nav-badge {
+    position: absolute; top: 2px; right: 6px;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--primary); border: 1.5px solid var(--bg);
+  }
+
+  /* User Card */
+  .user-card {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px; border-radius: var(--radius-sm);
+    cursor: pointer; transition: background 0.12s;
+  }
+  .user-card:hover { background: var(--bg-hover); }
+  .user-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    display: flex; align-items: center; justify-content: center;
+    color: var(--white); font-size: 12px; font-weight: 600; flex-shrink: 0;
+  }
+  .user-info { flex: 1; min-width: 0; }
+  .user-name { font-size: 12px; font-weight: 500; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .user-rank { font-size: 10px; color: var(--fg-muted); }
+  .user-rank-bar {
+    height: 3px; background: var(--border-light); border-radius: 99px;
+    margin-top: 3px; overflow: hidden;
+  }
+  .user-rank-fill {
+    height: 100%; width: 62%; border-radius: 99px;
+    background: linear-gradient(90deg, var(--primary), var(--rank-grad-to));
+  }
+
+  /* ── Center Editor ── */
+  .center { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+
+  .editor-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 20px; border-bottom: 1px solid var(--border-light);
+    flex-shrink: 0;
+  }
+  .editor-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .editor-breadcrumb span { color: var(--fg-muted); }
+  .editor-breadcrumb .bc-active { color: var(--fg); font-weight: 500; }
+  .editor-breadcrumb .bc-sep { color: var(--fg-placeholder); font-size: 11px; }
+  .editor-actions { display: flex; align-items: center; gap: 4px; }
+  .editor-action-btn {
+    width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-sm); color: var(--fg-muted);
+    transition: color 0.12s, background 0.12s;
+  }
+  .editor-action-btn:hover { color: var(--fg); background: var(--bg-hover); }
+  .editor-action-btn svg { width: 15px; height: 15px; }
+
+  .mode-toggle {
+    display: flex; align-items: center; background: var(--bg-secondary);
+    border-radius: var(--radius-sm); padding: 2px; margin-left: 12px;
+  }
+  .mode-btn {
+    padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: 500;
+    color: var(--fg-secondary); transition: all 0.15s;
+  }
+  .mode-btn.active { background: var(--bg); color: var(--fg); box-shadow: 0 1px 2px var(--shadow-mode); }
+
+  /* Platform Tabs */
+  .platform-bar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 20px; border-bottom: 1px solid var(--border-light);
+    overflow-x: auto; flex-shrink: 0;
+  }
+  .platform-tab {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 12px; border-radius: var(--radius-full);
+    font-size: 12px; font-weight: 500; white-space: nowrap;
+    border: 1px solid transparent;
+    transition: all 0.12s;
+  }
+  .platform-tab.active {
+    background: var(--bg-secondary); color: var(--fg);
+    border-color: var(--border);
+  }
+  .platform-tab:not(.active) { color: var(--fg-secondary); }
+  .platform-tab:not(.active):hover { background: var(--bg-hover); }
+  .platform-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .platform-dot.green { background: var(--status-active); }
+  .platform-icon {
+    width: 16px; height: 16px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 700; color: var(--white);
+  }
+
+  /* Status Bar */
+  .status-bar {
+    display: flex; align-items: center; gap: 16px;
+    padding: 6px 20px; border-bottom: 1px solid var(--border-light);
+    font-size: 12px; color: var(--fg-secondary); flex-shrink: 0;
+    background: var(--bg-secondary);
+  }
+  .status-indicator { display: flex; align-items: center; gap: 5px; }
+  .status-dot-live {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--status-active);
+  }
+  .status-dot-live.pulse { animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* Editor Content */
+  .editor-body { flex: 1; overflow-y: auto; padding: 24px 32px; }
+  .editor-content { max-width: 680px; margin: 0 auto; }
+  .editor-title-input {
+    width: 100%; font-size: 24px; font-weight: 700; color: var(--fg);
+    border: none; outline: none; background: transparent;
+    margin-bottom: 20px; letter-spacing: -0.02em; line-height: 1.3;
+  }
+  .editor-title-input::placeholder { color: var(--fg-placeholder); }
+  .editor-text {
+    font-size: 15px; line-height: 1.7; color: var(--text-body);
+  }
+  .editor-text p { margin-bottom: 16px; }
+  .editor-text h2 {
+    font-size: 18px; font-weight: 600; color: var(--fg);
+    margin: 24px 0 12px; letter-spacing: -0.01em;
+  }
+  .editor-text .highlight {
+    background: var(--highlight-bg); padding: 1px 3px; border-radius: 3px;
+  }
+
+  /* Command Input */
+  .command-bar {
+    padding: 12px 20px 16px; border-top: 1px solid var(--border-light);
+    flex-shrink: 0;
+  }
+  .command-input-wrap {
+    display: flex; align-items: center; gap: 4px;
+    padding: 5px 6px 5px 2px; border-radius: var(--radius-lg);
+    background: var(--bg); border: 1px solid var(--border);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .command-input-wrap:focus-within { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-light); }
+  .command-input-wrap textarea {
+    flex: 1; font-size: 13px; color: var(--fg); resize: none;
+    background: transparent; min-height: 24px; max-height: 80px;
+    line-height: 1.5; border: none; outline: none; padding: 4px 4px;
+  }
+  .command-input-wrap textarea::placeholder { color: var(--fg-placeholder); }
+  .command-send {
+    width: 28px; height: 28px; border-radius: var(--radius-sm);
+    background: var(--primary); color: var(--white);
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.12s;
+  }
+  .command-send:hover { background: var(--primary-dark); }
+  .command-send svg { width: 14px; height: 14px; }
+
+  /* ── Activity Stream ── */
+  .activity {
+    width: var(--activity-w);
+    min-width: var(--activity-w);
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    height: 100vh; overflow: hidden;
+  }
+  .activity-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-bottom: 1px solid var(--border-light);
+    flex-shrink: 0;
+  }
+  .activity-title { font-size: 14px; font-weight: 600; color: var(--fg); letter-spacing: -0.01em; }
+  .activity-filters { display: flex; gap: 4px; padding: 8px 12px; border-bottom: 1px solid var(--border-light); flex-shrink: 0; overflow-x: auto; }
+  .activity-filter {
+    padding: 5px 12px; border-radius: var(--radius-full);
+    font-size: 12px; font-weight: 500; color: var(--fg-muted);
+    transition: all 0.12s; white-space: nowrap;
+  }
+  .activity-filter.active { background: var(--bg-secondary); color: var(--fg); }
+  .activity-filter:hover:not(.active) { color: var(--fg-secondary); }
+
+  .activity-list { flex: 1; overflow-y: auto; padding: 8px 12px; }
+  .activity-event {
+    padding: 10px 12px; border-radius: var(--radius);
+    margin-bottom: 6px; border: 1px solid var(--border-light);
+    background: var(--bg);
+    transition: border-color 0.12s;
+  }
+  .activity-event:hover { border-color: var(--border); }
+  .activity-event-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .activity-agent { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 500; }
+  .activity-agent-icon {
+    width: 20px; height: 20px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+  }
+  .activity-agent-icon.search { background: var(--agent-search-bg); color: var(--agent-search-fg); }
+  .activity-agent-icon.research { background: var(--agent-research-bg); color: var(--agent-research-fg); }
+  .activity-agent-icon.verify { background: var(--agent-verify-bg); color: var(--agent-verify-fg); }
+  .activity-agent-icon.writing { background: var(--agent-writing-bg); color: var(--agent-writing-fg); }
+  .activity-agent-icon.commander { background: var(--agent-commander-bg); color: var(--agent-commander-fg); }
+  .activity-time { font-size: 11px; color: var(--fg-muted); }
+  .activity-status {
+    font-size: 10px; font-weight: 500; padding: 2px 8px;
+    border-radius: var(--radius-full);
+  }
+  .activity-status.done { background: var(--badge-done-bg); color: var(--badge-done-fg); }
+  .activity-status.warn { background: var(--badge-warn-bg); color: var(--badge-warn-fg); }
+  .activity-status.running { background: var(--badge-running-bg); color: var(--badge-running-fg); }
+  .activity-desc { font-size: 12px; color: var(--fg-secondary); line-height: 1.5; margin-bottom: 6px; }
+  .activity-points { font-size: 11px; color: var(--fg-muted); padding-left: 12px; }
+  .activity-points li { margin-bottom: 2px; }
+  .activity-actions { display: flex; gap: 6px; margin-top: 8px; }
+  .activity-action-btn {
+    flex: 1; padding: 5px 0; border-radius: var(--radius-sm);
+    font-size: 11px; font-weight: 500; text-align: center;
+    border: 1px solid var(--border); color: var(--fg-secondary);
+    transition: all 0.12s;
+  }
+  .activity-action-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .activity-action-btn.primary { background: var(--primary); color: var(--white); border-color: var(--primary); }
+  .activity-action-btn.primary:hover { background: var(--primary-dark); }
+
+  /* ── Degradation Banner ── */
+  .degrade-banner {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px; background: #fffbeb; border-bottom: 1px solid #fde68a;
+    font-size: 12px; color: #92400e; flex-shrink: 0;
+  }
+  .degrade-banner svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+  /* ── Quick Reply ── */
+  .quick-reply-toggle {
+    font-size: 11px; color: var(--fg-muted); cursor: pointer;
+    margin-top: 6px; transition: color 0.12s;
+  }
+  .quick-reply-toggle:hover { color: var(--primary); }
+  .quick-replies { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .quick-reply-btn {
+    padding: 3px 8px; border-radius: var(--radius-sm); font-size: 11px;
+    border: 1px solid var(--border); color: var(--fg-secondary);
+    transition: all 0.12s;
+  }
+  .quick-reply-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* ── Version Bar ── */
+  .version-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 16px; border-top: 1px solid var(--border-light);
+    background: var(--bg-secondary); font-size: 12px; flex-shrink: 0;
+  }
+  .version-bar-label { display: flex; align-items: center; gap: 4px; color: var(--fg-secondary); flex-shrink: 0; }
+  .version-bar-label svg { width: 13px; height: 13px; }
+  .version-list { display: flex; align-items: center; gap: 4px; overflow-x: auto; flex: 1; }
+  .version-item { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+  .version-btn {
+    padding: 3px 8px; border-radius: 4px; font-size: 11px; white-space: nowrap;
+    border: 1px solid var(--border); color: var(--fg-muted);
+    background: var(--bg); transition: all 0.12s;
+  }
+  .version-btn:hover { background: var(--bg-hover); color: var(--fg); }
+  .version-btn.current { background: var(--primary-light); color: var(--primary-text); border-color: var(--primary); font-weight: 500; }
+  .version-lock-btn {
+    width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
+    border-radius: 3px; transition: background 0.12s;
+  }
+  .version-lock-btn:hover { background: var(--bg-hover); }
+  .version-lock-btn svg { width: 11px; height: 11px; }
+  .version-lock-btn.locked svg { color: var(--favorite); }
+  .version-lock-btn.unlocked svg { color: var(--fg-placeholder); }
+  .version-autosave {
+    display: flex; align-items: center; gap: 4px; color: var(--primary);
+    font-size: 11px; flex-shrink: 0;
+  }
+  .version-autosave .dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--primary); animation: pulse 2s ease-in-out infinite;
+  }
+
+  /* ── Commander Toolbar ── */
+  .commander-toolbar { display: flex; align-items: center; gap: 2px; }
+  .commander-tool-btn {
+    width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-sm); color: var(--fg-placeholder);
+    transition: color 0.12s, background 0.12s;
+  }
+  .commander-tool-btn:hover { color: var(--fg-secondary); background: var(--bg-hover); }
+  .commander-tool-btn svg { width: 15px; height: 15px; }
+
+  /* ── Publish Confirm ── */
+  .publish-confirm-bar {
+    display: flex; align-items: center; gap: 8px;
+    margin-left: auto; flex-shrink: 0;
+  }
+  .publish-confirm-btn {
+    padding: 4px 12px; border-radius: var(--radius-sm);
+    background: var(--primary); color: var(--white);
+    font-size: 11px; font-weight: 500; transition: background 0.12s;
+  }
+  .publish-confirm-btn:hover { background: var(--primary-dark); }
+  .publish-btn {
+    width: 28px; height: 28px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; border: none;
+    color: var(--white); transition: all 0.12s;
+  }
+  .publish-btn:hover { opacity: 0.85; transform: scale(1.05); }
+  .publish-btn.publishing { box-shadow: 0 0 0 2px var(--primary), 0 0 0 4px var(--primary-light); }
+  .publish-btn.brand-zhihu { background: var(--brand-zhihu); }
+  .publish-btn.brand-xiaohongshu { background: var(--brand-xiaohongshu); }
+  .publish-btn.brand-weibo { background: var(--brand-weibo); }
+  .publish-btn.brand-douyin { background: var(--brand-douyin); }
+  .publish-btn.brand-bilibili { background: var(--brand-bilibili); }
+
+  /* ── Scroll to bottom ── */
+  .scroll-bottom-btn {
+    position: sticky; bottom: 8px; margin: 0 auto; display: block;
+    padding: 5px 14px; border-radius: var(--radius-full);
+    background: var(--primary); color: var(--white);
+    font-size: 12px; font-weight: 500;
+    box-shadow: 0 2px 8px var(--shadow-toast);
+    transition: background 0.12s;
+  }
+  .scroll-bottom-btn:hover { background: var(--primary-dark); }
+
+  /* ── Platform dropdown ── */
+  .platform-dropdown-wrap { position: relative; }
+  .platform-dropdown {
+    position: absolute; top: 100%; left: 0; margin-top: 4px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: 0 4px 12px var(--shadow-toast);
+    min-width: 120px; z-index: 50; overflow: hidden; display: none;
+  }
+  .platform-dropdown.show { display: block; }
+  .platform-dropdown-item {
+    width: 100%; text-align: left; padding: 7px 12px;
+    font-size: 12px; color: var(--fg-secondary);
+    transition: background 0.12s;
+  }
+  .platform-dropdown-item:hover { background: var(--bg-hover); color: var(--fg); }
+
+  /* ─ Toast ── */
+  .toast-container {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    z-index: 1000; display: flex; flex-direction: column; gap: 8px;
+    align-items: center; pointer-events: none;
+  }
+  .toast {
+    padding: 8px 16px; border-radius: var(--radius);
+    background: var(--toast-bg); color: var(--white); font-size: 13px; font-weight: 500;
+    box-shadow: 0 4px 12px var(--shadow-toast);
+    opacity: 0; transform: translateY(8px);
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: auto;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* ── Animations ── */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .ws-item { animation: fadeIn 0.2s ease both; }
+</style>
+</head>
+<body>
+<div class="app" data-component="App Layout" data-od-id="app-layout">
+
+  <!-- ═══ Sidebar ═══ -->
+  <aside class="sidebar" data-component="Workspace Sidebar" data-od-id="sidebar">
+
+    <!-- Header -->
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <div class="sidebar-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.9C15.5 4.9 17 3.5 19 2c1 2 2 4.5 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+        </div>
+        <div>
+          <div class="sidebar-brand-text">观微</div>
+          <div class="sidebar-brand-sub">GuanWei</div>
+        </div>
+      </div>
+      <button class="btn-create" data-component="Create Workspace Button" data-od-id="btn-create">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        新建工作空间
+      </button>
+    </div>
+
+    <!-- Search -->
+    <div class="sidebar-search" data-component="Search Bar" data-od-id="sidebar-search">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" placeholder="搜索工作空间…" aria-label="搜索工作空间" />
+        <span class="search-shortcut">⌘K</span>
+      </div>
+    </div>
+
+    <!-- Workspace List -->
+    <div class="sidebar-list" data-component="Workspace List" data-od-id="workspace-list" id="workspaceList">
+      <!-- Rendered by JS -->
+    </div>
+
+    <!-- Bottom Nav -->
+    <div class="sidebar-bottom" data-component="Bottom Navigation" data-od-id="bottom-nav">
+      <nav class="bottom-nav">
+        <button class="nav-btn" data-path="/melon" title="瓜田">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.9C15.5 4.9 17 3.5 19 2c1 2 2 4.5 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+          <span class="nav-btn-label">瓜田</span>
+        </button>
+        <button class="nav-btn active" data-path="/agent-world" title="工作间">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          <span class="nav-btn-label">工作间</span>
+          <span class="nav-badge"></span>
+        </button>
+        <button class="nav-btn" data-path="/verify" title="求证">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <span class="nav-btn-label">求证</span>
+        </button>
+        <button class="nav-btn" data-path="/settings" title="设置">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          <span class="nav-btn-label">设置</span>
+        </button>
+      </nav>
+
+      <!-- User Card -->
+      <div class="user-card" data-component="User Profile" data-od-id="user-card">
+        <div class="user-avatar">见</div>
+        <div class="user-info">
+          <div class="user-name">见微侦探</div>
+          <div class="user-rank">Lv.4 洞察者 · 1280/2000</div>
+          <div class="user-rank-bar"><div class="user-rank-fill"></div></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ══ Center Editor ═══ -->
+  <main class="center" data-component="Editor Area" data-od-id="editor">
+    <header class="editor-header">
+      <div class="editor-breadcrumb">
+        <button class="editor-action-btn" title="返回">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <span>工作间</span>
+        <span class="bc-sep">/</span>
+        <span class="bc-active" id="breadcrumbTitle">AI换脸诈骗频发</span>
+        <span style="margin-left:12px;font-size:11px;color:var(--fg-muted);display:flex;align-items:center;gap:4px;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          最后保存 2分钟前
+        </span>
+      </div>
+      <div class="editor-actions">
+        <div class="mode-toggle">
+          <button class="mode-btn active">Assist</button>
+          <button class="mode-btn">Auto</button>
+        </div>
+        <button class="editor-action-btn" title="通知" style="position:relative;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          <span style="position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--danger);border:1.5px solid var(--bg);"></span>
+        </button>
+        <div class="user-avatar" style="width:26px;height:26px;font-size:11px;">见</div>
+      </div>
+    </header>
+
+    <div class="platform-bar" data-component="Platform Tabs" data-od-id="platform-tabs">
+      <button class="platform-tab active">
+        <span class="platform-dot green"></span>
+        通用稿（主稿）
+      </button>
+      <button class="platform-tab">
+        <span class="platform-icon" style="background:var(--brand-zhihu);">知</span>
+        知乎
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--status-active)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      </button>
+      <button class="platform-tab">
+        <span class="platform-icon" style="background:var(--brand-xiaohongshu);">红</span>
+        小红书
+      </button>
+      <button class="platform-tab">
+        <span class="platform-icon" style="background:var(--brand-weibo);">微</span>
+        微博
+      </button>
+      <button class="platform-tab">
+        <span class="platform-icon" style="background:var(--brand-douyin);">抖</span>
+        抖音
+      </button>
+      <button class="platform-tab">
+        <span class="platform-icon" style="background:var(--brand-bilibili);">B</span>
+        B站
+      </button>
+      <div class="platform-dropdown-wrap">
+        <button class="platform-tab" style="border:1.5px dashed var(--border);color:var(--fg-placeholder);" id="addPlatformBtn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <div class="platform-dropdown" id="platformDropdown">
+          <button class="platform-dropdown-item">贴吧</button>
+        </div>
+      </div>
+      <div class="publish-confirm-bar">
+        <span style="font-size:11px;color:var(--fg-muted);">发布到</span>
+        <button class="publish-btn brand-zhihu publishing" title="已复制文案，待确认">知</button>
+        <button class="publish-btn brand-xiaohongshu" title="发布到小红书">红</button>
+        <button class="publish-btn brand-weibo" title="发布到微博">微</button>
+        <button class="publish-btn brand-douyin" title="发布到抖音">抖</button>
+        <button class="publish-btn brand-bilibili" title="发布到B站">B</button>
+        <button class="publish-confirm-btn" id="confirmPublishBtn">已完成发布 (1)</button>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <span class="status-indicator">
+        <span class="status-dot-live pulse"></span>
+        已连接 5/5 Agent
+      </span>
+      <span>字数 1248</span>
+      <span>预计阅读 5分钟</span>
+    </div>
+
+    <div class="editor-body">
+      <div class="editor-content">
+        <input class="editor-title-input" value="AI换脸诈骗频发：技术滥用下的信任危机与治理困境" placeholder="输入标题" aria-label="文章标题" />
+        <div class="editor-text">
+          <p>近年来，AI换脸技术被不法分子用于诈骗、敲诈勒索、传播虚假信息等违法行为，案件数量呈上升趋势。从"换脸拟声"冒充亲友借钱，到伪造名人视频进行投资诈骗，受害者遍布各个年龄段，损失金额巨大。</p>
+          <h2>一、事件概述</h2>
+          <p>据公安部2024年数据显示，全国已侦破AI换脸相关诈骗案件123起，涉案金额超2.3亿元，同比增长300%。受害者中，大学生和中老年人占比最高…</p>
+          <p><span class="highlight">这类诈骗的核心手法是利用AI换脸和拟声技术，伪造熟人或权威人士的形象和声音</span>，降低受害者的警惕性，从而达到骗取钱财或个人信息的目的。</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Version Bar with Snapshot Locking -->
+    <div class="version-bar" data-component="Version Bar" data-od-id="version-bar">
+      <div class="version-bar-label">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        版本历史
+      </div>
+      <div class="version-list">
+        <div class="version-item">
+          <button class="version-btn current">V5 2分钟前 (自动保存)</button>
+          <button class="version-lock-btn unlocked" title="锁定">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </button>
+        </div>
+        <div class="version-item">
+          <button class="version-btn">V4 10分钟前</button>
+          <button class="version-lock-btn locked" title="已锁定">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+          </button>
+        </div>
+        <div class="version-item">
+          <button class="version-btn">V3 25分钟前</button>
+          <button class="version-lock-btn unlocked" title="锁定">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </button>
+        </div>
+        <div class="version-item">
+          <button class="version-btn">V2 1小时前</button>
+          <button class="version-lock-btn unlocked" title="锁定">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </button>
+        </div>
+        <div class="version-item">
+          <button class="version-btn">V1 2小时前</button>
+          <button class="version-lock-btn locked" title="已锁定">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="version-autosave">
+        <span class="dot"></span>
+        自动保存已开启
+      </div>
+    </div>
+
+    <div class="command-bar">
+      <div class="command-input-wrap">
+        <div class="commander-toolbar">
+          <button class="commander-tool-btn" title="附件">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          </button>
+          <button class="commander-tool-btn" title="@Agent">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/></svg>
+          </button>
+          <button class="commander-tool-btn" title="技能">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+          </button>
+        </div>
+        <textarea rows="1" placeholder="输入 / 触发技能，或 @Agent" aria-label="Commander输入框"></textarea>
+        <button class="command-send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ═══ Activity Stream ═══ -->
+  <aside class="activity" data-component="Activity Stream" data-od-id="activity">
+    <div class="activity-header">
+      <span class="activity-title">工作空间活动流</span>
+      <div style="display:flex;gap:4px;">
+        <button class="editor-action-btn" title="筛选">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        </button>
+        <button class="editor-action-btn" title="设置">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="activity-filters">
+      <button class="activity-filter active">全部</button>
+      <button class="activity-filter">搜索员</button>
+      <button class="activity-filter">研究员</button>
+      <button class="activity-filter">指挥官</button>
+      <button class="activity-filter">写作员</button>
+      <button class="activity-filter">核查员</button>
+    </div>
+
+    <!-- Degradation Banner -->
+    <div class="degrade-banner" data-component="Degradation Banner" data-od-id="degrade-banner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span>当前使用降级模式，LLM/搜索不可用，结果可能受限</span>
+    </div>
+
+    <div class="activity-list" data-component="Activity Events" data-od-id="activity-events">
+
+      <div class="activity-event">
+        <div class="activity-event-header">
+          <div class="activity-agent">
+            <span class="activity-agent-icon search">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            </span>
+            搜索员 Search Agent
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="activity-time">09:21</span>
+            <span class="activity-status done">完成</span>
+          </div>
+        </div>
+        <div class="activity-desc">找到 8 篇相关报道和 12 个数据源</div>
+        <div class="activity-actions">
+          <button class="activity-action-btn">查看结果</button>
+          <button class="activity-action-btn primary">引用全部</button>
+        </div>
+        <div class="quick-replies">
+          <button class="quick-reply-btn">继续</button>
+          <button class="quick-reply-btn">详细说明</button>
+          <button class="quick-reply-btn">暂停</button>
+          <button class="quick-reply-btn">重新执行</button>
+        </div>
+      </div>
+
+      <div class="activity-event">
+        <div class="activity-event-header">
+          <div class="activity-agent">
+            <span class="activity-agent-icon research">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            </span>
+            研究员 Research Agent
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="activity-time">09:23</span>
+            <span class="activity-status done">完成</span>
+          </div>
+        </div>
+        <div class="activity-desc">提炼出 4 个核心观点</div>
+        <ul class="activity-points">
+          <li>技术滥用门槛降低是主因</li>
+          <li>监管存在滞后性和盲区</li>
+          <li>平台责任边界模糊</li>
+          <li>公众防范意识不足</li>
+        </ul>
+        <div class="activity-actions">
+          <button class="activity-action-btn">查看详情</button>
+          <button class="activity-action-btn primary">采纳观点</button>
+        </div>
+      </div>
+
+      <div class="activity-event">
+        <div class="activity-event-header">
+          <div class="activity-agent">
+            <span class="activity-agent-icon verify">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </span>
+            核查员 Evidence Agent
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="activity-time">09:25</span>
+            <span class="activity-status warn">警告</span>
+          </div>
+        </div>
+        <div class="activity-desc">发现 2 条信息存疑</div>
+        <ul class="activity-points">
+          <li>某平台用户量数据无法验证来源</li>
+          <li>案件破获率数据存在差异</li>
+        </ul>
+        <div class="activity-actions">
+          <button class="activity-action-btn">重新核查</button>
+          <button class="activity-action-btn">查看证据</button>
+        </div>
+      </div>
+
+      <div class="activity-event">
+        <div class="activity-event-header">
+          <div class="activity-agent">
+            <span class="activity-agent-icon writing">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+            </span>
+            写作员 Writing Agent
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="activity-time">09:26</span>
+            <span class="activity-status done">完成</span>
+          </div>
+        </div>
+        <div class="activity-desc">已生成 6 个平台版本</div>
+        <div class="activity-actions">
+          <button class="activity-action-btn" style="flex:0 0 auto;padding:5px 10px;">知</button>
+          <button class="activity-action-btn" style="flex:0 0 auto;padding:5px 10px;">红</button>
+          <button class="activity-action-btn" style="flex:0 0 auto;padding:5px 10px;">微</button>
+          <button class="activity-action-btn" style="flex:0 0 auto;padding:5px 10px;">抖</button>
+          <button class="activity-action-btn" style="flex:0 0 auto;padding:5px 10px;">B</button>
+          <button class="activity-action-btn primary" style="flex:1;">切换查看</button>
+        </div>
+      </div>
+
+      <div class="activity-event">
+        <div class="activity-event-header">
+          <div class="activity-agent">
+            <span class="activity-agent-icon commander">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </span>
+            指挥官 Commander
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="activity-time">09:20</span>
+            <span class="activity-status running">进行中</span>
+          </div>
+        </div>
+        <div class="activity-desc">任务规划已完成，5 个 Agent 已启动</div>
+        <div class="quick-replies">
+          <button class="quick-reply-btn">继续</button>
+          <button class="quick-reply-btn">详细说明</button>
+          <button class="quick-reply-btn">暂停</button>
+          <button class="quick-reply-btn">重新执行</button>
+        </div>
+      </div>
+
+      <!-- Scroll to bottom -->
+      <button class="scroll-bottom-btn">↓ 查看最新</button>
+
+    </div>
+  </aside>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ── Mock Data ──
+const mockWorkspaces = [
+  { id: 'ws-1', title: 'AI换脸诈骗频发', status: 'active', isFavorite: true, tag: 'hotspot', updatedAt: Date.now() - 21 * 60000 },
+  { id: 'ws-2', title: '南开220万诈骗事件分析', status: 'active', isFavorite: false, tag: null, updatedAt: Date.now() - 86400000 },
+  { id: 'ws-3', title: '高考作文题全网讨论', status: 'completed', isFavorite: false, tag: 'opinion', updatedAt: Date.now() - 172800000 },
+  { id: 'ws-4', title: '网红奶茶品牌危机', status: 'completed', isFavorite: true, tag: 'hotspot', updatedAt: Date.now() - 259200000 },
+  { id: 'ws-5', title: 'AI版权争议追踪', status: 'tracking', isFavorite: true, tag: 'science', updatedAt: Date.now() - 432000000 },
+  { id: 'ws-6', title: '大学生兼职现状调查', status: 'tracking', isFavorite: false, tag: null, updatedAt: Date.now() - 518400000 },
+  { id: 'ws-7', title: '新能源汽车补贴政策解读', status: 'draft', isFavorite: false, tag: null, updatedAt: Date.now() - 604800000 },
+  { id: 'ws-8', title: '某明星塌房事件始末', status: 'completed', isFavorite: false, tag: 'hotspot', updatedAt: Date.now() - 691200000 },
+  { id: 'ws-9', title: '量子计算最新突破', status: 'draft', isFavorite: false, tag: 'science', updatedAt: Date.now() - 777600000 },
+  { id: 'ws-10', title: '2024年消费趋势报告', status: 'archived', isFavorite: false, tag: null, updatedAt: Date.now() - 1209600000 },
+  { id: 'ws-11', title: '社区治理创新案例', status: 'archived', isFavorite: false, tag: null, updatedAt: Date.now() - 1814400000 },
+  { id: 'ws-12', title: 'AI医疗诊断准确性研究', status: 'active', isFavorite: true, tag: 'science', updatedAt: Date.now() - 3600000 },
+  { id: 'ws-13', title: '短视频平台算法推荐机制', status: 'draft', isFavorite: false, tag: null, updatedAt: Date.now() - 900000000 },
+];
+
+let currentId = 'ws-1';
+let collapsedGroups = new Set(['tracking', 'completed', 'archived']);
+let searchQuery = '';
+
+// ── Helpers ──
+function formatTime(ts) {
+  const diff = Date.now() - ts;
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return '刚刚';
+  if (m < 60) return m + '分钟前';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + '小时前';
+  const d = Math.floor(h / 24);
+  if (d === 1) return '昨天';
+  if (d < 7) return d + '天前';
+  return Math.floor(d / 7) + '周前';
+}
+
+const statusLabels = { active: '进行中', draft: '草稿', completed: '已完成', tracking: '跟踪中', archived: '已归档' };
+const groupOrder = [
+  { key: 'favorites', label: '收藏', icon: 'star' },
+  { key: 'active', label: '进行中', icon: 'circle' },
+  { key: 'tracking', label: '跟踪中', icon: 'clock' },
+  { key: 'completed', label: '已完成', icon: 'check' },
+  { key: 'archived', label: '已归档', icon: 'archive' },
+];
+
+function getGroups(data) {
+  const favorites = data.filter(w => w.isFavorite && w.status !== 'archived');
+  const active = data.filter(w => (w.status === 'active' || w.status === 'draft') && !w.isFavorite);
+  const tracking = data.filter(w => w.status === 'tracking');
+  const completed = data.filter(w => w.status === 'completed' && !w.isFavorite);
+  const archived = data.filter(w => w.status === 'archived');
+  return { favorites, active, tracking, completed, archived };
+}
+
+function filterWorkspaces(query) {
+  if (!query.trim()) return mockWorkspaces;
+  const q = query.toLowerCase();
+  return mockWorkspaces.filter(w =>
+    w.title.toLowerCase().includes(q) ||
+    (w.tag && w.tag.includes(q)) ||
+    statusLabels[w.status].includes(q)
+  );
+}
+
+// ── Render ──
+function render() {
+  const filtered = filterWorkspaces(searchQuery);
+  const groups = getGroups(filtered);
+  const list = document.getElementById('workspaceList');
+
+  if (filtered.length === 0) {
+    list.innerHTML = `
+      <div class="ws-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <div>没有找到匹配的工作空间</div>
+        <div style="margin-top:4px;font-size:11px;">尝试其他关键词</div>
+      </div>`;
+    return;
+  }
+
+  let html = '';
+  for (const g of groupOrder) {
+    const items = groups[g.key];
+    if (items.length === 0) continue;
+    const isCollapsed = collapsedGroups.has(g.key);
+    const chevronClass = isCollapsed ? 'ws-group-chevron collapsed' : 'ws-group-chevron';
+
+    html += `<div class="ws-group" data-group="${g.key}">`;
+    html += `<div class="ws-group-header" onclick="toggleGroup('${g.key}')">`;
+    html += `<svg class="${chevronClass}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>`;
+    html += `<span class="ws-group-label">${g.label}</span>`;
+    html += `<span class="ws-group-count">${items.length}</span>`;
+    html += `</div>`;
+    html += `<div class="ws-group-items${isCollapsed ? ' collapsed' : ''}" style="max-height:${isCollapsed ? '0' : items.length * 48 + 'px'}">`;
+
+    for (const ws of items) {
+      const isActive = ws.id === currentId;
+      html += `<div class="ws-item${isActive ? ' active' : ''}" data-id="${ws.id}" onclick="switchWorkspace('${ws.id}')" style="animation-delay:${Math.random() * 0.1}s">`;
+      html += `<span class="ws-status-dot ${ws.status}"></span>`;
+      html += `<div class="ws-item-content">`;
+      html += `<div class="ws-item-title">${ws.title}</div>`;
+      html += `<div class="ws-item-meta">`;
+      html += `<span>${formatTime(ws.updatedAt)}</span>`;
+      if (ws.tag) {
+        const tagLabels = { hotspot: '热点', science: '科技', opinion: '观点', debunk: '辟谣', meme: '梗' };
+        html += `<span class="ws-item-tag ${ws.tag}">${tagLabels[ws.tag] || ws.tag}</span>`;
+      }
+      if (ws.status === 'active') html += `<span style="color:var(--primary);font-size:10px;">${statusLabels[ws.status]}</span>`;
+      if (ws.status === 'draft') html += `<span style="color:var(--fg-muted);font-size:10px;">${statusLabels[ws.status]}</span>`;
+      html += `</div></div>`;
+
+      // Hover actions
+      html += `<div class="ws-item-actions">`;
+      html += `<button class="ws-action-btn${ws.isFavorite ? ' favorited' : ''}" onclick="event.stopPropagation();toggleFavorite('${ws.id}')" title="${ws.isFavorite ? '取消收藏' : '收藏'}">`;
+      html += ws.isFavorite
+        ? `<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
+        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+      html += `</button>`;
+      if (ws.status !== 'archived') {
+        html += `<button class="ws-action-btn" onclick="event.stopPropagation();archiveWorkspace('${ws.id}')" title="归档">`;
+        html += `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>`;
+        html += `</button>`;
+      } else {
+        html += `<button class="ws-action-btn" onclick="event.stopPropagation();unarchiveWorkspace('${ws.id}')" title="取消归档">`;
+        html += `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="m10 14 2-2 2 2"/></svg>`;
+        html += `</button>`;
+      }
+      html += `</div>`;
+      html += `</div>`;
+    }
+
+    html += `</div></div>`;
+  }
+
+  list.innerHTML = html;
+}
+
+// ── Interactions ──
+function toggleGroup(key) {
+  if (collapsedGroups.has(key)) collapsedGroups.delete(key);
+  else collapsedGroups.add(key);
+  render();
+}
+
+function switchWorkspace(id) {
+  currentId = id;
+  const ws = mockWorkspaces.find(w => w.id === id);
+  if (ws) {
+    document.getElementById('breadcrumbTitle').textContent = ws.title;
+  }
+  render();
+}
+
+function toggleFavorite(id) {
+  const ws = mockWorkspaces.find(w => w.id === id);
+  if (ws) {
+    ws.isFavorite = !ws.isFavorite;
+    ws.updatedAt = Date.now();
+    showToast(ws.isFavorite ? '已收藏「' + ws.title + '」' : '已取消收藏');
+    render();
+  }
+}
+
+function archiveWorkspace(id) {
+  const ws = mockWorkspaces.find(w => w.id === id);
+  if (ws) {
+    ws.status = 'archived';
+    ws.updatedAt = Date.now();
+    showToast('已归档「' + ws.title + '」');
+    render();
+  }
+}
+
+function unarchiveWorkspace(id) {
+  const ws = mockWorkspaces.find(w => w.id === id);
+  if (ws) {
+    ws.status = 'draft';
+    ws.updatedAt = Date.now();
+    showToast('已恢复「' + ws.title + '」');
+    render();
+  }
+}
+
+function showToast(msg) {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = msg;
+  container.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('show'));
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => toast.remove(), 200);
+  }, 2000);
+}
+
+// Search
+document.getElementById('searchInput').addEventListener('input', function(e) {
+  searchQuery = e.target.value;
+  render();
+});
+
+// Keyboard shortcut
+document.addEventListener('keydown', function(e) {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    document.getElementById('searchInput').focus();
+  }
+});
+
+// Mode toggle
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// Activity filter
+document.querySelectorAll('.activity-filter').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.activity-filter').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// Nav buttons
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// Platform tabs
+document.querySelectorAll('.platform-tab').forEach(tab => {
+  tab.addEventListener('click', function() {
+    document.querySelectorAll('.platform-tab').forEach(t => t.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// Platform dropdown toggle
+const addPlatformBtn = document.getElementById('addPlatformBtn');
+const platformDropdown = document.getElementById('platformDropdown');
+if (addPlatformBtn && platformDropdown) {
+  addPlatformBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    platformDropdown.classList.toggle('show');
+  });
+  document.addEventListener('click', function() {
+    platformDropdown.classList.remove('show');
+  });
+  platformDropdown.querySelectorAll('.platform-dropdown-item').forEach(item => {
+    item.addEventListener('click', function(e) {
+      e.stopPropagation();
+      showToast('已添加「' + this.textContent + '」平台');
+      platformDropdown.classList.remove('show');
+    });
+  });
+}
+
+// Publish confirm
+const confirmPublishBtn = document.getElementById('confirmPublishBtn');
+if (confirmPublishBtn) {
+  confirmPublishBtn.addEventListener('click', function() {
+    showToast('已确认发布，工作空间状态更新为「已发布」');
+    this.style.display = 'none';
+    document.querySelectorAll('.publish-btn.publishing').forEach(btn => {
+      btn.classList.remove('publishing');
+    });
+  });
+}
+
+// Version lock toggle
+document.querySelectorAll('.version-lock-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const isLocked = this.classList.contains('locked');
+    this.classList.toggle('locked');
+    this.classList.toggle('unlocked');
+    const svg = this.querySelector('svg');
+    if (isLocked) {
+      svg.innerHTML = '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>';
+      this.title = '锁定';
+      showToast('已解锁快照');
+    } else {
+      svg.innerHTML = '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>';
+      this.title = '已锁定';
+      showToast('已锁定快照，不会被自动淘汰');
+    }
+  });
+});
+
+// Scroll to bottom
+document.querySelectorAll('.scroll-bottom-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const list = this.parentElement;
+    list.scrollTop = list.scrollHeight;
+  });
+});
+
+// Initial render
+render();
+</script>
+</body>
+</html>

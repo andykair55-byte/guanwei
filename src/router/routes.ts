@@ -49,9 +49,11 @@ export const EmotionDetector = lazy(() => import('../pages/EmotionDetector'))
 // 辩论 / AI
 export const AIArena = lazy(() => import('../pages/AIArena'))
 export const AIBattle = lazy(() => import('../pages/AIBattle'))
-export const RoundTable = lazy(() => import('../pages/RoundTable'))
 export const DebateLobby = lazy(() => import('../pages/DebateLobby'))
 export const DebateRoomPage = lazy(() => import('../pages/DebateRoomPage'))
+export const EntertainmentRoomPage = lazy(() => import('../pages/EntertainmentRoomPage'))
+export const NationalDebateLobby = lazy(() => import('../pages/NationalDebateLobby'))
+export const NationalDebateRoomPage = lazy(() => import('../pages/NationalDebateRoomPage'))
 export const AICreationPage = lazy(() => import('../pages/AICreationPage'))
 
 // 其他
@@ -64,6 +66,7 @@ export const AgentWorldPage = lazy(() => import('../pages/AgentWorldPage'))
 export const EntertainmentHallPage = lazy(() => import('../pages/EntertainmentHallPage'))
 export const JudgeFeedPage = lazy(() => import('../pages/JudgeFeedPage'))
 export const AIArenaLobby = lazy(() => import('../pages/AIArenaLobby'))
+export const CharacterSelect = lazy(() => import('../pages/CharacterSelect'))
 export const DebateHallLobby = lazy(() => import('../pages/DebateHallLobby'))
 export const MelonJudgePage = lazy(() => import('../pages/MelonJudgePage'))
 
@@ -107,12 +110,14 @@ export const layoutRoutes: RouteConfig[] = [
   { path: '/entertainment',                          platform: 'both' },
   { path: '/entertainment/arena',                    platform: 'both' },
   { path: '/entertainment/arena/ai-battle/:topicId', platform: 'both' },
+  { path: '/entertainment/arena/character-select',     platform: 'both' },
   { path: '/entertainment/arena/human-battle',       platform: 'both' },
   { path: '/entertainment/arena/forge',              platform: 'web' },
   { path: '/entertainment/debate',                   platform: 'both' },
-  { path: '/entertainment/debate/round-table',       platform: 'both' },
   { path: '/entertainment/debate/lobby',             platform: 'both' },
   { path: '/entertainment/debate/room/:roomId',      platform: 'both' },
+  { path: '/entertainment/debate/national',          platform: 'both' },
+  { path: '/entertainment/debate/national/:roomId',  platform: 'both' },
   { path: '/entertainment/judge',                    platform: 'both' },
   { path: '/entertainment/judge/cases',              platform: 'both' },
   { path: '/entertainment/judge/melon/:id',          platform: 'both' },

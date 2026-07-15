@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Crown, Flame, Radio, Eye, Heart,
-  Zap, Trophy, Swords, Shield, Sparkles,
+  Zap, Trophy, Swords, Sparkles,
 } from 'lucide-react'
 import { getAllThemePacks } from '../services/themePackService'
 import { TOPICS } from '../services/debateArenaService'
@@ -274,20 +274,11 @@ export default function AIArenaLobby() {
       id: 'human-battle',
       icon: <Swords size={18} className="text-white" strokeWidth={2} />,
       title: '人机对战',
-      desc: '亲自上阵与 AI 辩手一决高下',
-      btnText: '开战',
+      desc: '选择角色，与诸葛亮聊蜀国、和曹操聊用人',
+      btnText: '选角色开战',
       color: '#dc2626',
       badge: 'NEW',
-      onClick: () => navigate('/entertainment/arena/human-battle'),
-    },
-    {
-      id: 'free-battle',
-      icon: <Shield size={18} className="text-white" strokeWidth={2} />,
-      title: '自由对战',
-      desc: '自选 AI 角色与辩题，自定义对决',
-      btnText: '开始',
-      color: '#2563eb',
-      onClick: () => navigate(`/entertainment/arena/ai-battle/${TOPICS[0].id}`),
+      onClick: () => navigate('/entertainment/arena/character-select'),
     },
     {
       id: 'forge',
@@ -435,7 +426,7 @@ export default function AIArenaLobby() {
             <span className="text-[10px] text-gray-400">FREE MODE</span>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2">
             {featureCards.map(card => (
               <FeatureCard key={card.id} {...card} />
             ))}

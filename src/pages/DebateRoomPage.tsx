@@ -15,18 +15,12 @@ import { getPhaseLabel } from '../types/debate'
 import type { DanmakuQueueItem } from '../services/danmakuService'
 import { pickDanmaku, toQueueItems } from '../services/danmakuService'
 import { useIsDesktop } from '../hooks/useIsDesktop'
-import DebateRoom4v4Demo from './DebateRoom4v4Demo'
 
 
 
 export default function DebateRoomPage() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
-
-  // 4v4 国赛 demo 模式
-  if (roomId === 'new') {
-    return <DebateRoom4v4Demo />
-  }
 
   const currentRoom = useDebateStore(s => s.currentRoom)
   const speeches = useDebateStore(s => s.speeches)

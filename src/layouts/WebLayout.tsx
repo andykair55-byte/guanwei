@@ -13,7 +13,7 @@ const RIGHT_WIDTH_COLLAPSED = 52
 
 const IMMERSIVE_ROUTES = ['/notifications', '/messages', '/community/', '/melon/', '/hot/', '/agent-world']
 // 仅隐藏右侧面板（保留左侧导航）
-const RIGHT_HIDDEN_ROUTES = ['/profile', '/settings', '/entertainment/arena/ai-battle']
+const RIGHT_HIDDEN_ROUTES = ['/profile', '/settings', '/entertainment/arena/ai-battle', '/entertainment', '/entertainment/arena', '/entertainment/debate', '/entertainment/judge']
 const NO_TOPNAV_ROUTES: string[] = []
 
 export default function WebLayout() {
