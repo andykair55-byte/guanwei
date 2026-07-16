@@ -50,7 +50,6 @@ export const EmotionDetector = lazy(() => import('../pages/EmotionDetector'))
 export const AIArena = lazy(() => import('../pages/AIArena'))
 export const AIBattle = lazy(() => import('../pages/AIBattle'))
 export const DebateLobby = lazy(() => import('../pages/DebateLobby'))
-export const DebateRoomPage = lazy(() => import('../pages/DebateRoomPage'))
 export const EntertainmentRoomPage = lazy(() => import('../pages/EntertainmentRoomPage'))
 export const NationalDebateLobby = lazy(() => import('../pages/NationalDebateLobby'))
 export const NationalDebateRoomPage = lazy(() => import('../pages/NationalDebateRoomPage'))
@@ -67,7 +66,6 @@ export const EntertainmentHallPage = lazy(() => import('../pages/EntertainmentHa
 export const JudgeFeedPage = lazy(() => import('../pages/JudgeFeedPage'))
 export const AIArenaLobby = lazy(() => import('../pages/AIArenaLobby'))
 export const CharacterSelect = lazy(() => import('../pages/CharacterSelect'))
-export const DebateHallLobby = lazy(() => import('../pages/DebateHallLobby'))
 export const MelonJudgePage = lazy(() => import('../pages/MelonJudgePage'))
 
 // 排行 / 积分

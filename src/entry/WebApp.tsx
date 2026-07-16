@@ -140,7 +140,6 @@ export default function WebApp() {
             <Route path="/ai-arena/:topicId" element={<OldRouteRedirect to="/entertainment/arena/ai-battle" />} />
             <Route path="/ai-battle" element={<Navigate to="/entertainment/arena/human-battle" replace />} />
             <Route path="/cricket-forge" element={<Navigate to="/entertainment/arena/forge" replace />} />
-            <Route path="/round-table" element={<Navigate to="/entertainment/debate/round-table" replace />} />
             <Route path="/debate-lobby" element={<Navigate to="/entertainment/debate/lobby" replace />} />
             <Route path="/debate-room/:roomId" element={<OldRouteRedirect to="/entertainment/debate/room" />} />
             <Route path="/judge" element={<Navigate to="/entertainment/judge" replace />} />

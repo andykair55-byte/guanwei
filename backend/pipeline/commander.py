@@ -1,4 +1,4 @@
-"""Commander - Mirror 容错内核核心控制器
+"""Commander - 容错内核核心控制器
 
 负责：
 1. 异常拦截与检测

@@ -1,4 +1,4 @@
-"""Pipeline 状态类型定义 - 集成 Mirror 容错内核"""
+"""Pipeline 状态类型定义 - 容错内核"""
 from typing import TypedDict, Optional, List
 from datetime import datetime
 

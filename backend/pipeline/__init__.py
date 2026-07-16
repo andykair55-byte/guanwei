@@ -1,4 +1,4 @@
-"""Pipeline 模块 - 集成 Mirror 容错内核"""
+"""Pipeline 模块 - 容错内核"""
 
 from .orchestrator import PipelineOrchestrator, orchestrator
 from .commander import Commander, commander

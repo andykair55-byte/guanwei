@@ -39,6 +39,3 @@ server/
 
 # debug images
 1.png
-
-# Mirror (nested git repo)
-engine/Mirror/

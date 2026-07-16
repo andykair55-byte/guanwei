@@ -1,4 +1,4 @@
-"""LangGraph 编排器 - 集成 Mirror 容错内核
+"""LangGraph 编排器 - 容错内核
 
 核心架构：
 1. Commander 拦截器 - 包装每个节点，注入容错逻辑
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 class PipelineOrchestrator:
-    """Pipeline 编排器 - 集成 Mirror 容错内核"""
+    """Pipeline 编排器 - 容错内核"""
 
     def __init__(self):
         self.checkpointer = MemorySaver()
