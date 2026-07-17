@@ -52,3 +52,105 @@ def test_get_module_route_unknown_returns_default():
     """未知 module 返回 default 路由"""
     assert get_module_route("unknown.module") == MODULE_ROUTES["default"]
     assert get_module_route("") == MODULE_ROUTES["default"]
+
+
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
+from services.llm import LLMService
+
+
+def _make_mock_response(content: str = "hello"):
+    """构造 mock 的 OpenAI chat completion response"""
+    resp = MagicMock()
+    resp.choices = [MagicMock()]
+    resp.choices[0].message.content = content
+    return resp
+
+
+@pytest.mark.asyncio
+async def test_generate_with_module_uses_route_chain(monkeypatch):
+    """generate(module=...) 按 MODULE_ROUTES 链遍历"""
+    svc = LLMService(primary_provider="glm")
+
+    # mock _generate_with_provider：glm 抛异常，internlm 成功
+    call_log = []
+
+    async def fake_generate_with_provider(provider_name, prompt, system_prompt, temperature, max_tokens):
+        call_log.append(provider_name)
+        if provider_name == "glm":
+            raise RuntimeError("glm 限流")
+        return f"response from {provider_name}"
+
+    monkeypatch.setattr(svc, "_generate_with_provider", fake_generate_with_provider)
+
+    result = await svc.generate("test prompt", module="workspace.writing")
+
+    assert result == "response from internlm"
+    assert call_log == ["glm", "internlm"]  # glm 失败后切 internlm
+
+
+@pytest.mark.asyncio
+async def test_generate_without_module_uses_default_chain(monkeypatch):
+    """不传 module 时走 default 路由"""
+    svc = LLMService(primary_provider="glm")
+
+    call_log = []
+
+    async def fake_generate_with_provider(provider_name, prompt, system_prompt, temperature, max_tokens):
+        call_log.append(provider_name)
+        return f"ok from {provider_name}"
+
+    monkeypatch.setattr(svc, "_generate_with_provider", fake_generate_with_provider)
+
+    await svc.generate("test prompt")  # 不传 module
+
+    assert call_log == ["glm"]  # default 链第一个是 glm，直接成功
+
+
+@pytest.mark.asyncio
+async def test_generate_all_providers_fail_raises_runtime_error(monkeypatch):
+    """所有 provider 都失败 → RuntimeError"""
+    svc = LLMService(primary_provider="glm")
+
+    async def fake_generate_with_provider(provider_name, prompt, system_prompt, temperature, max_tokens):
+        raise RuntimeError(f"{provider_name} 挂了")
+
+    monkeypatch.setattr(svc, "_generate_with_provider", fake_generate_with_provider)
+
+    with pytest.raises(RuntimeError, match="所有 provider"):
+        await svc.generate("test", module="workspace.writing")
+
+
+@pytest.mark.asyncio
+async def test_generate_with_explicit_provider_ignores_module(monkeypatch):
+    """显式传 provider 时优先级最高，忽略 module"""
+    svc = LLMService(primary_provider="glm")
+
+    call_log = []
+
+    async def fake_generate_with_provider(provider_name, prompt, system_prompt, temperature, max_tokens):
+        call_log.append(provider_name)
+        return f"ok from {provider_name}"
+
+    monkeypatch.setattr(svc, "_generate_with_provider", fake_generate_with_provider)
+
+    # provider=deepseek + module=workspace.writing → 应该只用 deepseek
+    await svc.generate("test", provider="deepseek", module="workspace.writing")
+
+    assert call_log == ["deepseek"]
+
+
+@pytest.mark.asyncio
+async def test_generate_json_with_module(monkeypatch):
+    """generate_json 支持 module 参数"""
+    svc = LLMService(primary_provider="glm")
+
+    # mock _generate_json_mode 返回成功
+    async def fake_generate_json_mode(prompt, system_prompt, provider, module=None):
+        return {"result": f"from {provider or 'default'}"}
+
+    monkeypatch.setattr(svc, "_generate_json_mode", fake_generate_json_mode)
+
+    result = await svc.generate_json("test", module="workspace.writing")
+
+    assert result == {"result": "from glm"}

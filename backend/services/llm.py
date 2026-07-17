@@ -348,6 +348,7 @@ class LLMService:
         prompt: str,
         system_prompt: str = "",
         provider: Optional[str] = None,
+        module: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: int = 4096,
     ) -> str:
@@ -356,7 +357,8 @@ class LLMService:
         Args:
             prompt: 用户输入提示
             system_prompt: 系统提示
-            provider: 指定提供商，None 则使用主提供商 + 自动降级
+            provider: 指定提供商（优先级最高，忽略 module）
+            module: 模块名（如 "workspace.writing"），按 MODULE_ROUTES 选 provider 链
             temperature: 温度
             max_tokens: 最大输出 token 数
 
@@ -364,12 +366,13 @@ class LLMService:
             LLM 生成的文本
         """
         if provider:
+            # 显式指定优先级最高
             return await self._generate_with_provider(
                 provider, prompt, system_prompt, temperature, max_tokens
             )
 
-        # 主提供商 + 自动降级（provider × key 二维矩阵遍历）
-        providers_to_try = [self.primary_provider] + self.fallback_providers
+        # 按 module 路由链遍历（替代原来的 primary + fallback）
+        providers_to_try = get_module_route(module)
         last_error = None
 
         for prov in providers_to_try:
@@ -387,7 +390,7 @@ class LLMService:
                 last_error = e
                 continue
 
-        raise RuntimeError(f"所有 provider × key 均不可用: {last_error}")
+        raise RuntimeError(f"模块 {module or 'default'} 的所有 provider × key 均不可用: {last_error}")
 
     async def _generate_with_provider(
         self,
@@ -414,13 +417,15 @@ class LLMService:
         prompt: str,
         system_prompt: str = "",
         provider: Optional[str] = None,
+        module: Optional[str] = None,
     ) -> dict[str, Any]:
         """生成结构化 JSON 响应
 
         Args:
             prompt: 用户输入提示
             system_prompt: 系统提示
-            provider: 指定提供商
+            provider: 指定提供商（优先级最高）
+            module: 模块名，按 MODULE_ROUTES 选 provider 链
 
         Returns:
             解析后的 JSON 对象
@@ -430,14 +435,14 @@ class LLMService:
         if config and config.supports_json_mode:
             try:
                 result = await self._generate_json_mode(
-                    prompt, system_prompt, provider
+                    prompt, system_prompt, provider or self.primary_provider, module=module
                 )
                 return result
             except Exception as e:
                 logger.debug(f"JSON mode failed, falling back to text: {e}")
 
         # 回退到文本生成 + 手动解析
-        text = await self.generate(prompt, system_prompt, provider)
+        text = await self.generate(prompt, system_prompt, provider, module=module)
         return self._parse_json(text)
 
     async def _generate_json_mode(
@@ -445,6 +450,7 @@ class LLMService:
         prompt: str,
         system_prompt: str,
         provider: Optional[str],
+        module: Optional[str] = None,
     ) -> dict[str, Any]:
         """使用 JSON mode 生成"""
         provider_name = provider or self.primary_provider
