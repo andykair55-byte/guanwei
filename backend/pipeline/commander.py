@@ -147,7 +147,12 @@ class Commander:
         return False
 
     def _switch_to_backup(self, state: PipelineState) -> bool:
-        """切换到备用 Agent"""
+        """切换到备用 Agent（局部切换，不污染全局 llm_service）
+
+        评审 #2 加固：删掉 llm_service.set_primary_provider() 全局调用。
+        provider 切换只记录在 state["agent_pool"]["current_provider"]，
+        实际 LLM 调用的 fallback 由 module 路由链处理。
+        """
         agent_pool = state["agent_pool"]
         current_provider = agent_pool["current_provider"]
         backups = agent_pool["backup"]
@@ -158,7 +163,8 @@ class Commander:
                 agent_pool["fail_count"] += 1
                 agent_pool["last_switch_time"] = time.time()
 
-                llm_service.set_primary_provider(backup["provider"])
+                # 不再调 llm_service.set_primary_provider() — 全局污染
+                # LLM 调用的 fallback 由 module 路由链处理（spec §4.1）
 
                 self._emit_event(
                     state,
@@ -176,9 +182,9 @@ class Commander:
         return False
 
     def _reset_agent_pool(self, state: PipelineState):
-        """恢复到主 Agent（冷却后）"""
+        """恢复到主 Agent（冷却后，局部恢复，不污染全局）"""
         agent_pool = state["agent_pool"]
-        if agent_pool["last_switch_time"] and (
+        if agent_pool["last_switch_time"] is not None and (
             time.time() - agent_pool["last_switch_time"] > self.RECOVERY_COOLDOWN
         ):
             primary_provider = agent_pool["primary"]["provider"]
@@ -186,7 +192,7 @@ class Commander:
             agent_pool["fail_count"] = 0
             agent_pool["last_switch_time"] = None
 
-            llm_service.set_primary_provider(primary_provider)
+            # 不再调 llm_service.set_primary_provider() — 全局污染
 
             self._emit_event(
                 state,
