@@ -109,7 +109,7 @@ class VerifierAgent(BaseAgent):
 
 请直接输出一个 1-5 的数字分数，不要其他内容。"""
 
-            response = await llm_service.generate(prompt)
+            response = await llm_service.generate(prompt, module="verify.pipeline")
             score = int(response.strip()[0]) if response.strip() else 3
             return max(1, min(5, score))
         except Exception as e:

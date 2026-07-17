@@ -87,7 +87,7 @@ class AnalyzerAgent(BaseAgent):
 注意：tendency_direction 为 true 表示倾向于真，false 表示倾向于假。"""
 
         try:
-            result = await llm_service.generate_json(prompt, system_prompt)
+            result = await llm_service.generate_json(prompt, system_prompt, module="verify.pipeline")
 
             # 解析 timeline
             timeline_data = result.get("timeline", [])

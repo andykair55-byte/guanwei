@@ -126,7 +126,7 @@ class ModeratorAgent(BaseAgent):
 {{"flagged": false, "categories": [], "reasons": []}}"""
 
         try:
-            result = await llm_service.generate_json(prompt, system_prompt)
+            result = await llm_service.generate_json(prompt, system_prompt, module="verify.pipeline")
             return {
                 "flagged": result.get("flagged", False),
                 "categories": result.get("categories", []),
