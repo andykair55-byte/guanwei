@@ -154,3 +154,80 @@ async def test_generate_json_with_module(monkeypatch):
     result = await svc.generate_json("test", module="workspace.writing")
 
     assert result == {"result": "from glm"}
+
+
+import os
+import time
+
+
+@pytest.mark.asyncio
+async def test_provider_skipped_when_budget_exceeded(monkeypatch):
+    """provider 日 token 超限时被跳过，走下一个 provider"""
+    svc = LLMService(primary_provider="glm")
+
+    # 模拟 glm 已用满 1500w
+    monkeypatch.setattr(svc, "_get_daily_tokens", lambda p: 15_000_000 if p == "glm" else 0)
+    monkeypatch.setenv("DAILY_TOKEN_BUDGET_GLM", "15000000")
+
+    call_log = []
+
+    async def fake_generate_with_provider(provider_name, prompt, system_prompt, temperature, max_tokens):
+        call_log.append(provider_name)
+        return f"ok from {provider_name}"
+
+    monkeypatch.setattr(svc, "_generate_with_provider", fake_generate_with_provider)
+
+    # glm 超限 → 应该跳过 glm，直接走 internlm
+    result = await svc.generate("test", module="workspace.writing")
+
+    assert result == "ok from internlm"
+    assert "glm" not in call_log
+    assert call_log == ["internlm"]
+
+
+@pytest.mark.asyncio
+async def test_all_providers_budget_exceeded_raises(monkeypatch):
+    """所有 provider 都超限 → RuntimeError 提示 budget"""
+    svc = LLMService(primary_provider="glm")
+
+    monkeypatch.setattr(svc, "_get_daily_tokens", lambda p: 999_999_999)
+    monkeypatch.setenv("DAILY_TOKEN_BUDGET_GLM", "100")
+    monkeypatch.setenv("DAILY_TOKEN_BUDGET_INTERNLM", "100")
+    monkeypatch.setenv("DAILY_TOKEN_BUDGET_DEEPSEEK", "100")
+
+    async def fake_generate_with_provider(*args, **kwargs):
+        raise AssertionError("超限 provider 不应被调用")
+
+    monkeypatch.setattr(svc, "_generate_with_provider", fake_generate_with_provider)
+
+    with pytest.raises(RuntimeError, match="token budget"):
+        await svc.generate("test", module="workspace.writing")
+
+
+def test_daily_token_usage_24h_sliding_window():
+    """滑动 24h 窗口：过期记录被清理"""
+    svc = LLMService(primary_provider="glm")
+
+    now = time.time()
+    svc.daily_token_usage["glm"] = [
+        (now - 25 * 3600, 1000),   # 25h 前，应被清理
+        (now - 23 * 3600, 2000),   # 23h 前，保留
+        (now - 1 * 3600, 3000),    # 1h 前，保留
+    ]
+
+    total = svc._get_daily_tokens("glm")
+
+    assert total == 5000
+    assert len(svc.daily_token_usage["glm"]) == 2  # 25h 的被清掉
+
+
+def test_record_token_usage_appends_with_timestamp():
+    """成功调用后 token usage 被记录（带时间戳）"""
+    svc = LLMService(primary_provider="glm")
+
+    svc._record_token_usage("glm", total_tokens=500)
+
+    assert len(svc.daily_token_usage["glm"]) == 1
+    ts, tokens = svc.daily_token_usage["glm"][0]
+    assert tokens == 500
+    assert abs(ts - time.time()) < 5

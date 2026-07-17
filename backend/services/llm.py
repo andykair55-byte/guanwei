@@ -234,6 +234,12 @@ class LLMService:
         self._recovery_timeout = float(os.getenv("LLM_CIRCUIT_RECOVERY_TIMEOUT", "60"))
         self._health_check_interval = int(os.getenv("LLM_HEALTH_CHECK_INTERVAL", "300"))
 
+        # ============================================================
+        # 日 token 预算熔断（spec: 2026-07-17-llm-module-routing §4.4）
+        # 滑动 24h 窗口：无需 cron，重启即清空（生产可接受）
+        # ============================================================
+        self.daily_token_usage: dict[str, list[tuple[float, int]]] = {}
+
     # ------------------------------------------------------------------
     #  Key 池 / 熔断器访问
     # ------------------------------------------------------------------
@@ -366,16 +372,21 @@ class LLMService:
             LLM 生成的文本
         """
         if provider:
-            # 显式指定优先级最高
+            # 显式指定优先级最高（不检查 budget，由调用方负责）
             return await self._generate_with_provider(
                 provider, prompt, system_prompt, temperature, max_tokens
             )
 
         # 按 module 路由链遍历（替代原来的 primary + fallback）
         providers_to_try = get_module_route(module)
-        last_error = None
+        last_error: Optional[Exception] = None
+        skipped_for_budget: list[str] = []
 
         for prov in providers_to_try:
+            # 日 token 预算检查（spec §4.4）
+            if self._is_budget_exceeded(prov):
+                skipped_for_budget.append(prov)
+                continue
             try:
                 return await self._generate_with_provider(
                     prov, prompt, system_prompt, temperature, max_tokens
@@ -390,6 +401,11 @@ class LLMService:
                 last_error = e
                 continue
 
+        if skipped_for_budget:
+            raise RuntimeError(
+                f"模块 {module or 'default'} 的所有 provider token budget 超限或不可用: "
+                f"超限跳过={skipped_for_budget}, 最后错误={last_error}"
+            )
         raise RuntimeError(f"模块 {module or 'default'} 的所有 provider × key 均不可用: {last_error}")
 
     async def _generate_with_provider(
@@ -500,6 +516,47 @@ class LLMService:
         messages.append({"role": "user", "content": prompt})
         return messages
 
+    # ------------------------------------------------------------------
+    #  日 token 预算熔断（spec: 2026-07-17-llm-module-routing §4.4）
+    # ------------------------------------------------------------------
+
+    def _record_token_usage(self, provider: str, total_tokens: int) -> None:
+        """记录一次成功调用的 token 用量（带时间戳，滑动窗口）"""
+        if provider not in self.daily_token_usage:
+            self.daily_token_usage[provider] = []
+        self.daily_token_usage[provider].append((time.time(), total_tokens))
+
+    def _get_daily_tokens(self, provider: str) -> int:
+        """获取 provider 过去 24h 累计 token（顺带清理过期记录）"""
+        if provider not in self.daily_token_usage:
+            return 0
+        now = time.time()
+        cutoff = now - 24 * 3600
+        self.daily_token_usage[provider] = [
+            (ts, tokens) for ts, tokens in self.daily_token_usage[provider]
+            if ts >= cutoff
+        ]
+        return sum(tokens for _, tokens in self.daily_token_usage[provider])
+
+    def _is_budget_exceeded(self, provider: str) -> bool:
+        """检查 provider 是否日 token 超限。未配置预算 = 不限制。"""
+        budget_env = f"DAILY_TOKEN_BUDGET_{provider.upper()}"
+        budget = os.getenv(budget_env)
+        if not budget:
+            return False
+        try:
+            budget_limit = int(budget)
+        except ValueError:
+            logger.warning(f"无效的 {budget_env} 值: {budget}，忽略")
+            return False
+        used = self._get_daily_tokens(provider)
+        if used >= budget_limit:
+            logger.warning(
+                f"Provider {provider} 日 token 超限: 已用 {used} / 预算 {budget_limit}，跳过"
+            )
+            return True
+        return False
+
     async def _call_with_matrix(
         self,
         provider_name: str,
@@ -534,6 +591,15 @@ class LLMService:
                 client = self._get_client(provider_name, key)
                 response = await client.chat.completions.create(**call_kwargs)
                 await cb.record_success(key)
+                # 记录 token 用量（spec §4.4）
+                try:
+                    usage = getattr(response, "usage", None)
+                    if usage:
+                        total_tokens = getattr(usage, "total_tokens", 0) or 0
+                        if total_tokens > 0:
+                            self._record_token_usage(provider_name, total_tokens)
+                except Exception as e:
+                    logger.debug(f"记录 token usage 失败（不影响主流程）: {e}")
                 return response, key
             except RateLimitError as e:
                 # 429：rpm 触顶，熔断此 key
