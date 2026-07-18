@@ -3,7 +3,7 @@
 评审 #5：含 prompt_hash + 注入拦截示范（其他 agent 同模式）
 """
 import json
-from pipeline.commander import commander
+from services.llm import llm_service
 from services.workspace.agents.base_agent import (
     WorkspaceBaseAgent, WorkspaceAgentInput, WorkspaceAgentOutput,
     RetryableError, NonRetryableError,
@@ -33,36 +33,22 @@ class ResearchAgent(WorkspaceBaseAgent):
         prompt = self._build_prompt(input_data.topic, sources, search_degraded)
         prompt_hash = compute_prompt_hash(prompt)  # 评审 #5
 
-        result = await commander.execute(prompt, agent_type="research")
+        result = await llm_service.generate(prompt, system_prompt="", module="workspace.research")
 
         # 评审 #5：注入检测
-        text = self._extract_text(result)
-        self._check_injection(text)
+        self._check_injection(result)
 
-        viewpoints = self._parse_viewpoints(text)
+        viewpoints = self._parse_viewpoints(result)
         return WorkspaceAgentOutput(
             success=True,
             data={
                 "viewpoints": viewpoints,
-                "key_facts": self._extract_key_facts(text),
-                "controversy": self._extract_controversy(text),
+                "key_facts": self._extract_key_facts(result),
+                "controversy": self._extract_controversy(result),
                 "based_on_external": not search_degraded,
             },
-            llm_provider=getattr(result, 'provider', '') if not isinstance(result, dict) else '',
-            llm_model=getattr(result, 'model', '') if not isinstance(result, dict) else '',
-            input_tokens=getattr(result, 'input_tokens', 0) if not isinstance(result, dict) else 0,
-            output_tokens=getattr(result, 'output_tokens', 0) if not isinstance(result, dict) else 0,
             prompt_hash=prompt_hash,  # 评审 #5
         )
-
-    def _extract_text(self, result) -> str:
-        """从 LLM 响应中提取文本（兼容 dict OpenAI 格式和对象）"""
-        if isinstance(result, dict):
-            try:
-                return result["choices"][0]["message"]["content"]
-            except (KeyError, IndexError, TypeError):
-                return ""
-        return getattr(result, 'text', '') or ""
 
     def _check_injection(self, text: str) -> None:
         """评审 #5：检测 LLM 输出是否包含 prompt 模板泄露特征

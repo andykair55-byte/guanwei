@@ -2,6 +2,7 @@
 """平台适配 agent — 6 平台并行"""
 import asyncio
 import json
+from services.llm import llm_service
 from services.workspace.agents.base_agent import (
     WorkspaceBaseAgent, WorkspaceAgentInput, WorkspaceAgentOutput,
 )
@@ -40,16 +41,14 @@ class PlatformAgent(WorkspaceBaseAgent):
         )
 
     async def _generate_for_platform(self, platform: str, draft: dict, topic: str) -> dict:
-        from pipeline.commander import commander
-
         prompt_template = PLATFORM_PROMPTS.get(platform)
         if not prompt_template:
             raise ValueError(f"未知平台: {platform}")
 
         prompt = prompt_template.format(draft=json.dumps(draft, ensure_ascii=False), topic=topic)
-        result = await commander.execute(prompt, agent_type="platform")
+        result = await llm_service.generate(prompt, system_prompt="", module="workspace.platform")
 
-        return self._parse_platform_result(result.text, platform)
+        return self._parse_platform_result(result, platform)
 
     def _parse_platform_result(self, text, platform):
         try:

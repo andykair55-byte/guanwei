@@ -1,6 +1,7 @@
 # backend/services/workspace/agents/writing_agent.py
 """写作 agent — 生成 CanonicalDraft"""
 import json
+from services.llm import llm_service
 from services.workspace.agents.base_agent import (
     WorkspaceBaseAgent, WorkspaceAgentInput, WorkspaceAgentOutput,
 )
@@ -11,8 +12,6 @@ class WritingAgent(WorkspaceBaseAgent):
     default_timeout = 60
 
     async def run(self, input_data: WorkspaceAgentInput) -> WorkspaceAgentOutput:
-        from pipeline.commander import commander
-
         verified = input_data.upstream.get("verify", {})
         research = input_data.upstream.get("research", {})
 
@@ -25,16 +24,12 @@ class WritingAgent(WorkspaceBaseAgent):
                 "verify": verified.get("degraded", False),
             },
         )
-        result = await commander.execute(prompt, agent_type="writing")
-        draft = self._parse_draft(result.text, input_data.topic)
+        result = await llm_service.generate(prompt, system_prompt="", module="workspace.writing")
+        draft = self._parse_draft(result, input_data.topic)
 
         return WorkspaceAgentOutput(
             success=True,
             data={"draft": draft},
-            llm_provider=getattr(result, 'provider', ''),
-            llm_model=getattr(result, 'model', ''),
-            input_tokens=getattr(result, 'input_tokens', 0),
-            output_tokens=getattr(result, 'output_tokens', 0),
         )
 
     def _build_prompt(self, topic, verified_facts, viewpoints, degraded_flags):
