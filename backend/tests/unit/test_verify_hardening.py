@@ -44,3 +44,32 @@ def test_verify_allows_after_previous_completed(client, db_session):
     resp2 = client.post("/api/v1/verify", json={"content": "已完成的内容"})
     assert resp2.status_code == 200
     assert resp2.json()["pipeline_id"] != pipeline_id_1
+
+
+import asyncio
+from unittest.mock import patch, AsyncMock
+
+
+def test_verify_returns_429_when_semaphore_exhausted(client, db_session):
+    """Semaphore 耗尽时返回 429 + retry_after_seconds"""
+    # 模拟 Semaphore 已满（_value=0）
+    from api import routes as routes_module
+    with patch.object(routes_module._verify_semaphore, "_value", 0):
+        with patch.object(routes_module._verify_semaphore, "locked", return_value=True):
+            resp = client.post("/api/v1/verify", json={"content": "限流测试"})
+            assert resp.status_code == 429
+            detail = resp.json()["detail"]
+            assert detail["error"] == "RATE_LIMITED"
+            assert "retry_after_seconds" in detail
+
+
+def test_verify_semaphore_releases_after_completion(client, db_session):
+    """正常完成后 Semaphore 释放"""
+    from api import routes as routes_module
+    initial_value = routes_module._verify_semaphore._value
+
+    resp = client.post("/api/v1/verify", json={"content": "正常请求"})
+    assert resp.status_code == 200
+
+    # Semaphore 应该恢复初始值（因为是同步测试，请求已完成）
+    assert routes_module._verify_semaphore._value == initial_value

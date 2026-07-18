@@ -58,6 +58,12 @@ class ModerateResponse(BaseModel):
 PIPELINE_TIMEOUT = 120  # 秒
 
 
+# ================================================================
+#  并发限流（spec: 2026-07-18-verify-pipeline-hardening §4.2）
+# ================================================================
+_verify_semaphore = asyncio.Semaphore(10)  # 最多 10 个并发 verify
+
+
 async def run_pipeline_background(
     pipeline_id: str,
     content: str,
@@ -205,33 +211,45 @@ async def verify(
             }
         )
 
-    pipeline_id = str(uuid.uuid4())
-    logger.info(f"Verify request [{pipeline_id}]: {request.content[:100]}")
+    # 并发限流（spec §4.2）
+    if _verify_semaphore.locked() and _verify_semaphore._value == 0:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": "RATE_LIMITED",
+                "message": "当前并发请求过多，请稍后重试",
+                "retry_after_seconds": 30,
+            }
+        )
 
-    run = PipelineRun(
-        pipeline_id=pipeline_id,
-        input_content=request.content[:2000],
-        status="pending",
-        user_id=current_user.id if current_user else None,
-        idempotency_key=idempotency_key,
-    )
-    db.add(run)
-    db.commit()
+    async with _verify_semaphore:
+        pipeline_id = str(uuid.uuid4())
+        logger.info(f"Verify request [{pipeline_id}]: {request.content[:100]}")
 
-    asyncio.create_task(run_pipeline_background(
-        pipeline_id=pipeline_id,
-        content=request.content,
-        demo_crash_trigger=request.demo_crash_trigger,
-        crash_probability=request.crash_probability,
-    ))
+        run = PipelineRun(
+            pipeline_id=pipeline_id,
+            input_content=request.content[:2000],
+            status="pending",
+            user_id=current_user.id if current_user else None,
+            idempotency_key=idempotency_key,
+        )
+        db.add(run)
+        db.commit()
 
-    return VerifyResponse(
-        success=True,
-        result=None,
-        error=None,
-        pipeline_id=pipeline_id,
-        status="pending",
-    )
+        asyncio.create_task(run_pipeline_background(
+            pipeline_id=pipeline_id,
+            content=request.content,
+            demo_crash_trigger=request.demo_crash_trigger,
+            crash_probability=request.crash_probability,
+        ))
+
+        return VerifyResponse(
+            success=True,
+            result=None,
+            error=None,
+            pipeline_id=pipeline_id,
+            status="pending",
+        )
 
 
 @router.get("/pipeline/{pipeline_id}")
