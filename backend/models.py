@@ -160,3 +160,100 @@ class PipelineRun(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     idempotency_key = Column(String(64), index=True)  # 幂等键：user_id-content_hash
+
+
+# ================================================================
+#  工作间模块（spec: workspace-multi-agent-design）
+# ================================================================
+
+class Workspace(Base):
+    """工作间 — 一次多 agent 内容创作任务"""
+    __tablename__ = "workspaces"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workspace_id = Column(String(36), unique=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    topic = Column(String(500))
+    title = Column(String(200), default="")
+    strategy = Column(String(20), default="dag")
+    status = Column(String(20), default="draft")
+
+    platform_order = Column(Text, default="[]")
+    draft = Column(Text, default="{}")
+    platform_contents = Column(Text, default="{}")
+    snapshots = Column(Text, default="[]")
+
+    error_message = Column(Text, default="")
+    duration_ms = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class WorkspaceAgentRun(Base):
+    """工作间内单个 agent 的执行记录"""
+    __tablename__ = "workspace_agent_runs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workspace_id = Column(String(36), ForeignKey("workspaces.workspace_id"), index=True)
+    agent_type = Column(String(20), index=True)
+    platform = Column(String(20), default="")
+
+    status = Column(String(20), default="pending")
+    duration_ms = Column(Integer, default=0)
+    llm_provider = Column(String(20), default="")
+    llm_model = Column(String(50), default="")
+    input_tokens = Column(Integer, default=0)
+    output_tokens = Column(Integer, default=0)
+
+    input_summary = Column(Text, default="")
+    output_result = Column(Text, default="{}")
+    error_message = Column(Text, default="")
+    retry_count = Column(Integer, default=0)
+
+    prompt_hash = Column(String(16), default="", index=True)     # 评审 #5：prompt 指纹（sha256 前 16 位）
+    prompt_injection_blocked = Column(Boolean, default=False)    # 评审 #5：是否触发注入拦截
+
+    trace_id = Column(String(50), default="", index=True)        # 生产加固：端到端 trace
+
+    started_at = Column(DateTime)
+    completed_at = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class WorkspaceExperience(Base):
+    """经验聚合 — 按 (任务签名, 策略) 维度统计历史成功率"""
+    __tablename__ = "workspace_experiences"
+
+    id = Column(Integer, primary_key=True, index=True)
+    task_signature = Column(String(100), index=True)
+    strategy = Column(String(20), index=True)
+
+    sample_count = Column(Integer, default=0)
+    success_count = Column(Integer, default=0)
+    partial_count = Column(Integer, default=0)
+    failed_count = Column(Integer, default=0)
+    success_rate = Column(Float, default=0.0)
+    avg_duration_ms = Column(Integer, default=0)
+    avg_quality_score = Column(Float, default=0.0)
+
+    last_strategy_used = Column(String(20), default="")
+    last_task_topic = Column(String(500), default="")
+    last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PublishTask(Base):
+    """发布队列任务"""
+    __tablename__ = "publish_tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    workspace_id = Column(String(36), ForeignKey("workspaces.workspace_id"), index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    platform = Column(String(20), index=True)
+    title = Column(String(500), default="")
+    content = Column(Text, default="")
+    publish_url = Column(String(500), default="")
+
+    status = Column(String(20), default="pending")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    operated_at = Column(DateTime)
