@@ -4,7 +4,7 @@ import hashlib
 import logging
 from datetime import datetime, timedelta
 
-from pipeline.commander import commander
+from services.llm import llm_service
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +38,8 @@ async def classify_topic(topic: str) -> str:
 只返回一个分类名。"""
 
     try:
-        result = await commander.execute(prompt, agent_type="orchestrator")
-        category = result.text.strip()
+        category = await llm_service.generate(prompt, module="default")
+        category = category.strip()
 
         if category not in CATEGORIES:
             for c in CATEGORIES:

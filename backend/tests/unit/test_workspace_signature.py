@@ -43,8 +43,8 @@ async def test_classify_topic_fallback_on_error():
     """LLM 调用失败 → 默认'其他'"""
     _category_cache.clear()
 
-    with patch("services.workspace.signature.commander") as cmd_mock:
-        cmd_mock.execute = AsyncMock(side_effect=Exception("LLM 不可用"))
+    with patch("services.workspace.signature.llm_service") as svc_mock:
+        svc_mock.generate = AsyncMock(side_effect=Exception("LLM 不可用"))
         result = await classify_topic("任意主题")
 
     assert result == "其他"
@@ -55,8 +55,8 @@ async def test_classify_topic_normalizes_response():
     """LLM 返回'科技类' → 归一化为'科技'"""
     _category_cache.clear()
 
-    with patch("services.workspace.signature.commander") as cmd_mock:
-        cmd_mock.execute = AsyncMock(return_value=type("R", (), {"text": "科技类"})())
+    with patch("services.workspace.signature.llm_service") as svc_mock:
+        svc_mock.generate = AsyncMock(return_value="科技类")
         result = await classify_topic("AI技术")
 
     assert result == "科技"
