@@ -154,6 +154,11 @@ async def security_headers_middleware(request: Request, call_next):
 
 app.include_router(api_router, prefix="/api/v1")
 
+# spec-workspace: 工作间 REST + WebSocket + 发布队列
+from api.workspace_routes import router as workspace_router, publish_router as publish_router
+app.include_router(workspace_router, prefix="/api/v1")
+app.include_router(publish_router, prefix="/api/v1")
+
 
 # === 请求指标中间件 ===
 
