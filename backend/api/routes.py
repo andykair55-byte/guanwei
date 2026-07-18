@@ -259,6 +259,15 @@ def get_pipeline_status(pipeline_id: str, db: Session = Depends(get_db)):
     if not run:
         raise HTTPException(status_code=404, detail="Pipeline not found")
 
+    # 僵尸 running 懒检查 reaper（spec §4.3）
+    if run.status == "running":
+        idle_threshold = datetime.utcnow() - timedelta(minutes=5)
+        if run.updated_at < idle_threshold:
+            run.status = "failed"
+            run.error_message = "执行超时（reaper 标记）"
+            db.commit()
+            db.refresh(run)
+
     node_results = {}
     if run.node_results:
         try:

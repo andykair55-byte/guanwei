@@ -73,3 +73,57 @@ def test_verify_semaphore_releases_after_completion(client, db_session):
 
     # Semaphore 应该恢复初始值（因为是同步测试，请求已完成）
     assert routes_module._verify_semaphore._value == initial_value
+
+
+def test_get_pipeline_reaper_marks_zombie_as_failed(client, db_session):
+    """running 超过 5 分钟无更新 → GET 时标 failed"""
+    # 造一个 6 分钟前的 running 任务
+    run = PipelineRun(
+        pipeline_id="zombie-test-id",
+        input_content="僵尸测试",
+        status="running",
+        created_at=datetime.utcnow() - timedelta(minutes=6),
+        updated_at=datetime.utcnow() - timedelta(minutes=6),
+    )
+    db_session.add(run)
+    db_session.commit()
+
+    # GET 触发 reaper
+    resp = client.get("/api/v1/pipeline/zombie-test-id")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "failed"
+    assert "超时" in resp.json().get("error_message", "") or "reaper" in resp.json().get("error_message", "")
+
+
+def test_get_pipeline_reaper_skips_recent_running(client, db_session):
+    """刚更新的 running 不被 reaper 标记"""
+    run = PipelineRun(
+        pipeline_id="fresh-test-id",
+        input_content="新鲜测试",
+        status="running",
+        created_at=datetime.utcnow() - timedelta(seconds=30),
+        updated_at=datetime.utcnow() - timedelta(seconds=30),
+    )
+    db_session.add(run)
+    db_session.commit()
+
+    resp = client.get("/api/v1/pipeline/fresh-test-id")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "running"
+
+
+def test_get_pipeline_reaper_skips_non_running(client, db_session):
+    """非 running 状态不触发 reaper"""
+    run = PipelineRun(
+        pipeline_id="success-test-id",
+        input_content="成功测试",
+        status="success",
+        created_at=datetime.utcnow() - timedelta(minutes=10),
+        updated_at=datetime.utcnow() - timedelta(minutes=10),
+    )
+    db_session.add(run)
+    db_session.commit()
+
+    resp = client.get("/api/v1/pipeline/success-test-id")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "success"
