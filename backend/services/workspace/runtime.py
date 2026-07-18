@@ -24,13 +24,13 @@ logger = logging.getLogger(__name__)
 class AgentRuntime:
     """统一执行环境 — 包在 agent 外层，注入横切逻辑"""
 
-    async def wrap(self, agent: WorkspaceBaseAgent) -> Callable:
-        """返回 LangGraph 节点函数"""
+    def wrap(self, agent: WorkspaceBaseAgent) -> Callable:
+        """返回 LangGraph 节点函数（sync 包装，内部节点是 async）"""
         async def node_func(state: WorkspaceState) -> WorkspaceState:
             return await self._execute_node(agent, state)
         return node_func
 
-    async def wrap_orchestrator(self, node_func: Callable) -> Callable:
+    def wrap_orchestrator(self, node_func: Callable) -> Callable:
         """包装 orchestrator 节点（dynamic 策略用）"""
         async def wrapped(state: WorkspaceState) -> WorkspaceState:
             return await node_func(state)

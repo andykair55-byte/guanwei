@@ -1,5 +1,13 @@
 # backend/services/workspace/strategies/dag.py
-"""B) 固定 DAG — 部分并行"""
+"""B) 固定 DAG — 部分并行
+
+search/research 并行 → verify → writing → platform
+
+DAG 专用 state 用合并 reducer 解决并发写入冲突：
+- upstream: dict 合并（_merge_upstream）
+- agent_runs/events: list append（operator.add）
+节点返回 diff（只含修改字段），避免未修改字段触发并发更新。
+"""
 import copy
 import inspect
 from operator import add
@@ -30,10 +38,7 @@ def _merge_upstream(left: dict | None, right: dict | None) -> dict:
 
 
 class _DagWorkspaceState(TypedDict, total=False):
-    """DAG 专用 state schema — 带并发合并 reducer
-    字段与 WorkspaceState 一致，但 upstream/agent_runs/events 用合并 reducer，
-    允许 search/research 并行写入。
-    """
+    """DAG 专用 state schema — 带并发合并 reducer"""
     workspace_id: str
     topic: str
     platform_order: list[str]
@@ -47,7 +52,7 @@ class _DagWorkspaceState(TypedDict, total=False):
 
 def _compute_diff(before: dict, after: dict | None) -> dict:
     """计算 before → after 的 diff，用于 LangGraph update
-    避免节点返回整个 state 时，未修改字段（如 workspace_id）触发并发更新冲突。
+    避免节点返回整个 state 时，未修改字段触发并发更新冲突。
     list 字段返回新增部分（假设只 append），dict 字段返回合并后的值。
     """
     if after is None:
@@ -56,7 +61,6 @@ def _compute_diff(before: dict, after: dict | None) -> dict:
     for k, v in after.items():
         old = before.get(k)
         if isinstance(v, list) and isinstance(old, list) and v != old:
-            # list: 返回新增部分（假设只 append）
             if len(v) > len(old) and v[:len(old)] == old:
                 diff[k] = v[len(old):]
             else:
@@ -66,19 +70,29 @@ def _compute_diff(before: dict, after: dict | None) -> dict:
     return diff
 
 
-def _make_node(runtime, agent):
-    """构建 LangGraph 节点 — 兼容 sync/async runtime.wrap
-    返回 diff（只包含修改的字段），避免并发更新冲突。
+def _wrap_node(runtime, agent):
+    """构建 LangGraph 节点 — 包装 runtime.wrap 并返回 diff
+    兼容 sync wrap（返回 callable）和 async wrap（返回 coroutine）。
     """
-    wrap = runtime.wrap
-    if inspect.iscoroutinefunction(wrap):
-        async def node(state):
-            actual_node = await wrap(agent)
+    wrap_result = runtime.wrap(agent)
+    if inspect.iscoroutine(wrap_result):
+        # async wrap — 需要在节点内 await 拿到真正 node
+        async def node_coro(state):
+            actual_node = await wrap_result
             before = copy.deepcopy(state)
             new_state = await actual_node(state)
             return _compute_diff(before, new_state)
-        return node
-    return wrap(agent)
+        return node_coro
+
+    # sync wrap — 直接拿到 node
+    node_func = wrap_result
+
+    async def node(state):
+        before = copy.deepcopy(state)
+        new_state = await node_func(state)
+        return _compute_diff(before, new_state)
+
+    return node
 
 
 def build_dag_graph(agents, runtime, checkpointer):
@@ -90,11 +104,11 @@ def build_dag_graph(agents, runtime, checkpointer):
     """
     graph = StateGraph(_DagWorkspaceState)
 
-    graph.add_node("search", _make_node(runtime, agents["search"]))
-    graph.add_node("research", _make_node(runtime, agents["research"]))
-    graph.add_node("verify", _make_node(runtime, agents["verify"]))
-    graph.add_node("writing", _make_node(runtime, agents["writing"]))
-    graph.add_node("platform", _make_node(runtime, agents["platform"]))
+    graph.add_node("search", _wrap_node(runtime, agents["search"]))
+    graph.add_node("research", _wrap_node(runtime, agents["research"]))
+    graph.add_node("verify", _wrap_node(runtime, agents["verify"]))
+    graph.add_node("writing", _wrap_node(runtime, agents["writing"]))
+    graph.add_node("platform", _wrap_node(runtime, agents["platform"]))
 
     # 虚拟入口节点：并行启动 search 和 research
     graph.add_node("__start_fanout", _fanout_start_node)
