@@ -6,13 +6,21 @@ import ActivityStream from '../components/workspace/ActivityStream'
 import CommanderInput from '../components/workspace/CommanderInput'
 import VersionBar from '../components/workspace/VersionBar'
 import OnboardingGuide from '../components/workspace/OnboardingGuide'
+import PublishQueueBoard from '../components/workspace/PublishQueueBoard'
+import StrategySelector from '../components/workspace/StrategySelector'
 import MarkdownEditor from '../components/create/MarkdownEditor'
+import DraftAutoSaver from '../components/create/DraftAutoSaver'
+import ClaimVerifier from '../components/create/ClaimVerifier'
+import { useCreationStore } from '../stores/creationStore'
+import { ShieldCheck } from 'lucide-react'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useActivityStore } from '../stores/activityStore'
 import { useCommanderStore } from '../stores/commanderStore'
 import { useCanonicalStore } from '../stores/canonicalStore'
 import { useSnapshotStore } from '../stores/snapshotStore'
-import { handleUserInput, quickStart, confirmPlan, resetCommander } from '../services/commanderService'
+import { handleUserInput, quickStart, resetCommander } from '../services/commanderService'
+import { workspaceApi } from '../services/workspaceApi'
+import { workspaceSocket } from '../services/workspaceSocket'
 import { PLATFORM_TEMPLATES, type PlatformId } from '../config/platformTemplates'
 import { adaptToPlatform } from '../services/platformAdapter'
 import type { ActivityEvent, EventType, AgentTypeLabel } from '../types/activity'
@@ -74,6 +82,9 @@ export default function AgentWorldPage() {
   const [publishingPlatforms, setPublishingPlatforms] = useState<Set<string>>(new Set())
   const [saveLabel, setSaveLabel] = useState('已保存')
   const [dataPending, setDataPending] = useState(true)
+  const [showClaimVerifier, setShowClaimVerifier] = useState(false)
+  const [strategy, setStrategy] = useState('dag')
+  const [isRunning, setIsRunning] = useState(false)
   const initRef = useRef(false)
 
   useEffect(() => {
@@ -229,6 +240,21 @@ export default function AgentWorldPage() {
     }
   }, [currentId, loadDemoEvents])
 
+  // ── WebSocket 接入：currentId 变化时连接 workspaceSocket，事件 push 到 activityStore ──
+  useEffect(() => {
+    if (!currentId || currentId === 'new') return
+
+    workspaceSocket.connect(currentId)
+    const off = workspaceSocket.onEvent((event) => {
+      useActivityStore.getState().addEvent(currentId, event)
+    })
+
+    return () => {
+      off()
+      workspaceSocket.disconnect()
+    }
+  }, [currentId])
+
   // Mark data as ready after initial load (demo data + DOM paint)
   useEffect(() => {
     const id = requestAnimationFrame(() => setDataPending(false))
@@ -250,6 +276,53 @@ export default function AgentWorldPage() {
     }
     await handleUserInput(currentId, text, mode)
   }, [currentId, mode, clearEvents])
+
+  // ── 真实 API 触发：调用 workspaceApi.run 替代原 mock 管线 ──
+  const handleRun = useCallback(async () => {
+    if (!currentId || !current || isRunning) return
+
+    // 如果当前是 Demo 示例事件，先清空，避免和真实事件混在一起
+    const existing = useActivityStore.getState().eventsByWorkspace[currentId] || []
+    if (existing.length > 0 && existing.every(e => e.id.startsWith('demo-evt-'))) {
+      clearEvents(currentId)
+    }
+
+    setIsRunning(true)
+    useWorkspaceStore.getState().setStatus(currentId, 'running')
+    addEventSimple(
+      currentId,
+      'info',
+      'orchestrator',
+      '开始执行',
+      `策略：${strategy}，正在启动 Agent 管线…`,
+      undefined,
+      { strategy }
+    )
+
+    try {
+      const result = await workspaceApi.run(currentId, { strategy })
+      const runStatus = result.status
+      const wsStatus: WorkspaceStatus =
+        runStatus === 'partial' ? 'partial' :
+        runStatus === 'failed' ? 'failed' : 'completed'
+      useWorkspaceStore.getState().setStatus(currentId, wsStatus)
+      addEventSimple(
+        currentId,
+        'info',
+        'orchestrator',
+        '任务完成 ✨',
+        wsStatus === 'partial'
+          ? '部分步骤已成功完成，你可以在编辑器中查看内容，或在下方发布队列中发布。'
+          : '所有步骤已执行完毕，你可以在编辑器中查看和修改内容，或切换平台版本。'
+      )
+    } catch (e) {
+      const error = e instanceof Error ? e.message : String(e)
+      useWorkspaceStore.getState().setStatus(currentId, 'failed')
+      addEventSimple(currentId, 'error', 'system', '执行出错', error)
+    } finally {
+      setIsRunning(false)
+    }
+  }, [currentId, current, isRunning, strategy, addEventSimple, clearEvents])
 
   const handleGeneratePlatform = useCallback(async (platform: PlatformId) => {
     if (!current) return
@@ -280,7 +353,8 @@ export default function AgentWorldPage() {
   const handleAction = useCallback(async (actionId: string, _event: ActivityEvent) => {
     if (!currentId) return
     if (actionId === 'confirm' || actionId === 'use_all' || actionId === 'adopt_views') {
-      confirmPlan(currentId, mode)
+      // 替换原 mock 触发逻辑：调用真实 API
+      void handleRun()
     } else if (actionId === 'modify') {
       addEventSimple(currentId, 'commander_question', 'orchestrator', '修改计划', '你想怎么调整？可以告诉我需要修改的地方。')
     } else if (actionId.startsWith('platform-')) {
@@ -291,7 +365,7 @@ export default function AgentWorldPage() {
     } else if (actionId === 'reverify') {
       addEventSimple(currentId, 'info', 'verify', '重新核查', '正在重新核查存疑信息...')
     }
-  }, [currentId, mode, addEventSimple, availablePlatforms, handleGenerateAll])
+  }, [currentId, handleRun, addEventSimple, availablePlatforms, handleGenerateAll])
 
   const handleEditorChange = useCallback((content: string) => {
     if (!currentId) return
@@ -346,6 +420,14 @@ export default function AgentWorldPage() {
     if (topic) updateTopic(currentId, topic)
   }, [currentId, activePlatform, updatePlatformContent, updateTopic])
 
+  // 从 creationStore 恢复未保存草稿到当前编辑器
+  const handleRestoreDraft = useCallback(() => {
+    const savedContent = useCreationStore.getState().draft.content
+    if (savedContent) {
+      updatePlatformContent(activePlatform, { content: savedContent })
+    }
+  }, [activePlatform, updatePlatformContent])
+
   if (!current) {
     return (
       <div className="h-dvh flex items-center justify-center bg-paper-50">
@@ -380,6 +462,14 @@ export default function AgentWorldPage() {
             </span>
           </div>
           <div className="ws-editor-actions">
+            <button
+              className={`ws-editor-action-btn${showClaimVerifier ? ' active' : ''}`}
+              title="声明核查"
+              onClick={() => setShowClaimVerifier(v => !v)}
+              style={showClaimVerifier ? { color: 'var(--primary)', background: 'var(--bg-hover, rgba(0,0,0,0.04))' } : undefined}
+            >
+              <ShieldCheck size={16} />
+            </button>
             <div className="ws-mode-toggle">
               <button
                 className={`ws-mode-btn${mode === 'assist' ? ' active' : ''}`}
@@ -472,7 +562,7 @@ export default function AgentWorldPage() {
                     </button>
                   </div>
                   <div className="ws-platform-modal-body">
-                    {(ALL_EXTERNAL_PLATFORMS as PlatformId[])
+                    {ALL_EXTERNAL_PLATFORMS
                       .filter(p => !availablePlatforms.includes(p))
                       .map(p => (
                         <button
@@ -523,12 +613,28 @@ export default function AgentWorldPage() {
         {/* Status Bar */}
         <div className="ws-status-bar">
           <span className="ws-status-indicator">
-            <span className={`ws-status-dot-live${pipelineStatus === 'running' ? ' pulse' : ''}`} />
-            {pipelineStatus === 'running' ? 'Agent运行中' : '已连接 5/5 Agent'}
+            <span className={`ws-status-dot-live${pipelineStatus === 'running' || isRunning ? ' pulse' : ''}`} />
+            {pipelineStatus === 'running' || isRunning ? 'Agent运行中' : '已连接 5/5 Agent'}
           </span>
           <span>字数 {wordCount}</span>
           <span>预计阅读 {readTime}分钟</span>
           <div style={{ flex: 1 }} />
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <StrategySelector value={strategy} onChange={setStrategy} recommended="dag" />
+            <button
+              onClick={() => void handleRun()}
+              disabled={isRunning || !currentId}
+              style={{
+                padding: '4px 12px', fontSize: 12, fontWeight: 500,
+                borderRadius: 6, border: 'none', cursor: isRunning ? 'not-allowed' : 'pointer',
+                background: isRunning ? 'var(--status-draft)' : 'var(--primary, #10b981)',
+                color: '#fff', opacity: isRunning ? 0.6 : 1,
+              }}
+              title={isRunning ? '运行中…' : '运行 Agent 管线'}
+            >
+              {isRunning ? '运行中…' : '运行'}
+            </button>
+          </div>
           {copied && (
             <span style={{ color: 'var(--primary-text)', display: 'inline-flex', alignItems: 'center', gap: 1 }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -551,6 +657,12 @@ export default function AgentWorldPage() {
         {/* Editor Content */}
         <div className="ws-editor-body">
           <div className="ws-editor-content">
+            {/* 草稿自动保存状态条 */}
+            <DraftAutoSaver
+              content={editorContent}
+              topic={editorTitle}
+              onRestore={handleRestoreDraft}
+            />
             <input
               className="ws-editor-title-input"
               value={editorTitle}
@@ -563,8 +675,17 @@ export default function AgentWorldPage() {
               textareaRef={textareaRef}
               placeholder="开始创作，或在下方输入框告诉Commander你想做什么…"
             />
+            {/* 声明核查面板（可折叠） */}
+            {showClaimVerifier && (
+              <ClaimVerifier content={editorContent} />
+            )}
           </div>
         </div>
+
+        {/* 发布队列：pipeline 成功 / 部分完成时展示 */}
+        {currentId && (current.status === 'completed' || current.status === 'published' || current.status === 'partial') && (
+          <PublishQueueBoard workspaceId={currentId} platformContents={current.platformContents} />
+        )}
 
         <VersionBar onRestore={handleRestore} />
         <CommanderInput onSend={handleSend} />

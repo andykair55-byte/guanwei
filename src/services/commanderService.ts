@@ -1,12 +1,12 @@
 import { callLLM } from '../stores/llmStore'
-import { type SearchResult } from './searchService'
-import { runOrchestrator, runSearchAgent, runResearchAgent, runVerifyAgent, runWritingAgent } from './agentService'
-import { adaptToAllPlatforms } from './platformAdapter'
 import { filterUserInput } from './contentFilter'
+import { workspaceApi } from './workspaceApi'
 import { useWorkspaceStore } from '../stores/workspaceStore'
 import { useActivityStore } from '../stores/activityStore'
 import { useCanonicalStore } from '../stores/canonicalStore'
+import { useCommanderStore } from '../stores/commanderStore'
 import type { EventAction } from '../types/activity'
+import type { WorkspaceStatus } from '../types/workspace'
 
 // ===== 信息完整度判断（MVP 简化版） =====
 
@@ -326,175 +326,48 @@ export function confirmPlan(workspaceId: string, mode: 'assist' | 'auto') {
 
 async function executePlan(workspaceId: string, mode: 'assist' | 'auto'): Promise<void> {
   state.phase = 'executing'
-  addEvent(workspaceId, 'info', 'orchestrator', '开始执行', '正在启动Agent管线...')
+  useCommanderStore.setState({ pipelineStatus: 'running' })
+  addEvent(workspaceId, 'info', 'orchestrator', '开始执行', '正在启动 Agent 管线...')
 
   useCanonicalStore.getState().reset()
   useCanonicalStore.getState().setTopic(state.spec.goal)
   useCanonicalStore.getState().updateMetadata({ mode })
 
-  let searchResults: SearchResult[] = []
-
   try {
-    if (state.plan[state.currentStep]?.agent === 'search') {
-      useActivityStore.getState().addEventSimple(workspaceId, 'agent_started', 'search', '搜索员启动', '正在搜集相关信息...')
-      addEvent(workspaceId, 'info', 'search', '搜索开始', '正在搜集相关信息...')
-      const orchOutput = await runOrchestrator(state.spec.goal)
-      const searchOutput = await runSearchAgent(orchOutput.keywords)
-      searchResults = searchOutput.results
+    // ── 替换原 mock 管线：调用真实 workspaceApi.run ──
+    // 事件流（agent_started / search_complete / research_complete / writing_complete 等）
+    // 由后端通过 WebSocket 推送到 activityStore，前端不再本地 mock。
+    const current = useWorkspaceStore.getState().getCurrent()
+    const strategy = current?.strategy || 'dag'
 
-      const factCount = useCanonicalStore.getState().draft.facts.length
-      addEvent(
-        workspaceId,
-        'search_complete',
-        'search',
-        '搜索完成',
-        `找到 ${searchResults.length} 篇相关报道和 ${factCount} 个数据来源`,
-        [
-          { id: 'use_all', label: '引用全部', style: 'primary' },
-          { id: 'view_results', label: '查看结果', style: 'secondary' },
-        ],
-        { resultCount: searchResults.length }
-      )
-      state.currentStep++
-    }
+    useWorkspaceStore.getState().setStatus(workspaceId, 'running')
 
-    if (state.plan[state.currentStep]?.agent === 'research') {
-      useActivityStore.getState().addEventSimple(workspaceId, 'agent_started', 'research', '研究员启动', '正在整理资料与观点...')
-      addEvent(workspaceId, 'info', 'research', '研究开始', '正在提炼多角度观点...')
-      const researchOutput = await runResearchAgent(searchResults, state.spec.goal)
+    const result = await workspaceApi.run(workspaceId, { strategy })
 
-      const vpCount = researchOutput.viewpoints.length
-      addEvent(
-        workspaceId,
-        'research_complete',
-        'research',
-        '观点提炼完成',
-        `提炼出 ${vpCount} 个核心观点和 ${researchOutput.keyConflicts.length} 个争议点：\n${researchOutput.viewpoints.map(v => `• ${v.stance}：${v.argument.slice(0, 50)}...`).join('\n')}`,
-        [
-          { id: 'adopt_views', label: '采纳观点', style: 'primary' },
-          { id: 'view_detail', label: '查看详情', style: 'secondary' },
-        ],
-        { viewpointCount: vpCount }
-      )
-      state.currentStep++
-    }
-
-    if (state.plan[state.currentStep]?.agent === 'verify') {
-      useActivityStore.getState().addEventSimple(workspaceId, 'agent_started', 'verify', '核查员启动', '正在核查关键声明...')
-      addEvent(workspaceId, 'info', 'verify', '核查开始', '正在验证事实声明...')
-      const verifyOutput = await runVerifyAgent(searchResults)
-
-      const warnings = verifyOutput.claims.filter(c => c.status === 'disputed' || c.status === 'unverifiable')
-      if (warnings.length > 0) {
-        addEvent(
-          workspaceId,
-          'verify_warning',
-          'verify',
-          `发现 ${warnings.length} 条信息存疑`,
-          warnings.map(w => `• [${w.status}] ${w.text.slice(0, 80)}`).join('\n'),
-          [
-            { id: 'reverify', label: '重新核查', style: 'warning' },
-            { id: 'view_evidence', label: '查看证据', style: 'secondary' },
-          ],
-          { warningCount: warnings.length }
-        )
-      } else {
-        addEvent(
-          workspaceId,
-          'info',
-          'verify',
-          '核查完成',
-          `已核查 ${verifyOutput.claims.length} 条声明，未发现明显存疑信息。`
-        )
-      }
-      state.currentStep++
-    }
-
-    const canonDraft = useCanonicalStore.getState().draft
-
-    if (state.plan[state.currentStep]?.agent === 'writing') {
-      useActivityStore.getState().addEventSimple(workspaceId, 'agent_started', 'writing', '写作员启动', '正在生成主稿...')
-      addEvent(workspaceId, 'info', 'writing', '写作开始', '正在组织结构，生成标准稿...')
-      const writingOutput = await runWritingAgent(
-        state.spec.goal,
-        canonDraft.facts,
-        canonDraft.claims,
-        canonDraft.viewpoints,
-        canonDraft.references
-      )
-
-      useWorkspaceStore.getState().updateDraft({
-        topic: state.spec.goal,
-        facts: canonDraft.facts,
-        claims: canonDraft.claims,
-        viewpoints: canonDraft.viewpoints,
-        references: canonDraft.references,
-        structure: writingOutput.structure,
-      })
-
-      useWorkspaceStore.getState().updatePlatformContent('guanwei', {
-        content: writingOutput.content,
-        title: writingOutput.title,
-        generated: true,
-      })
-
-      addEvent(
-        workspaceId,
-        'writing_complete',
-        'writing',
-        '标准稿生成完成',
-        `标题：${writingOutput.title}\n共 ${writingOutput.structure.length} 个章节`,
-        [
-          { id: 'adapt_all', label: '生成平台版本', style: 'primary' },
-        ],
-        { title: writingOutput.title, sectionCount: writingOutput.structure.length }
-      )
-      state.currentStep++
-    }
-
-    if (state.plan[state.currentStep]?.agent === 'adapt') {
-      const latestDraft = useCanonicalStore.getState().draft
-      addEvent(workspaceId, 'info', 'writing', '平台适配', '正在生成各平台版本...')
-
-      try {
-        const allContent = await adaptToAllPlatforms(latestDraft)
-        for (const pc of allContent) {
-          useWorkspaceStore.getState().updatePlatformContent(pc.platform, {
-            content: pc.content,
-            title: pc.title,
-            generated: true,
-          })
-        }
-
-        const platformIcons: Record<string, string> = {
-          zhihu: '知', xiaohongshu: '红', weibo: '微', douyin: '抖', tieba: '贴', guanwei: '观', bilibili: 'B'
-        }
-
-        addEvent(
-          workspaceId,
-          'writing_complete',
-          'writing',
-          '平台版本已生成',
-          `已生成 ${allContent.length} 个平台版本，可切换查看和编辑。`,
-          allContent.map((pc, i) => ({
-            id: `platform-${pc.platform}`,
-            label: platformIcons[pc.platform] || pc.platform,
-            style: i === 0 ? 'primary' : 'secondary',
-          })),
-          { platforms: allContent.map(p => p.platform) }
-        )
-      } catch {
-        addEvent(workspaceId, 'error', 'system', '平台适配部分失败', '部分平台版本生成失败，可以单独重试。')
-      }
-      state.currentStep++
-    }
+    // 映射 run 返回状态到 workspace 状态
+    const runStatus = result.status
+    const wsStatus: WorkspaceStatus =
+      runStatus === 'partial' ? 'partial' :
+      runStatus === 'failed' ? 'failed' : 'completed'
+    useWorkspaceStore.getState().setStatus(workspaceId, wsStatus)
 
     state.phase = 'done'
-    addEvent(workspaceId, 'info', 'orchestrator', '任务完成 ✨', '所有步骤已执行完毕，你可以在编辑器中查看和修改内容，或切换平台版本。需要调整可以随时告诉我。')
+    useCommanderStore.setState({ pipelineStatus: wsStatus === 'failed' ? 'error' : 'completed' })
+    addEvent(
+      workspaceId,
+      'info',
+      'orchestrator',
+      '任务完成 ✨',
+      wsStatus === 'partial'
+        ? '部分步骤已成功完成，你可以在编辑器中查看内容，或切换平台版本。'
+        : '所有步骤已执行完毕，你可以在编辑器中查看和修改内容，或切换平台版本。需要调整可以随时告诉我。'
+    )
 
   } catch (e) {
     const error = e instanceof Error ? e.message : String(e)
     addEvent(workspaceId, 'error', 'system', '执行出错', error)
+    useWorkspaceStore.getState().setStatus(workspaceId, 'failed')
+    useCommanderStore.setState({ pipelineStatus: 'error' })
     state.phase = 'idle'
   }
 }

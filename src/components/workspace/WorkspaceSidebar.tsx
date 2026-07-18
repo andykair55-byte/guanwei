@@ -28,6 +28,9 @@ const STATUS_LABELS: Record<WorkspaceStatus, string> = {
   published: '已发布',
   tracking: '跟踪中',
   archived: '已归档',
+  running: '运行中',
+  partial: '部分完成',
+  failed: '失败',
 }
 
 const TAG_LABELS: Record<string, string> = {
