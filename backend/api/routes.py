@@ -4,6 +4,8 @@ import uuid
 import time
 import json
 import asyncio
+import hashlib
+from datetime import datetime, timedelta
 from typing import Literal, List, Optional
 from pydantic import BaseModel, Field
 
@@ -16,7 +18,8 @@ from pipeline.ws_manager import ws_manager
 from agents.moderator import moderator_agent
 from agents.models import ModeratorInput
 from services.evidence import EvidenceService, get_evidence_service
-from models import PipelineRun
+from models import PipelineRun, User
+from auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +28,7 @@ router = APIRouter()
 
 class VerifyRequest(BaseModel):
     """求证请求"""
-    content: str = Field(description="待验证的信息内容")
+    content: str = Field(..., max_length=2000, description="待验证的信息内容")
     type: Literal["text", "link"] = Field(default="text", description="内容类型")
     demo_crash_trigger: Optional[str] = Field(default=None, description="演示模式 - 指定崩溃节点")
     crash_probability: float = Field(default=0.0, description="演示模式 - 崩溃概率")
@@ -42,7 +45,7 @@ class VerifyResponse(BaseModel):
 
 class ModerateRequest(BaseModel):
     """内容审核请求"""
-    text: str = Field(description="待审核的文本内容")
+    text: str = Field(..., max_length=5000, description="待审核的文本内容")
 
 
 class ModerateResponse(BaseModel):
@@ -166,7 +169,11 @@ async def run_pipeline_background(
 
 
 @router.post("/verify", response_model=VerifyResponse)
-async def verify(request: VerifyRequest, db: Session = Depends(get_db)):
+async def verify(
+    request: VerifyRequest,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user),
+):
     """一键求证接口（异步模式）
 
     提交 Pipeline 任务后立即返回，可通过 GET /pipeline/{id} 查询状态，
@@ -174,7 +181,30 @@ async def verify(request: VerifyRequest, db: Session = Depends(get_db)):
 
     执行完整的信息验证流程：
     1. 内容审核  2. 信息搜集  3. 来源验证  4. 深度分析
+
+    认证可选：已登录用户记录 user_id，未登录用户 user_id=None
     """
+    # 幂等检查：content hash + user_id（spec §4.1）
+    content_hash = hashlib.sha256(request.content.encode()).hexdigest()[:16]
+    user_part = str(current_user.id) if current_user else "anon"
+    idempotency_key = f"{user_part}-{content_hash}"
+
+    existing = db.query(PipelineRun).filter(
+        PipelineRun.idempotency_key == idempotency_key,
+        PipelineRun.status.in_(["pending", "running"]),
+        PipelineRun.created_at > datetime.utcnow() - timedelta(minutes=5),
+    ).first()
+
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "DUPLICATE_SUBMIT",
+                "message": "相同内容正在处理中，请勿重复提交",
+                "existing_pipeline_id": existing.pipeline_id,
+            }
+        )
+
     pipeline_id = str(uuid.uuid4())
     logger.info(f"Verify request [{pipeline_id}]: {request.content[:100]}")
 
@@ -182,6 +212,8 @@ async def verify(request: VerifyRequest, db: Session = Depends(get_db)):
         pipeline_id=pipeline_id,
         input_content=request.content[:2000],
         status="pending",
+        user_id=current_user.id if current_user else None,
+        idempotency_key=idempotency_key,
     )
     db.add(run)
     db.commit()

@@ -156,4 +156,7 @@ class PipelineRun(Base):
     node_results = Column(Text, default="{}")        # JSON: 每个节点的执行状态
     error_message = Column(Text, default="")
     event_log = Column(Text, default="[]")            # JSON: 完整事件日志
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # 提交者（可选，未登录为 None）
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    idempotency_key = Column(String(64), index=True)  # 幂等键：user_id-content_hash
