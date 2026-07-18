@@ -9,6 +9,9 @@ export type WorkspaceStatus =
   | 'published'
   | 'tracking'
   | 'archived'
+  | 'running'
+  | 'partial'
+  | 'failed'
 
 export type WorkspaceTag = 'hotspot' | 'science' | 'meme' | 'opinion' | 'debunk' | string
 
@@ -50,6 +53,7 @@ export interface Workspace {
   platformContents: Record<string, PlatformContent>
   snapshots: WorkspaceSnapshot[]
   previousStatus?: WorkspaceStatus
+  strategy?: string
   createdAt: string
   updatedAt: string
 }
