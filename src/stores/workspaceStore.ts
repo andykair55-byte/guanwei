@@ -43,7 +43,7 @@ interface WorkspaceStore {
     source?: WorkspaceSource
     tags?: WorkspaceTag[]
     platformOrder?: string[]
-  }) => Workspace
+  }, options?: { activate?: boolean }) => Workspace
   fetchWorkspaces: () => Promise<void>
   runWorkspace: (id: string, params?: { strategy?: string; customDag?: Record<string, unknown> }) => Promise<void>
   deleteWorkspace: (id: string) => void
@@ -78,7 +78,9 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
       workspaces: [],
       currentId: null,
 
-      createWorkspace: (params = {}) => {
+      createWorkspace: (params = {}, options = {}) => {
+        // activate 默认 true，保留旧行为（同步切换到新 workspace）
+        const { activate = true } = options
         // 本地立即创建（保留 localStorage 兜底逻辑）
         const ws = createEmptyWorkspace(
           params.topic,
@@ -88,7 +90,8 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
         )
         set((state) => ({
           workspaces: [ws, ...state.workspaces],
-          currentId: ws.id,
+          // activate=false 时同步部分不切换 currentId，避免 demo 循环触发 WS 抖动
+          ...(activate ? { currentId: ws.id } : {}),
         }))
 
         // API 优先：同步触发后端创建，成功后用后端 ID/时间戳回写本地
@@ -111,6 +114,8 @@ export const useWorkspaceStore = create<WorkspaceStore>()(
                     }
                   : w,
               ),
+              // 仅当 currentId 仍指向临时 id 时才回写到后端 id
+              // activate=false 时 currentId 从未被设为 ws.id，这里自然不会覆盖
               currentId: state.currentId === ws.id ? dto.workspace_id : state.currentId,
             }))
           })

@@ -183,7 +183,7 @@ export default function PublishPage() {
                 <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
                   {images.map((img, idx) => (
                     <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-gray-100 group shadow-sm">
-                      <img src={img} alt="" className="w-full h-full object-cover" />
+                      <img src={img} alt="" loading="lazy" className="w-full h-full object-cover" />
                       <button
                         onClick={() => handleRemoveImage(idx)}
                         className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"

@@ -19,9 +19,19 @@ from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from fastapi_limiter.depends import RateLimiter
 from pydantic import BaseModel, Field
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+
+# 条件限流：Redis 不可用时跳过限流（开发模式降级）
+from services.cache import REDIS_AVAILABLE
+
+def conditional_rate_limiter(times: int = 20, seconds: int = 60):
+    """Redis 可用时启用限流，不可用时返回空列表跳过限流"""
+    if REDIS_AVAILABLE:
+        return [Depends(RateLimiter(times=times, seconds=seconds))]
+    return []
 
 from auth import require_admin
 from database import get_db
@@ -63,6 +73,12 @@ class UpdateMelonRequest(BaseModel):
 class SetAdminRequest(BaseModel):
     user_id: int
     is_admin: bool
+
+class TestLLMConnectionRequest(BaseModel):
+    provider: str = Field(description="模型提供商，如 deepseek / glm / qwen / openai 等")
+    api_key: str = Field(description="待测试的 API Key")
+    base_url: Optional[str] = Field(default=None, description="自定义 API 端点；不传则用 provider 默认")
+    model: Optional[str] = Field(default=None, description="自定义模型名；不传则用 provider 默认")
 
 
 # ================================================================
@@ -201,7 +217,7 @@ def list_users(
     }
 
 
-@router.delete("/users/{user_id}")
+@router.delete("/users/{user_id}", dependencies=conditional_rate_limiter(times=20, seconds=60))
 def delete_user(user_id: int, request: Request, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     """注销用户（软删除）"""
     user = db.query(User).filter(User.id == user_id).first()
@@ -227,7 +243,7 @@ def delete_user(user_id: int, request: Request, admin: User = Depends(require_ad
     return {"success": True, "message": f"用户 {user.username} 已注销"}
 
 
-@router.put("/users/{user_id}/points")
+@router.put("/users/{user_id}/points", dependencies=conditional_rate_limiter(times=20, seconds=60))
 def adjust_points(
     user_id: int,
     req: AdjustPointsRequest,
@@ -254,7 +270,7 @@ def adjust_points(
     return {"success": True, "points": user.points, "amount": req.amount}
 
 
-@router.put("/users/{user_id}/set-admin")
+@router.put("/users/{user_id}/set-admin", dependencies=conditional_rate_limiter(times=20, seconds=60))
 def set_admin_role(
     user_id: int,
     req: SetAdminRequest,
@@ -338,7 +354,7 @@ def list_melons_admin(
     return {"total": total, "page": page, "size": size, "pages": (total + size - 1) // size, "items": items}
 
 
-@router.put("/melons/{melon_id}")
+@router.put("/melons/{melon_id}", dependencies=conditional_rate_limiter(times=20, seconds=60))
 def update_melon(melon_id: int, req: UpdateMelonRequest, request: Request,
                  admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     """管理员编辑瓜"""
@@ -358,7 +374,7 @@ def update_melon(melon_id: int, req: UpdateMelonRequest, request: Request,
     return {"success": True, "melon_id": melon.id}
 
 
-@router.put("/melons/{melon_id}/reveal")
+@router.put("/melons/{melon_id}/reveal", dependencies=conditional_rate_limiter(times=20, seconds=60))
 def reveal_melon(melon_id: int, req: RevealMelonRequest, request: Request,
                  admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     """管理员揭瓜"""
@@ -393,7 +409,7 @@ def reveal_melon(melon_id: int, req: RevealMelonRequest, request: Request,
     return {"success": True, "message": f"瓜 #{melon_id} 已揭晓，结算 {settled} 条猜测"}
 
 
-@router.post("/melons/batch-reveal")
+@router.post("/melons/batch-reveal", dependencies=conditional_rate_limiter(times=20, seconds=60))
 def batch_reveal_melons(req: BatchRevealRequest, request: Request,
                         admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     """批量揭瓜"""
@@ -414,7 +430,7 @@ def batch_reveal_melons(req: BatchRevealRequest, request: Request,
     return {"success": True, "results": results}
 
 
-@router.post("/melons/batch-delete")
+@router.post("/melons/batch-delete", dependencies=conditional_rate_limiter(times=20, seconds=60))
 def batch_delete_melons(req: BatchDeleteMelonsRequest, request: Request,
                         admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     """批量删除瓜"""
@@ -437,7 +453,7 @@ def batch_delete_melons(req: BatchDeleteMelonsRequest, request: Request,
     return {"success": True, "deleted": deleted, "count": len(deleted)}
 
 
-@router.delete("/melons/{melon_id}")
+@router.delete("/melons/{melon_id}", dependencies=conditional_rate_limiter(times=20, seconds=60))
 def delete_melon(melon_id: int, request: Request,
                  admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     """删除单个瓜"""
@@ -558,6 +574,7 @@ def list_pipeline_runs(
                 "duration_ms": r.duration_ms,
                 "error_message": r.error_message,
                 "node_results": json.loads(r.node_results) if r.node_results else {},
+                "user_id": r.user_id,
                 "created_at": r.created_at.isoformat() if r.created_at else None,
             }
             for r in runs
@@ -584,7 +601,7 @@ def get_pipeline_run(pipeline_id: str, db: Session = Depends(get_db)):
     }
 
 
-@router.post("/pipeline/runs/{pipeline_id}/retry")
+@router.post("/pipeline/runs/{pipeline_id}/retry", dependencies=conditional_rate_limiter(times=20, seconds=60))
 async def retry_pipeline_run(pipeline_id: str):
     """重试一次 Pipeline 运行（返回原始输入内容供前端重新提交）"""
     from database import SessionLocal
@@ -673,7 +690,7 @@ def list_providers():
     return {"current": llm_service.primary_provider, "providers": llm_service.list_available_providers()}
 
 
-@router.post("/llm/set-provider")
+@router.post("/llm/set-provider", dependencies=conditional_rate_limiter(times=20, seconds=60))
 def set_provider(request: Request, provider: str, admin: User = Depends(require_admin), db: Session = Depends(get_db)):
     """切换模型提供商"""
     from services.llm import llm_service
@@ -689,6 +706,84 @@ def set_provider(request: Request, provider: str, admin: User = Depends(require_
         return {"success": True, "current": provider}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/llm/health", dependencies=conditional_rate_limiter(times=20, seconds=60))
+def llm_health():
+    """LLM 资源矩阵健康状态（spec-11）
+
+    返回所有 provider 的健康探测结果、熔断器状态、key 池容量。
+    供运维面板监控多 key 轮询 / 熔断 / 热替换接力状态。
+    """
+    from services.llm import llm_service
+    return {
+        "providers": llm_service.provider_health,
+        "circuit_breakers": {
+            p: cb.get_status() for p, cb in llm_service.circuit_breakers.items()
+        },
+        "key_pools": {
+            p: {
+                "key_count": len(pool.keys),
+                "total_rpm": pool.rpm_limit * len(pool.keys) if pool.rpm_limit > 0 else 0,
+            }
+            for p, pool in llm_service.key_pools.items()
+        },
+    }
+
+
+@router.post("/llm/test-connection", dependencies=conditional_rate_limiter(times=10, seconds=60))
+async def test_llm_connection(
+    req: TestLLMConnectionRequest,
+    admin: User = Depends(require_admin),
+):
+    """测试 LLM 连接（后端代理，避免浏览器 CORS）— spec-19
+
+    前端 LLM 设置页面调用此端点验证用户填写的 api_key 是否可用。
+    不再从浏览器直接 fetch 第三方 API（会被书生 API 的 CORS 拦截报 "fail to fetched"）。
+
+    复用 services/llm.py 的 PROVIDERS 配置（base_url / default_model），不硬编码。
+    使用 httpx.AsyncClient(timeout=10.0) 避免长时间挂起。
+    """
+    from services.llm import PROVIDERS
+    from openai import AsyncOpenAI
+    import httpx
+
+    if req.provider not in PROVIDERS:
+        return {"success": False, "error": f"未知 provider: {req.provider}"}
+
+    config = PROVIDERS[req.provider]
+
+    # 解析 base_url：用户传入 > provider 默认
+    if req.base_url:
+        base_url = req.base_url
+    elif req.provider == "custom":
+        return {"success": False, "error": "custom provider 必须传 base_url"}
+    else:
+        base_url = config.base_url
+
+    # 解析 model：用户传入 > provider 默认
+    model = req.model or config.default_model
+    if not model:
+        return {"success": False, "error": "未指定模型名且 provider 无默认模型"}
+
+    logger.info(
+        f"admin {admin.username} 测试 LLM 连接: provider={req.provider} model={model} base_url={base_url}"
+    )
+    try:
+        client = AsyncOpenAI(
+            api_key=req.api_key,
+            base_url=base_url,
+            http_client=httpx.AsyncClient(timeout=10.0),
+        )
+        # 发送极简测试请求（max_tokens=1 降低成本）
+        response = await client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": "1"}],
+            max_tokens=1,
+        )
+        return {"success": True, "model": response.model}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 # ================================================================

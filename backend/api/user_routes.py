@@ -7,9 +7,13 @@ from models import User
 from schemas import UserCreate, UserLogin, UserResponse, PointsRecordResponse
 from auth import require_current_user
 from services.user_service import get_user_service, UserService
+from services.cache import REDIS_AVAILABLE
 from fastapi_limiter.depends import RateLimiter
 
 router = APIRouter(prefix="/users", tags=["用户"])
+
+# 条件限流：Redis 不可用时跳过
+_login_deps = [Depends(RateLimiter(times=5, seconds=60))] if REDIS_AVAILABLE else []
 
 
 @router.post("/register", response_model=UserResponse)
@@ -20,7 +24,7 @@ def register(
     return user_service.register(user.username, user.password, user.nickname)
 
 
-@router.post("/login", dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+@router.post("/login", dependencies=_login_deps)
 def login(
     user: UserLogin,
     user_service: UserService = Depends(get_user_service)

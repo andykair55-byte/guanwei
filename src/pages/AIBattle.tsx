@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft, Send, Swords, Trophy, RotateCcw,
   Shield, BarChart3, Search, Target, Lightbulb, BookOpen, RefreshCw, Smile, Brain,
-  Mic, TrendingUp, Flame, Zap, Check,
+  Mic, TrendingUp, Flame, Zap, Check, Coins,
 } from 'lucide-react'
 import CharacterIcon from '../components/CharacterIcon'
 import DanmakuOverlay from '../components/DanmakuOverlay'
@@ -147,6 +147,8 @@ export default function AIBattle() {
   const [battleEnded, setBattleEnded] = useState(false)
   const [showResult, setShowResult] = useState(false)
   const [hasVoted, setHasVoted] = useState<'user' | 'ai' | null>(null)
+  const [betInfo, setBetInfo] = useState<{ side: 'affirm' | 'negate'; amount: number } | null>(null)
+  const [betSettled, setBetSettled] = useState(false)
   const [userVotes, setUserVotes] = useState(834 + Math.floor(Math.random() * 300))
   const [aiVotes, setAiVotes] = useState(912 + Math.floor(Math.random() * 300))
   const [isRecording, setIsRecording] = useState(false)
@@ -161,6 +163,8 @@ export default function AIBattle() {
 
   const chatEndRef = useRef<HTMLDivElement>(null)
   const TOTAL_ROUNDS = 4
+  /** 下注赔率，与 BetPanel ODDS 保持一致 */
+  const BET_ODDS = 1.8
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -395,16 +399,17 @@ export default function AIBattle() {
     setBattleEnded(false)
     setShowResult(false)
     setHasVoted(null)
+    setBetInfo(null)
+    setBetSettled(false)
   }
 
-  // 下注回调：扣减用户积分（结算逻辑后续 Sprint 接入）
+  // 下注回调：扣减用户积分，并记录下注信息供结算使用
   const handleBet = useCallback((side: 'affirm' | 'negate', amount: number) => {
     useAuthStore.setState((state) => {
       if (!state.user) return state
       return { user: { ...state.user, points: Math.max(0, state.user.points - amount) } }
     })
-    // side 暂存到闭包外由后续结算逻辑消费
-    void side
+    setBetInfo({ side, amount })
   }, [])
 
   // 用户发送弹幕：转为队列项追加到弹幕层
@@ -417,6 +422,37 @@ export default function AIBattle() {
   const totalAiScore = rounds.reduce((sum, r) => sum + (r.score?.negateScore || 0), 0)
   const totalVotes = userVotes + aiVotes
   const userPercent = totalVotes > 0 ? Math.round((userVotes / totalVotes) * 100) : 50
+
+  // 结算：showResult 为 true 时，根据最终得分结算下注
+  // 用户是正方(affirm)，AI 是反方(negate)；赢则按赔率返还积分
+  useEffect(() => {
+    if (!showResult || !betInfo || betSettled) return
+    const userWon = betInfo.side === 'affirm'
+      ? totalUserScore > totalAiScore
+      : totalAiScore > totalUserScore
+    if (userWon) {
+      const winnings = Math.round(betInfo.amount * BET_ODDS)
+      useAuthStore.setState((state) => {
+        if (!state.user) return state
+        return { user: { ...state.user, points: state.user.points + winnings } }
+      })
+    }
+    setBetSettled(true)
+  }, [showResult, betInfo, betSettled, totalUserScore, totalAiScore])
+
+  // 结算结果文案（用于结果页展示）
+  const betResultMessage = (() => {
+    if (!betInfo || !betSettled) return null
+    const userWon = betInfo.side === 'affirm'
+      ? totalUserScore > totalAiScore
+      : totalAiScore > totalUserScore
+    const sideLabel = betInfo.side === 'affirm' ? topic.affirmLabel : topic.negateLabel
+    if (userWon) {
+      const winnings = Math.round(betInfo.amount * BET_ODDS)
+      return `下注 ${sideLabel} 获胜 · 赢得 +${winnings} 积分`
+    }
+    return `下注 ${sideLabel} 未中 · 损失 ${betInfo.amount} 积分`
+  })()
 
   // 对战状态机：匹配→准备→辩论中→裁判评分→结算→完成
   // 匹配(0) 对手已分配即完成；后续按本地状态推进
@@ -835,6 +871,20 @@ export default function AIBattle() {
               </p>
               <p className="text-[12px] text-ink-500 mt-1">评委打分 {totalUserScore} : {totalAiScore}</p>
             </div>
+
+            {/* 下注结算结果 */}
+            {betResultMessage && (
+              <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[12px] font-medium ${
+                betInfo && (betInfo.side === 'affirm'
+                  ? totalUserScore > totalAiScore
+                  : totalAiScore > totalUserScore)
+                  ? 'bg-bamboo/10 text-bamboo'
+                  : 'bg-seal/8 text-seal'
+              }`}>
+                <Coins size={14} className="text-gold flex-shrink-0" />
+                <span>{betResultMessage}</span>
+              </div>
+            )}
 
             {/* Audience vote */}
             <div className="space-y-2">

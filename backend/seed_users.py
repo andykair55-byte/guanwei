@@ -19,6 +19,35 @@ MOCK_USERS = [
     {"username": "瓜田过客", "nickname": "瓜田过客", "points": 150, "rank": "吃瓜群众", "total_guesses": 12, "correct_guesses": 6},
 ]
 
+
+def seed_demo_user(db: Session):
+    """创建演示账号 demo/demo（与 admin/test 同等级别）。
+
+    幂等：已存在时直接跳过，保证在已有数据库里也能补建。
+    解决前端 authStore.ts autoLoginMock 用 demo/demo 登录但后端无此用户的问题。
+    """
+    existing = db.query(User).filter(User.username == "demo").first()
+    if existing:
+        print("demo 用户已存在，跳过")
+        return
+
+    demo_user = User(
+        username="demo",
+        nickname="演示账号",
+        password_hash=get_password_hash("demo"),
+        avatar="https://picsum.photos/seed/demo/80/80",
+        points=100,
+        rank="吃瓜群众",
+        is_admin=False,
+        total_guesses=0,
+        correct_guesses=0,
+        created_at=datetime.utcnow(),
+    )
+    db.add(demo_user)
+    db.commit()
+    print("已创建 demo 演示账号（用户名: demo / 密码: demo）")
+
+
 def seed_extended_users(db: Session):
     """创建扩展用户数据"""
     # 检查是否已有扩展用户
@@ -114,6 +143,7 @@ if __name__ == "__main__":
     from database import SessionLocal
     db = SessionLocal()
     try:
+        seed_demo_user(db)
         seed_extended_users(db)
         user_ids = [u.id for u in db.query(User).filter(User.username.in_([u["username"] for u in MOCK_USERS])).all()]
         seed_more_melons(db, user_ids)

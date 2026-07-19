@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
+import { useSidebarStore, ALL_NAV_ITEMS, ICON_MAP } from '../stores/sidebarStore'
 
 /* ═══════════════════════════════════════════════════════
    Toggle Switch（像素风）
@@ -277,7 +278,6 @@ export default function SettingsPage() {
   const [melonNotify, setMelonNotify] = useState(true)
   const [debateNotify, setDebateNotify] = useState(false)
   const [publicProfile, setPublicProfile] = useState(true)
-  const [allowDM, setAllowDM] = useState(true)
   const [showActivity, setShowActivity] = useState(false)
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('light')
   const [density, setDensity] = useState<'comfortable' | 'compact' | 'spacious'>('comfortable')
@@ -294,6 +294,8 @@ export default function SettingsPage() {
   const [sidebarCompact, setSidebarCompact] = useState(false)
   const [showLabels, setShowLabels] = useState(true)
   const [dataUsage] = useState({ used: 128, total: 1024 })
+  const [navExpanded, setNavExpanded] = useState(false)
+  const { enabledItems, addItem, removeItem } = useSidebarStore()
 
   // 扁平化导航项
   const flatNav = useMemo(() => {
@@ -607,14 +609,94 @@ export default function SettingsPage() {
             </SettingGroup>
 
             <SettingGroup title="导航项管理">
-              <SettingRow
-                icon={Layers} iconColor="#3b82f6" iconBg="#eff6ff"
-                label="自定义导航"
-                description="选择侧边栏显示的页面"
-                value="6 个已启用"
-                onClick={() => {}}
-                last
-              />
+              {/* 可点击行：动态数量 + 旋转箭头 */}
+              <div
+                role="button"
+                tabIndex={0}
+                aria-expanded={navExpanded}
+                onClick={() => setNavExpanded(v => !v)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setNavExpanded(v => !v)
+                  }
+                }}
+                className="flex items-start gap-3.5 py-3.5 px-4 transition-all duration-200 cursor-pointer hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-seal/50 motion-reduce:transition-none"
+                style={{ borderBottom: navExpanded ? '1px solid #f5f5f5' : 'none' }}
+              >
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
+                  style={{ background: '#eff6ff', color: '#3b82f6', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)' }}
+                >
+                  <Layers size={17} strokeWidth={2} />
+                </div>
+                <div className="flex-1 min-w-0 pt-0.5">
+                  <p className="text-[14px] font-medium leading-tight" style={{ color: '#171717' }}>
+                    自定义导航
+                  </p>
+                  <p className="text-[12px] mt-1 leading-relaxed text-gray-400">
+                    选择侧边栏显示的页面
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0 pt-0.5">
+                  <span className="text-[13px] text-gray-400">{enabledItems.length} 个已启用</span>
+                  <ChevronRight
+                    size={16}
+                    className={`text-gray-300 shrink-0 mt-0.5 transition-transform duration-200 motion-reduce:transition-none ${navExpanded ? 'rotate-90' : ''}`}
+                  />
+                </div>
+              </div>
+
+              {/* 展开面板：按 group 分组展示所有可用导航项 */}
+              {navExpanded && (
+                <div className="px-4 py-4 bg-gray-50/50 animate-page-enter">
+                  {([1, 2, 3] as const).map((g, gi) => {
+                    const groupItems = ALL_NAV_ITEMS.filter(i => i.group === g)
+                    const groupTitle = g === 1 ? '核心' : g === 2 ? '求证 / 工具' : '发现 / 休闲'
+                    return (
+                      <div key={g} className={gi > 0 ? 'mt-4' : ''}>
+                        <p className="text-[11px] font-bold uppercase tracking-[0.12em] mb-2 px-1 text-gray-400">
+                          {groupTitle}
+                        </p>
+                        <div className="space-y-1">
+                          {groupItems.map(item => {
+                            const Icon = ICON_MAP[item.icon]
+                            const enabled = enabledItems.includes(item.id)
+                            // 保底：仅剩 1 个已启用项时，该项 toggle 禁用
+                            const isLastEnabled = enabledItems.length === 1 && enabled
+                            return (
+                              <div
+                                key={item.id}
+                                className="flex items-center gap-3 py-2 px-2.5 rounded-lg bg-white/60 transition-all duration-200 motion-reduce:transition-none"
+                              >
+                                <div
+                                  className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+                                  style={{ background: '#f5f5f5', color: '#737373' }}
+                                >
+                                  {Icon && <Icon size={14} strokeWidth={2} />}
+                                </div>
+                                <span className="flex-1 text-[13px] font-medium text-gray-700">
+                                  {item.label}
+                                </span>
+                                <div
+                                  className={isLastEnabled ? 'opacity-40 pointer-events-none' : 'transition-all duration-200 motion-reduce:transition-none'}
+                                  title={isLastEnabled ? '至少保留 1 个导航项' : undefined}
+                                >
+                                  <Toggle
+                                    checked={enabled}
+                                    onChange={(v) => (v ? addItem(item.id) : removeItem(item.id))}
+                                    size="sm"
+                                  />
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </SettingGroup>
           </>
         )

@@ -19,6 +19,12 @@ class UserService:
 
     def register(self, username: str, password: str, nickname: str) -> User:
         """用户注册"""
+        # spec-12: 密码强度二次校验（防御 Pydantic 被绕过的场景）
+        if len(password) < 8 or len(password) > 128:
+            raise HTTPException(status_code=400, detail="密码长度必须为 8-128 位")
+        if not any(c.isalpha() for c in password) or not any(c.isdigit() for c in password):
+            raise HTTPException(status_code=400, detail="密码必须同时包含字母和数字")
+
         db_user = self.db.query(User).filter(User.username == username).first()
         if db_user:
             raise HTTPException(status_code=400, detail="用户名已存在")

@@ -8,6 +8,9 @@ import logging
 from typing import Optional, Any
 from datetime import datetime
 
+from dotenv import load_dotenv
+load_dotenv()
+
 logger = logging.getLogger(__name__)
 
 DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"

@@ -4,7 +4,7 @@
 import { useRef, useEffect } from 'react'
 import { Crown, Bot, User, Gavel, Eye, Users, MessageCircle, Play } from 'lucide-react'
 import {
-  NATIONAL_PHASES, type NationalDebateRoom, type NationalSpeech, type NationalPhase,
+  NATIONAL_PHASES, type NationalDebateRoom, type NationalSpeech,
   getPositionLabel, getPhaseLabel, DEFAULT_JUDGES,
 } from '../../types/nationalDebate'
 import PhaseTimer from './PhaseTimer'
@@ -29,7 +29,7 @@ export default function NationalDebateStage({
   room, currentPhaseIndex, currentSpeechIndex,
   phaseRemaining, onPhaseTimeUp,
   userSeatId, userInput, onUserInputChange, onUserSubmit,
-  isAIThinking, isJudging, activeTab, onTabChange,
+  isAIThinking, isJudging, activeTab,
 }: Props) {
   const chatEndRef = useRef<HTMLDivElement>(null)
 
@@ -38,7 +38,6 @@ export default function NationalDebateStage({
   }, [room.speeches.length, isAIThinking])
 
   const currentPhaseConfig = NATIONAL_PHASES[currentPhaseIndex]
-  const currentPhase: NationalPhase = currentPhaseConfig?.phase ?? 'opening'
   const currentPhaseOrder = currentPhaseConfig?.order ?? []
   const currentSeatId = currentPhaseOrder[currentSpeechIndex]
   const isUserTurn = currentSeatId === userSeatId

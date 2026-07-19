@@ -1,16 +1,16 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  Play, FastForward, Trophy, RotateCcw,
+  Play, FastForward,
   MessageCircle, Share2, MoreHorizontal, ThumbsUp,
   Swords as SwordsIcon, RefreshCw, Loader2,
   Flame, Sparkles, Send, Radio, Users,
-  BookOpen, Zap, Download, Circle, Crown,
-  ChevronLeft, Eye, Heart,
+  BookOpen, Zap, Circle,
+  ChevronLeft, Heart,
 } from 'lucide-react'
 import {
   getTopic, getMockMatch,
-  type DebateMatch, type DebateRound, type Highlight, type TauntMoment, type FinalResult, type ThinkingStep,
+  type DebateMatch, type DebateRound, type Highlight, type TauntMoment, type ThinkingStep,
 } from '../services/debateArenaService'
 import { type AICharacter } from '../services/characters'
 import { initThemeDebate, runThemeDebate } from '../services/themeDebateService'
@@ -73,6 +73,7 @@ function CharacterPortraitSmall({ characterId, size = 28, flip = false }: { char
 }
 
 // ===== 角色阵营/称号映射 =====
+// eslint-disable-next-line react/only-export-components -- 常量被 AIArenaLobby 引用，暂不拆分
 export const FACTION_MAP: Record<string, string> = {
   'zhuge-liang': '蜀', 'zhuge-liang-2': '蜀',
   'wang-lang': '魏',
@@ -333,7 +334,7 @@ function CharacterPortrait({ char, faction, side, isActive }: {
 }
 
 // ===== 交叉剑 VS 中央 =====
-function VSCenter({ roundNum, totalRounds, phase, isThemeMode }: {
+function VSCenter({ roundNum, phase, isThemeMode }: {
   roundNum: number; totalRounds: number; phase: string; isThemeMode: boolean
 }) {
   const phaseText = (() => {
@@ -728,15 +729,14 @@ export default function AIArena() {
   const [affirmVotes, setAffirmVotes] = useState(23876)
   const [negateVotes, setNegateVotes] = useState(11248)
   const [hasVoted, setHasVoted] = useState<'affirm' | 'negate' | null>(null)
-  const [showResult, setShowResult] = useState(false)
-  const [showClosing, setShowClosing] = useState(false)
+  const [showClosing] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const isPinnedRef = useRef(true) // 用户是否贴在底部（未上拉）
   const [isLoadingDebate, setIsLoadingDebate] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
-  const [danmakuEnabled, setDanmakuEnabled] = useState(true)
+  const [danmakuEnabled] = useState(true)
   const [danmakuQueue, setDanmakuQueue] = useState<DanmakuQueueItem[]>([])
   const [viewerCount, setViewerCount] = useState(23124)
   const [isRecording, setIsRecording] = useState(false)
@@ -839,7 +839,7 @@ export default function AIArena() {
       .then(m => { if (!cancelled) { setMatch(m); setIsLoadingDebate(false) } })
       .catch(err => { if (!cancelled) { setLoadError(err.message || '辩论加载失败'); setIsLoadingDebate(false) } })
     return () => { cancelled = true }
-  }, [themeId, debateTopicId, roundsParam, reloadKey])
+  }, [themeId, debateTopicId, roundsParam, reloadKey]) // eslint-disable-line react-hooks/exhaustive-deps -- 故意不依赖 match.rounds.length，避免回合更新时重复初始化
 
   const totalRounds = match.totalRounds
   const isComplete = revealed.length >= totalRounds && revealed.every(r => r.phase === 'scored')
@@ -903,15 +903,6 @@ export default function AIArena() {
 
   const handleStart = () => { setIsAutoPlaying(true); if (revealed.length === 0) advance() }
   const handleFastForward = () => { setIsAutoPlaying(false); setRevealed(match.rounds.map(r => ({ round: r, phase: 'scored' as Phase }))) }
-  const handleReset = () => {
-    setRevealed([]); setIsAutoPlaying(false); setShowResult(false); setShowClosing(false)
-    setDanmakuQueue([]); prevPhaseRef.current = ''
-    if (themeId) {
-      const init = initThemeDebate(themeId, debateTopicId || 'college')
-      if (init) { setMatch({ topic: init.topic, affirmChar: init.affirmChar, negateChar: init.negateChar, rounds: [], totalRounds: roundsParam }); setLoadError(null); setReloadKey(k => k + 1); return }
-    }
-    setMatch(getMockMatch(topic.id, affirmCharId, negateCharId, roundsParam))
-  }
 
   const handleVote = (side: 'affirm' | 'negate') => {
     if (hasVoted) return; setHasVoted(side)

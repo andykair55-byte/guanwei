@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import MobileLayout from '../layouts/MobileLayout'
 import ShareRedirect from '../components/ShareRedirect'
 import ErrorBoundary from '../components/ErrorBoundary'
+import { PageWrapper } from '../components/PageWrapper'
 import {
   filterRoutes,
   layoutRoutes,
@@ -45,6 +46,7 @@ import {
   CharacterSelect,
   MelonJudgePage,
   EntertainmentHallPage,
+  MultiplayerDebatePlaceholder,
   JudgeFeedPage,
 } from '../router/routes'
 
@@ -72,6 +74,7 @@ const pageMap: Record<string, React.LazyExoticComponent<React.ComponentType<any>
   '/entertainment/arena/human-battle': AIBattle,
   '/entertainment/debate': DebateLobby,
   '/entertainment/debate/lobby': DebateLobby,
+  '/entertainment/debate/multiplayer': MultiplayerDebatePlaceholder,
   '/entertainment/debate/room/:roomId': EntertainmentRoomPage,
   '/entertainment/debate/national': NationalDebateLobby,
   '/entertainment/debate/national/:roomId': NationalDebateRoomPage,
@@ -119,7 +122,7 @@ export default function MobileApp() {
               {myLayoutRoutes.map(r => {
                 const Comp = pageMap[r.path]
                 if (!Comp) return null
-                return <Route key={r.path} path={r.path} element={<Comp />} />
+                return <Route key={r.path} path={r.path} element={<PageWrapper><Comp /></PageWrapper>} />
               })}
               <Route path="*" element={<Navigate to={fallback} replace />} />
             </Route>

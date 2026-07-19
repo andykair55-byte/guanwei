@@ -20,6 +20,7 @@ function delay(ms = 150): Promise<void> {
 
 let melonsCache = generateMelons()
 // 让部分瓜变成已开奖状态（前4个 pending，后面的交替 revealed）
+// 已开奖的瓜同步补充 result + report 字段，确保种子数据完整
 melonsCache = melonsCache.map((m, i) => {
   if (i >= 4 && i % 2 === 0) {
     const result = i % 4 === 0
@@ -28,13 +29,16 @@ melonsCache = melonsCache.map((m, i) => {
       status: 'revealed' as const,
       result,
       revealTime: new Date(Date.now() - Math.random() * 86400000).toISOString(),
+      report: generateMockReport(m.id, result),
     }
   }
   return m
 })
 
 // 模拟用户猜测记录
-const guessesMap = new Map<string, { choice: boolean; evidence?: string }>()
+const guessesMap = new Map<string, { choice: boolean; evidence?: string; requestId?: string }>()
+// 佐证/猜瓜 requestId 去重表
+const processedRequestIds = new Set<string>()
 
 // 模拟评论数据
 const commentsMap = new Map<number, any[]>()
@@ -168,13 +172,32 @@ export const mockApi = {
       evidence_count: melonEvidenceCounts.get(m.id) || 0,
       is_liked: likedMelons.has(id),
       created_at: m.createdAt,
+      // 已开奖的瓜同步返回 report 字段，确保前端任何路径都能拿到完整数据
+      report: m.report ?? null,
     }
   },
 
-  async submitGuess(melonId: number, choice: boolean, evidenceContent?: string) {
+  async submitGuess(melonId: number, choice: boolean, evidenceContent?: string, requestId?: string) {
     await delay(400)
     const key = String(melonId)
-    guessesMap.set(key, { choice, evidence: evidenceContent })
+    // requestId 幂等：同一 requestId 直接返回首次结果
+    if (requestId) {
+      if (processedRequestIds.has(requestId)) {
+        // 返回上次记录的结果（避免重复入账）
+        const existing = guessesMap.get(key)
+        return {
+          id: Date.now(),
+          melon_id: melonId,
+          choice: existing?.choice ?? choice,
+          is_correct: null,
+          points_earned: 0,
+          guessed_at: new Date().toISOString(),
+          duplicated: true,
+        }
+      }
+      processedRequestIds.add(requestId)
+    }
+    guessesMap.set(key, { choice, evidence: evidenceContent, requestId })
     return {
       id: Date.now(),
       melon_id: melonId,
@@ -182,6 +205,29 @@ export const mockApi = {
       is_correct: null,
       points_earned: 0,
       guessed_at: new Date().toISOString(),
+    }
+  },
+
+  async revealMelon(melonId: number, result: boolean) {
+    await delay(300)
+    const m = melonsCache.find(x => x.id === `melon-${melonId}`)
+    if (!m) {
+      return { success: false, message: '瓜不存在' }
+    }
+    if (m.status === 'revealed') {
+      return { success: false, message: '该瓜已开奖，请勿重复操作' }
+    }
+    m.status = 'revealed'
+    m.result = result
+    m.revealTime = new Date().toISOString()
+    // 同步在 Melon 对象上挂一份 report，确保前端任何路径都能拿到
+    m.report = generateMockReport(String(melonId), result)
+    return {
+      success: true,
+      message: '开奖成功',
+      melon_id: melonId,
+      result,
+      revealed_at: m.revealTime,
     }
   },
 

@@ -63,6 +63,7 @@ export const AboutPage = lazy(() => import('../pages/AboutPage'))
 export const CricketForge = lazy(() => import('../pages/CricketForge'))
 export const AgentWorldPage = lazy(() => import('../pages/AgentWorldPage'))
 export const EntertainmentHallPage = lazy(() => import('../pages/EntertainmentHallPage'))
+export const MultiplayerDebatePlaceholder = lazy(() => import('../pages/MultiplayerDebatePlaceholder'))
 export const JudgeFeedPage = lazy(() => import('../pages/JudgeFeedPage'))
 export const AIArenaLobby = lazy(() => import('../pages/AIArenaLobby'))
 export const CharacterSelect = lazy(() => import('../pages/CharacterSelect'))
@@ -113,6 +114,7 @@ export const layoutRoutes: RouteConfig[] = [
   { path: '/entertainment/arena/forge',              platform: 'web' },
   { path: '/entertainment/debate',                   platform: 'both' },
   { path: '/entertainment/debate/lobby',             platform: 'both' },
+  { path: '/entertainment/debate/multiplayer',       platform: 'both' },
   { path: '/entertainment/debate/room/:roomId',      platform: 'both' },
   { path: '/entertainment/debate/national',          platform: 'both' },
   { path: '/entertainment/debate/national/:roomId',  platform: 'both' },

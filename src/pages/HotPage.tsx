@@ -1,44 +1,20 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Users, Clock, ChevronRight, Activity, Eye,
   Bookmark, BookmarkCheck, Flame, TrendingUp, Radio
 } from 'lucide-react'
-import HotDetailModal, { EVENTS_DATA, type HotEvent } from '../components/HotDetailModal'
-
-// ── 类型定义 ──────────────────────────────────────────
-type EventStatus = 'developing' | 'resolved' | 'tracking'
-type EventCategory = '科技' | '社会热点' | '生活科普' | '财经' | '校园' | '娱乐' | '健康'
-
-interface TimelineNode {
-  date: string
-  event: string
-}
-
-interface HotEventCard {
-  id: number
-  title: string
-  summary: string
-  category: EventCategory
-  status: EventStatus
-  followers: number
-  lastUpdate: string
-  nodes: TimelineNode[]
-  totalNodes: number
-  viewCount: number
-  date: string
-  coverImage: string
-  discussionCount: number
-  mediaCoverage: number
-}
+import HotDetailModal from '../components/HotDetailModal'
+import { HOT_EVENT_SEEDS, hotCardToDetail } from '../services/mockData'
+import type { HotEventCard, HotEventStatus, HotEventCategory, HotEvent } from '../types'
 
 // ── 配置 ──────────────────────────────────────────────
-const STATUS_CONFIG: Record<EventStatus, { label: string; dotColor: string; bgColor: string; textColor: string }> = {
+const STATUS_CONFIG: Record<HotEventStatus, { label: string; dotColor: string; bgColor: string; textColor: string }> = {
   developing: { label: '发酵中', dotColor: '#d64535', bgColor: '#fef2f0', textColor: '#d64535' },
   resolved: { label: '已解决', dotColor: '#27ae60', bgColor: '#f0fdf4', textColor: '#27ae60' },
   tracking: { label: '持续追踪', dotColor: '#f1c40f', bgColor: '#fffdf0', textColor: '#d4a017' },
 }
 
-const CATEGORY_COLORS: Record<EventCategory, { bg: string; text: string }> = {
+const CATEGORY_COLORS: Record<HotEventCategory, { bg: string; text: string }> = {
   '科技': { bg: 'bg-blue-500', text: 'text-white' },
   '社会热点': { bg: 'bg-rose-500', text: 'text-white' },
   '生活科普': { bg: 'bg-emerald-500', text: 'text-white' },
@@ -48,7 +24,7 @@ const CATEGORY_COLORS: Record<EventCategory, { bg: string; text: string }> = {
   '健康': { bg: 'bg-teal-500', text: 'text-white' },
 }
 
-const CATEGORY_SOLID: Record<EventCategory, string> = {
+const CATEGORY_SOLID: Record<HotEventCategory, string> = {
   '科技': '#3b82f6',
   '社会热点': '#f43f5e',
   '生活科普': '#10b981',
@@ -57,71 +33,6 @@ const CATEGORY_SOLID: Record<EventCategory, string> = {
   '娱乐': '#ec4899',
   '健康': '#14b8a6',
 }
-
-// 状态映射：从卡片状态映射到详情页状态
-const STATUS_MAP: Record<EventStatus, '发酵中' | '已解决' | '持续追踪'> = {
-  developing: '发酵中',
-  resolved: '已解决',
-  tracking: '持续追踪',
-}
-
-// ── Mock 数据 ─────────────────────────────────────────
-const BASE_EVENTS: HotEventCard[] = [
-  {
-    id: 1, title: '新能源车续航虚标事件',
-    summary: '多位车主实测发现某品牌旗舰车型实际续航仅为官方标称的60%，引发大规模维权。工信部已介入调查，第三方检测机构正在进行全面测试。',
-    category: '科技', status: 'developing', followers: 128400, lastUpdate: '2 小时前',
-    nodes: [{ date: '03-12', event: '首批车主爆料' }, { date: '03-18', event: '品牌方回应' }, { date: '03-25', event: '工信部介入' }, { date: '04-02', event: '第三方检测' }],
-    totalNodes: 12, viewCount: 892000, date: '2025-03-12',
-    coverImage: 'https://picsum.photos/seed/hot1/400/300',
-    discussionCount: 89234, mediaCoverage: 156,
-  },
-  {
-    id: 2, title: '985高校保研名额争议',
-    summary: '某985高校被曝保研名额向特定生源倾斜，往届学生质疑公平性，教育部回应将开展专项核查，校方已成立独立调查组。',
-    category: '校园', status: 'developing', followers: 96200, lastUpdate: '45 分钟前',
-    nodes: [{ date: '04-01', event: '长文首发' }, { date: '04-05', event: '校方声明' }, { date: '04-10', event: '教育部回应' }],
-    totalNodes: 8, viewCount: 1240000, date: '2025-04-01',
-    coverImage: 'https://picsum.photos/seed/hot2/400/300',
-    discussionCount: 156789, mediaCoverage: 89,
-  },
-  {
-    id: 3, title: '网红餐厅预制菜事件',
-    summary: '知名连锁品牌被曝全线使用预制菜却以"现炒"为卖点。市场监管总局发布预制菜标识新规征求意见稿，行业迎来规范化发展。',
-    category: '生活科普', status: 'resolved', followers: 73500, lastUpdate: '1 天前',
-    nodes: [{ date: '01-20', event: '暗访视频曝光' }, { date: '02-03', event: '品牌道歉' }, { date: '02-18', event: '行业自查' }, { date: '03-10', event: '新规出台' }],
-    totalNodes: 15, viewCount: 2100000, date: '2025-01-20',
-    coverImage: 'https://picsum.photos/seed/hot3/400/300',
-    discussionCount: 234567, mediaCoverage: 234,
-  },
-  {
-    id: 4, title: '室温超导材料争议',
-    summary: '国内某实验室宣称实现近常压室温超导，多个团队尝试复现结果不一。论文已启动撤稿审查，学界对此争议持续。',
-    category: '科技', status: 'tracking', followers: 54300, lastUpdate: '6 小时前',
-    nodes: [{ date: '02-14', event: '论文预印本' }, { date: '03-01', event: '复现失败' }, { date: '03-22', event: '撤稿审查' }],
-    totalNodes: 6, viewCount: 670000, date: '2025-02-14',
-    coverImage: 'https://picsum.photos/seed/hot4/400/300',
-    discussionCount: 45678, mediaCoverage: 78,
-  },
-  {
-    id: 5, title: '某地暴雨救援时间线',
-    summary: '连续暴雨导致城市内涝，救援力量调配、物资发放、灾后重建各阶段时间线梳理，记录了这场自然灾害中的关键节点。',
-    category: '社会热点', status: 'resolved', followers: 210000, lastUpdate: '3 天前',
-    nodes: [{ date: '06-15', event: '暴雨预警' }, { date: '06-16', event: '紧急救援' }, { date: '06-18', event: '物资到位' }, { date: '06-22', event: '积水退去' }],
-    totalNodes: 12, viewCount: 3400000, date: '2025-06-15',
-    coverImage: 'https://picsum.photos/seed/hot5/400/300',
-    discussionCount: 345678, mediaCoverage: 456,
-  },
-  {
-    id: 6, title: 'AI生成内容版权诉讼',
-    summary: '国内首例AI绘画版权案开庭，原告指控某平台生成图片侵犯其原创作品风格。判决结果将对AI产业发展产生深远影响。',
-    category: '科技', status: 'developing', followers: 41800, lastUpdate: '30 分钟前',
-    nodes: [{ date: '03-28', event: '原告起诉' }, { date: '04-08', event: '法院受理' }, { date: '04-15', event: '首次开庭' }],
-    totalNodes: 6, viewCount: 530000, date: '2025-03-28',
-    coverImage: 'https://picsum.photos/seed/hot6/400/300',
-    discussionCount: 89012, mediaCoverage: 67,
-  },
-]
 
 const TABS = ['全部', '科技', '社会热点', '生活科普', '财经', '校园', '娱乐', '健康']
 
@@ -214,7 +125,7 @@ function formatNum(n: number): string {
 }
 
 // ── 迷你时间线组件 ────────────────────────────────────
-function MiniTimeline({ nodes, totalNodes, color }: { nodes: TimelineNode[]; totalNodes: number; color: string }) {
+function MiniTimeline({ nodes, totalNodes, color }: { nodes: import('../types').TimelineNode[]; totalNodes: number; color: string }) {
   const extraCount = totalNodes - nodes.length
   return (
     <div className="mt-4 pt-3 border-t border-ink-100/60">
@@ -235,7 +146,7 @@ function MiniTimeline({ nodes, totalNodes, color }: { nodes: TimelineNode[]; tot
             </div>
             <div className="mt-2 pr-3">
               <div className="text-[10px] font-mono text-ink-400 font-semibold">{node.date}</div>
-              <div className="text-[11px] text-ink-600 mt-0.5 font-medium line-clamp-1">{node.event}</div>
+              <div className="text-[11px] text-ink-600 mt-0.5 font-medium line-clamp-1">{node.label}</div>
             </div>
           </div>
         ))}
@@ -251,13 +162,12 @@ function MiniTimeline({ nodes, totalNodes, color }: { nodes: TimelineNode[]; tot
 
 // ── 事件卡片组件 ──────────────────────────────────────
 function EventCard({
-  event, isBookmarked, onToggleBookmark, onClick, cardRef,
+  event, isBookmarked, onToggleBookmark, onClick,
 }: {
   event: HotEventCard
   isBookmarked: boolean
   onToggleBookmark: () => void
   onClick: (e: React.MouseEvent) => void
-  cardRef: (el: HTMLElement | null) => void
 }) {
   const statusCfg = STATUS_CONFIG[event.status]
   const catColor = CATEGORY_COLORS[event.category]
@@ -265,7 +175,6 @@ function EventCard({
 
   return (
     <article
-      ref={cardRef}
       data-event-id={event.id}
       className="group cursor-pointer bg-white rounded-2xl border border-ink-100/80 overflow-hidden transition-all duration-300 hover:shadow-lg hover:border-ink-200 hover:-translate-y-0.5"
       onClick={onClick}
@@ -377,45 +286,15 @@ function EventCard({
   )
 }
 
-// ── 将卡片数据转换为详情页数据格式 ─────────────────────
-function cardToDetailEvent(card: HotEventCard): HotEvent {
-  // 优先从 EVENTS_DATA 中查找完整数据
-  const fullEvent = EVENTS_DATA[card.id]
-  if (fullEvent) return fullEvent
-
-  // 否则从卡片数据构造
-  return {
-    id: card.id,
-    title: card.title,
-    summary: card.summary,
-    fullDescription: card.summary,
-    category: card.category,
-    status: STATUS_MAP[card.status],
-    followers: card.followers,
-    lastUpdate: card.lastUpdate,
-    nodes: card.nodes.map(n => ({ date: n.date, label: n.event })),
-    viewCount: card.viewCount,
-    tags: [card.category],
-    relatedEvents: [],
-    keyFigures: [],
-    mediaCoverage: card.mediaCoverage,
-    discussionCount: card.discussionCount,
-    coverImage: card.coverImage.replace('/400/300', '/800/600'),
-  }
-}
-
 // ── 主组件 ────────────────────────────────────────────
 export default function HotPage() {
   const [selectedTab, setSelectedTab] = useState('全部')
   const [bookmarkedIds, setBookmarkedIds] = useState<number[]>([])
-  const [displayedEvents, setDisplayedEvents] = useState<HotEventCard[]>(BASE_EVENTS)
-  const sentinelRef = useRef<HTMLDivElement>(null)
 
   // 弹窗状态
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<HotEvent | null>(null)
   const [originRect, setOriginRect] = useState<DOMRect | null>(null)
-  const cardRefs = useRef<Map<number, HTMLElement>>(new Map())
 
   useEffect(() => {
     const saved = localStorage.getItem('hotBookmarks')
@@ -429,36 +308,9 @@ export default function HotPage() {
   const toggleBookmark = (id: number) =>
     setBookmarkedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
 
-  const filtered = displayedEvents.filter(e =>
+  const filtered = HOT_EVENT_SEEDS.filter(e =>
     selectedTab === '全部' || e.category === selectedTab
   )
-
-  const generatePage = useCallback((pageNum: number): HotEventCard[] => {
-    return BASE_EVENTS.map(e => ({
-      ...e,
-      id: pageNum * BASE_EVENTS.length + e.id,
-      followers: e.followers + Math.floor(Math.random() * 1000) * pageNum,
-      viewCount: e.viewCount + Math.floor(Math.random() * 5000) * pageNum,
-      coverImage: `https://picsum.photos/seed/hot${pageNum * 10 + e.id}/400/300`,
-    }))
-  }, [])
-
-  useEffect(() => {
-    if (!sentinelRef.current) return
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && displayedEvents.length < 30) {
-          setDisplayedEvents(prev => [
-            ...prev,
-            ...generatePage(Math.floor(prev.length / BASE_EVENTS.length))
-          ])
-        }
-      },
-      { rootMargin: '200px' },
-    )
-    observer.observe(sentinelRef.current)
-    return () => observer.disconnect()
-  }, [displayedEvents.length, generatePage])
 
   // 打开弹窗（和社区一致：不改 URL，仅弹窗展示）
   const openModal = useCallback((event: HotEvent, rect: DOMRect) => {
@@ -477,18 +329,9 @@ export default function HotPage() {
   const handleCardClick = useCallback((card: HotEventCard) => (e: React.MouseEvent) => {
     const target = e.currentTarget as HTMLElement
     const rect = target.getBoundingClientRect()
-    const detailEvent = cardToDetailEvent(card)
+    const detailEvent = hotCardToDetail(card)
     openModal(detailEvent, rect)
   }, [openModal])
-
-  // 卡片 ref 注册
-  const setCardRef = useCallback((id: number) => (el: HTMLElement | null) => {
-    if (el) {
-      cardRefs.current.set(id, el)
-    } else {
-      cardRefs.current.delete(id)
-    }
-  }, [])
 
   return (
     <div className="flex flex-col h-full relative overflow-hidden"
@@ -618,7 +461,7 @@ export default function HotPage() {
           })}
           <div className="ml-auto flex items-center gap-2 text-[12px] text-gray-400 flex-shrink-0">
             <Radio size={11} className="text-red-500 animate-pulse" />
-            <span>{displayedEvents.length} 个事件</span>
+            <span>{HOT_EVENT_SEEDS.length} 个事件</span>
           </div>
         </div>
       </div>
@@ -634,7 +477,6 @@ export default function HotPage() {
                 isBookmarked={bookmarkedIds.includes(event.id)}
                 onToggleBookmark={() => toggleBookmark(event.id)}
                 onClick={handleCardClick(event)}
-                cardRef={setCardRef(event.id)}
               />
             ))}
           </div>
@@ -648,13 +490,7 @@ export default function HotPage() {
             </div>
           )}
 
-          <div ref={sentinelRef} className="h-12" />
-          {displayedEvents.length < 30 && filtered.length > 0 && (
-            <div className="flex justify-center py-6">
-              <div className="w-5 h-5 border-2 border-paper-200 border-t-seal rounded-full animate-spin" />
-            </div>
-          )}
-          {displayedEvents.length >= 30 && (
+          {filtered.length > 0 && (
             <div className="text-center py-6">
               <span className="text-[12px] text-ink-300 font-medium">已加载全部热点</span>
             </div>

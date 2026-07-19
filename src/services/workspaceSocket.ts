@@ -12,11 +12,39 @@ class WorkspaceSocket {
   private reconnectTimer: number | null = null
   private reconnectAttempts = 0
   private maxReconnect = 5
+  // 50ms debounce：连续 currentId 变化时只连接最后一个，避免 WS 抖动
+  private connectTimer: number | null = null
+  private pendingWorkspaceId: string | null = null
+  private readonly connectDebounceMs = 50
 
   connect(workspaceId: string) {
+    // 同 ID 守卫：已连接到相同 workspace 且 socket 处于 OPEN 时直接返回
     if (this.workspaceId === workspaceId && this.socket?.readyState === WebSocket.OPEN) return
 
-    this.disconnect()
+    // debounce：记下 pending id，50ms 后再真正建立连接
+    // 50ms 内若又收到新的 connect 调用，直接覆盖 pendingWorkspaceId
+    this.pendingWorkspaceId = workspaceId
+    if (this.connectTimer !== null) {
+      clearTimeout(this.connectTimer)
+    }
+    this.connectTimer = window.setTimeout(() => {
+      this.connectTimer = null
+      const id = this.pendingWorkspaceId
+      this.pendingWorkspaceId = null
+      if (id === null) return
+      this.doConnect(id)
+    }, this.connectDebounceMs)
+  }
+
+  private doConnect(workspaceId: string) {
+    // 取消可能挂起的 reconnect 定时器，我们要建立全新连接
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
+    }
+    // 关闭旧 socket（不调 disconnect，避免清掉 pendingWorkspaceId 相关状态）
+    this.socket?.close()
+    this.socket = null
 
     this.workspaceId = workspaceId
     this.reconnectAttempts = 0
@@ -47,6 +75,13 @@ class WorkspaceSocket {
   }
 
   disconnect() {
+    // 取消 pending 的 debounce 定时器
+    if (this.connectTimer !== null) {
+      clearTimeout(this.connectTimer)
+      this.connectTimer = null
+    }
+    this.pendingWorkspaceId = null
+
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer)
       this.reconnectTimer = null

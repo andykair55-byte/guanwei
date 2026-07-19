@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useParams, useLocation } from '
 import WebLayout from '../layouts/WebLayout'
 import ShareRedirect from '../components/ShareRedirect'
 import ErrorBoundary from '../components/ErrorBoundary'
+import { PageWrapper } from '../components/PageWrapper'
 import {
   filterRoutes,
   layoutRoutes,
@@ -46,6 +47,7 @@ import {
   NotificationPage,
   MessagePage,
   EntertainmentHallPage,
+  MultiplayerDebatePlaceholder,
   AICreationPage,
   EmotionDetector,
   JudgeFeedPage,
@@ -83,6 +85,7 @@ const pageMap: Record<string, React.LazyExoticComponent<React.ComponentType<any>
   '/entertainment/arena/forge': CricketForge,
   '/entertainment/debate': DebateLobby,
   '/entertainment/debate/lobby': DebateLobby,
+  '/entertainment/debate/multiplayer': MultiplayerDebatePlaceholder,
   '/entertainment/debate/room/:roomId': EntertainmentRoomPage,
   '/entertainment/debate/national': NationalDebateLobby,
   '/entertainment/debate/national/:roomId': NationalDebateRoomPage,
@@ -157,7 +160,7 @@ export default function WebApp() {
               {myLayoutRoutes.map(r => {
                 const Comp = pageMap[r.path]
                 if (!Comp) return null
-                return <Route key={r.path} path={r.path} element={<Comp />} />
+                return <Route key={r.path} path={r.path} element={<PageWrapper><Comp /></PageWrapper>} />
               })}
               <Route path="*" element={<Navigate to={fallback} replace />} />
             </Route>

@@ -1,0 +1,4 @@
+﻿=== 触发小薇 Pipeline ===
+Status: 200
+success: True
+pipeline_id: 9716c8bc-ea88-4643-ab75-5efceeed26db

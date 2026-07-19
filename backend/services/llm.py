@@ -428,6 +428,71 @@ class LLMService:
         )
         return response.choices[0].message.content
 
+    async def generate_chat(
+        self,
+        messages: list[dict],
+        provider: Optional[str] = None,
+        module: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+    ) -> str:
+        """多轮对话生成（保留 role 结构）
+
+        与 generate() 的区别：直接传入 OpenAI 格式的 messages 数组，
+        不再把历史拼成单条 prompt，适合客服/聊天场景。
+        同样支持 module 路由链和 provider 显式指定。
+        """
+        if provider:
+            return await self._generate_chat_with_provider(
+                provider, messages, temperature, max_tokens
+            )
+
+        providers_to_try = get_module_route(module)
+        last_error: Optional[Exception] = None
+        skipped_for_budget: list[str] = []
+
+        for prov in providers_to_try:
+            if self._is_budget_exceeded(prov):
+                skipped_for_budget.append(prov)
+                continue
+            try:
+                return await self._generate_chat_with_provider(
+                    prov, messages, temperature, max_tokens
+                )
+            except ValueError as e:
+                logger.debug(f"Skipping {prov}: {e}")
+                last_error = e
+                continue
+            except Exception as e:
+                logger.warning(f"{PROVIDERS[prov].display_name} 调用失败，尝试下一个: {e}")
+                last_error = e
+                continue
+
+        if skipped_for_budget:
+            raise RuntimeError(
+                f"模块 {module or 'default'} 的所有 provider token budget 超限或不可用: "
+                f"超限跳过={skipped_for_budget}, 最后错误={last_error}"
+            )
+        raise RuntimeError(f"模块 {module or 'default'} 的所有 provider × key 均不可用: {last_error}")
+
+    async def _generate_chat_with_provider(
+        self,
+        provider_name: str,
+        messages: list[dict],
+        temperature: float,
+        max_tokens: int,
+    ) -> str:
+        """使用指定提供商进行多轮对话生成"""
+        model = self.get_model_name(provider_name)
+        response, _key = await self._call_with_matrix(
+            provider_name,
+            model=model,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        return response.choices[0].message.content
+
     async def generate_json(
         self,
         prompt: str,
@@ -705,17 +770,17 @@ class LLMService:
 
 MODULE_ROUTES: dict[str, list[str]] = {
     # 工作间 5 个 agent 角色
-    "workspace.search":    ["glm", "internlm", "deepseek"],
-    "workspace.research":  ["glm", "internlm", "deepseek"],
-    "workspace.verify":    ["glm", "internlm", "deepseek"],
-    "workspace.writing":   ["glm", "internlm", "deepseek"],
-    "workspace.platform":  ["glm", "internlm", "deepseek"],
+    "workspace.search":    ["glm", "groq", "internlm", "deepseek"],
+    "workspace.research":  ["glm", "groq", "internlm", "deepseek"],
+    "workspace.verify":    ["glm", "groq", "internlm", "deepseek"],
+    "workspace.writing":   ["glm", "groq", "internlm", "deepseek"],
+    "workspace.platform":  ["glm", "groq", "internlm", "deepseek"],
     # 其他模块
-    "xiaowei.chat":        ["glm", "internlm", "deepseek"],
-    "verify.pipeline":     ["glm", "internlm", "deepseek"],
-    "entertainment.event": ["glm", "internlm", "deepseek"],
+    "xiaowei.chat":        ["glm", "groq", "internlm", "deepseek"],
+    "verify.pipeline":     ["glm", "groq", "internlm", "deepseek"],
+    "entertainment.event": ["glm", "groq", "internlm", "deepseek"],
     # 兜底
-    "default":             ["glm", "internlm", "deepseek"],
+    "default":             ["glm", "groq", "internlm", "deepseek"],
 }
 
 

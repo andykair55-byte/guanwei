@@ -29,7 +29,7 @@ const SYSTEM_PROMPT = `你是一位专业的内容创作助手。根据用户提
 needsVerification 为 true 表示该节包含需要事实核查的声明。`
 
 // 3个预设模板（LLM不可用时的降级方案）
-const PRESET_TEMPLATES: Record<PresetType, (input: SkeletonInput) => { title: string; sections: SkeletonSection[] }> = {
+export const PRESET_TEMPLATES: Record<PresetType, (input: SkeletonInput) => { title: string; sections: SkeletonSection[] }> = {
   event: (input) => ({
     title: `关于"${input.topic}"的事件分析`,
     sections: [
@@ -57,6 +57,13 @@ const PRESET_TEMPLATES: Record<PresetType, (input: SkeletonInput) => { title: st
       { id: '4', title: '推荐建议', points: ['适用场景', '最终推荐'], needsVerification: false, accepted: false },
     ],
   }),
+}
+
+// 预设模板的展示元数据（用于 UI 渲染）
+export const PRESET_TEMPLATE_META: Record<PresetType, { name: string; description: string; icon: 'event' | 'opinion' | 'comparison' }> = {
+  event: { name: '事件分析', description: '按事件概述—各方反应—深度分析—总结思考结构展开', icon: 'event' },
+  opinion: { name: '观点论述', description: '按引入—论据—反面观点—结论结构展开', icon: 'opinion' },
+  comparison: { name: '对比评测', description: '按对象介绍—维度对比—优劣分析—推荐建议结构展开', icon: 'comparison' },
 }
 
 export function getPresetTemplate(type: PresetType, input: SkeletonInput) {

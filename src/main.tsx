@@ -4,6 +4,7 @@ import './index.css'
 import { useAuthStore } from './stores/authStore'
 import { detectPlatform, PlatformProvider } from './hooks/usePlatform'
 import type { Platform } from './hooks/usePlatform'
+import { initWebVitals } from './utils/webVitals'
 
 // ---- 平台检测 ----
 // 优先级: URL 参数 > localStorage 覆盖 > UA 检测
@@ -28,6 +29,7 @@ const AppComponent = platform === 'web'
 
 // ---- 初始化 ----
 useAuthStore.getState().init()
+initWebVitals()
 
 // ---- 渲染 ----
 createRoot(document.getElementById('root')!).render(

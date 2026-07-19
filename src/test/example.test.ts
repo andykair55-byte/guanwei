@@ -3,8 +3,6 @@
  * 测试段位组件和积分组件
  */
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import React from 'react'
 
 // Mock 段位数据
 const RANKS = [

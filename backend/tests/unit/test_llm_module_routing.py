@@ -38,9 +38,9 @@ def test_all_modules_have_glm_as_primary():
 
 def test_get_module_route_returns_correct_chain():
     """get_module_route 返回正确的 provider 链"""
-    assert get_module_route("workspace.writing") == ["glm", "internlm", "deepseek"]
-    assert get_module_route("verify.pipeline") == ["glm", "internlm", "deepseek"]
-    assert get_module_route("default") == ["glm", "internlm", "deepseek"]
+    assert get_module_route("workspace.writing") == ["glm", "groq", "internlm", "deepseek"]
+    assert get_module_route("verify.pipeline") == ["glm", "groq", "internlm", "deepseek"]
+    assert get_module_route("default") == ["glm", "groq", "internlm", "deepseek"]
 
 
 def test_get_module_route_none_returns_default():
@@ -72,7 +72,7 @@ async def test_generate_with_module_uses_route_chain(monkeypatch):
     """generate(module=...) 按 MODULE_ROUTES 链遍历"""
     svc = LLMService(primary_provider="glm")
 
-    # mock _generate_with_provider：glm 抛异常，internlm 成功
+    # mock _generate_with_provider：glm 抛异常，groq 成功
     call_log = []
 
     async def fake_generate_with_provider(provider_name, prompt, system_prompt, temperature, max_tokens):
@@ -85,8 +85,8 @@ async def test_generate_with_module_uses_route_chain(monkeypatch):
 
     result = await svc.generate("test prompt", module="workspace.writing")
 
-    assert result == "response from internlm"
-    assert call_log == ["glm", "internlm"]  # glm 失败后切 internlm
+    assert result == "response from groq"
+    assert call_log == ["glm", "groq"]  # glm 失败后切 groq
 
 
 @pytest.mark.asyncio
@@ -177,12 +177,12 @@ async def test_provider_skipped_when_budget_exceeded(monkeypatch):
 
     monkeypatch.setattr(svc, "_generate_with_provider", fake_generate_with_provider)
 
-    # glm 超限 → 应该跳过 glm，直接走 internlm
+    # glm 超限 → 应该跳过 glm，直接走 groq
     result = await svc.generate("test", module="workspace.writing")
 
-    assert result == "ok from internlm"
+    assert result == "ok from groq"
     assert "glm" not in call_log
-    assert call_log == ["internlm"]
+    assert call_log == ["groq"]
 
 
 @pytest.mark.asyncio
@@ -192,6 +192,7 @@ async def test_all_providers_budget_exceeded_raises(monkeypatch):
 
     monkeypatch.setattr(svc, "_get_daily_tokens", lambda p: 999_999_999)
     monkeypatch.setenv("DAILY_TOKEN_BUDGET_GLM", "100")
+    monkeypatch.setenv("DAILY_TOKEN_BUDGET_GROQ", "100")
     monkeypatch.setenv("DAILY_TOKEN_BUDGET_INTERNLM", "100")
     monkeypatch.setenv("DAILY_TOKEN_BUDGET_DEEPSEEK", "100")
 

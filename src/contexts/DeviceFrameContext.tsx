@@ -18,6 +18,7 @@ export function DeviceFrameProvider({ notchHeight, children }: { notchHeight: nu
   )
 }
 
+// eslint-disable-next-line react/only-export-components -- 标准 Context 模式：Provider + Hook 同文件
 export function useDeviceFrame() {
   return useContext(DeviceFrameContext)
 }

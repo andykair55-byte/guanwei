@@ -2,11 +2,14 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   X, Heart, MessageCircle, Bookmark, BookmarkCheck, Share2, Send,
-  Users, Clock, Eye, TrendingUp, Radio, ChevronRight,
-  AlertCircle, ArrowLeft, Bell, BellOff, Link2,
+  Users, TrendingUp, Radio, ChevronRight,
+  AlertCircle, ArrowLeft, Bell, BellOff,
   User, Activity, Flame
 } from 'lucide-react'
 import { usePlatform } from '../hooks/usePlatform'
+import { usePageContext } from '../hooks/usePageContext'
+import EvidenceTimeline from '../components/EvidenceTimeline'
+import { getHotEventById, hotCardToDetail } from '../services/mockData'
 
 // ── 类型定义 ──────────────────────────────────────────
 interface TimelineNode {
@@ -293,14 +296,15 @@ export default function HotEventDetailPage() {
 
   const [isBookmarked, setIsBookmarked] = useState(false)
   const [isSubscribed, setIsSubscribed] = useState(false)
-  const [expandedNode, setExpandedNode] = useState<number | null>(null)
   const [activeTab, setActiveTab] = useState<'timeline' | 'detail'>('timeline')
   const [commentText, setCommentText] = useState('')
   const [comments, setComments] = useState(MOCK_COMMENTS)
   const [replyTarget, setReplyTarget] = useState<{ parentId: string; replyToUser: string } | null>(null)
   const [showCopied, setShowCopied] = useState(false)
 
-  const event = EVENTS_DATA[Number(id)]
+  // 优先使用本地完整数据，其次从 mock 种子数据转换
+  const card = getHotEventById(Number(id))
+  const event: HotEvent | undefined = EVENTS_DATA[Number(id)] ?? (card ? hotCardToDetail(card) : undefined)
 
   useEffect(() => {
     if (event) {
@@ -400,6 +404,19 @@ export default function HotEventDetailPage() {
     }
   }
 
+  // 注入页面上下文给小薇：事件描述 + 时间线节点拼接
+  usePageContext(
+    event
+      ? {
+          type: 'hot',
+          title: event.title,
+          content: `${event.fullDescription}\n\n事件时间线：\n${event.nodes
+            .map(n => `${n.date} ${n.label}${n.detail ? ': ' + n.detail : ''}`)
+            .join('\n')}`,
+        }
+      : null
+  )
+
   if (!event) {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-paper-50">
@@ -476,95 +493,13 @@ export default function HotEventDetailPage() {
             </div>
 
             {/* 时间线区域 */}
-            <div className="flex-1 overflow-y-auto scrollbar-thin p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-6 h-6 rounded-lg bg-seal/10 flex items-center justify-center">
-                  <Activity size={13} className="text-seal" />
-                </div>
-                <h2 className="text-[16px] font-bold text-ink-900">事件时间线</h2>
-                <span className="text-[12px] text-ink-400">{event.nodes.length} 个关键节点</span>
-              </div>
-
-              <div className="relative pl-5">
-                {/* 竖向时间线 */}
-                <div className="absolute left-1.5 top-2 bottom-2 w-px bg-ink-200" />
-
-                <div className="space-y-1">
-                  {event.nodes.map((node, i) => {
-                    const isLatest = i === event.nodes.length - 1
-                    const isExpanded = expandedNode === i
-                    return (
-                      <div key={i} className="relative">
-                        {/* 节点圆点 */}
-                        <div
-                          className={`absolute -left-5 top-3 w-3 h-3 rounded-full border-2 border-white z-10 ${
-                            isLatest ? 'bg-seal ring-4 ring-seal/20' : 'bg-ink-300'
-                          }`}
-                        />
-
-                        <div
-                          className={`bg-white rounded-xl border transition-all cursor-pointer ${
-                            isExpanded ? 'border-seal/30 shadow-md' : 'border-ink-100 hover:border-ink-200 hover:shadow-sm'
-                          }`}
-                          onClick={() => setExpandedNode(isExpanded ? null : i)}
-                        >
-                          <div className="p-3">
-                            <div className="flex items-start gap-3">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-[11px] font-mono text-ink-400 font-bold">{node.date}</span>
-                                  {isLatest && (
-                                    <span className="text-[10px] text-seal bg-seal/10 px-1.5 py-0.5 rounded font-medium">
-                                      最新
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-[14px] font-semibold text-ink-900">{node.label}</p>
-                                {node.detail && (
-                                  <p className={`text-[12px] text-ink-500 mt-1 leading-relaxed ${
-                                    !isExpanded ? 'line-clamp-1' : ''
-                                  }`}>
-                                    {node.detail}
-                                  </p>
-                                )}
-                              </div>
-                              <ChevronRight
-                                size={15}
-                                className={`text-ink-300 flex-shrink-0 mt-0.5 transition-transform ${
-                                  isExpanded ? 'rotate-90' : ''
-                                }`}
-                              />
-                            </div>
-                          </div>
-
-                          {/* 展开的来源 */}
-                          {isExpanded && node.sources && node.sources.length > 0 && (
-                            <div className="px-3 pb-3 pt-0">
-                              <div className="pt-2 border-t border-ink-50">
-                                <p className="text-[11px] text-ink-400 mb-2">信息来源：</p>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {node.sources.map((src, j) => (
-                                    <span
-                                      key={j}
-                                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-paper-50 text-[11px] text-ink-600 border border-ink-100"
-                                    >
-                                      <Link2 size={10} />
-                                      {src}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* 节点间距 */}
-                        {i < event.nodes.length - 1 && <div className="h-3" />}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
+            <div className="flex-1 overflow-y-auto scrollbar-thin">
+              <EvidenceTimeline
+                nodes={event.nodes}
+                theme="hot"
+                defaultExpanded
+                title="事件时间线"
+              />
             </div>
           </div>
 
@@ -833,6 +768,16 @@ export default function HotEventDetailPage() {
           </div>
           <h1 className="font-serif text-[24px] font-bold text-ink-900 leading-snug mb-3">{event.title}</h1>
           <p className="text-[14px] text-ink-600 leading-relaxed">{event.fullDescription}</p>
+        </div>
+
+        {/* 事件时间线 */}
+        <div className="bg-white rounded-2xl border border-ink-100 shadow-sm overflow-hidden">
+          <EvidenceTimeline
+            nodes={event.nodes}
+            theme="hot"
+            defaultExpanded
+            title="事件时间线"
+          />
         </div>
       </main>
     </div>

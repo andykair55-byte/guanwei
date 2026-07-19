@@ -39,6 +39,42 @@ services:
       timeout: 5s
       retries: 5
 
+  # 后端 FastAPI 服务（本地联调）
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: jianwei-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DEV_MODE=true
+      - DATABASE_URL=postgresql://jianwei:jianwei_dev_password@postgres:5432/jianwei
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=dev-secret-key-change-in-production
+      - LLM_PROVIDER=${LLM_PROVIDER:-deepseek}
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:4173
+      # LLM API Keys（从根目录 .env 读取，未配置则为空）
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app  # 开发模式热重载
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    # 用 Python 做健康检查（python:3.11-slim 不依赖 curl）
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
   redis_data:

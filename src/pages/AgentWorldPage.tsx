@@ -134,7 +134,7 @@ export default function AgentWorldPage() {
       ]
 
       for (const m of DEMO_WORKSPACES) {
-        const w = wsStore.createWorkspace({ topic: m.title, tags: m.tag ? [m.tag] : undefined })
+        const w = wsStore.createWorkspace({ topic: m.title, tags: m.tag ? [m.tag] : undefined }, { activate: false })
         wsStore.setStatus(w.id, m.status)
         if (m.fav) wsStore.toggleFavorite(w.id)
       }
@@ -241,12 +241,34 @@ export default function AgentWorldPage() {
   }, [currentId, loadDemoEvents])
 
   // ── WebSocket 接入：currentId 变化时连接 workspaceSocket，事件 push 到 activityStore ──
+  // 跳过本地临时 ID（格式 ws-<timestamp>-<rand>），等后端回写真实 UUID 再连
+  // 否则 createWorkspace 一次调用会让 currentId 变化 2 次（临时 ID → UUID），叠加 demo 创建 ≈ 13 次 WS 连接
   useEffect(() => {
     if (!currentId || currentId === 'new') return
+    if (/^ws-\d+-[a-z0-9]+$/.test(currentId)) return
 
     workspaceSocket.connect(currentId)
     const off = workspaceSocket.onEvent((event) => {
       useActivityStore.getState().addEvent(currentId, event)
+
+      // 终态事件释放 isRunning 锁（与 handleRun 的 running 分支配合）
+      // 后端 schema（_run_workspace_background）：
+      //   成功 → { type: 'info', data: { status: 'success'|'partial'|'failed' } }
+      //   失败 → { type: 'error', data: { error: '...' } }
+      if (event.type === 'error') {
+        useWorkspaceStore.getState().setStatus(currentId, 'failed')
+        setIsRunning(false)
+      } else if (event.type === 'info' && event.data?.status) {
+        const status = String(event.data.status)
+        if (status === 'success' || status === 'partial' || status === 'failed' ||
+            status === 'complete' || status === 'error' || status === 'done') {
+          const wsStatus: WorkspaceStatus =
+            status === 'partial' ? 'partial' :
+            (status === 'failed' || status === 'error') ? 'failed' : 'completed'
+          useWorkspaceStore.getState().setStatus(currentId, wsStatus)
+          setIsRunning(false)
+        }
+      }
     })
 
     return () => {
@@ -278,6 +300,11 @@ export default function AgentWorldPage() {
   }, [currentId, mode, clearEvents])
 
   // ── 真实 API 触发：调用 workspaceApi.run 替代原 mock 管线 ──
+  // 后端 /run 是 fire-and-forget：路由立即返回 { status: 'running' }，后台任务跑完才推 WS 事件。
+  // 所以：
+  //   - 收到 running → 不切换 store 状态、不释放 isRunning 锁，等 WS 终态事件再释放
+  //   - API 抛错（网络/409）→ 立即释放锁
+  //   - 后端同步返回终态（理论兜底）→ 直接结算并释放锁
   const handleRun = useCallback(async () => {
     if (!currentId || !current || isRunning) return
 
@@ -301,6 +328,20 @@ export default function AgentWorldPage() {
 
     try {
       const result = await workspaceApi.run(currentId, { strategy })
+
+      if (result.status === 'running') {
+        // 后端 fire-and-forget：保持 isRunning=true，等 WS 推送 complete/error 事件
+        addEventSimple(
+          currentId,
+          'info',
+          'orchestrator',
+          '管线已启动',
+          '正在后台执行，结果将通过 WebSocket 推送…'
+        )
+        return  // 不释放锁、不切换 store 状态
+      }
+
+      // 兜底：后端同步返回终态（理论上不会走到，但保持兼容）
       const runStatus = result.status
       const wsStatus: WorkspaceStatus =
         runStatus === 'partial' ? 'partial' :
@@ -315,11 +356,11 @@ export default function AgentWorldPage() {
           ? '部分步骤已成功完成，你可以在编辑器中查看内容，或在下方发布队列中发布。'
           : '所有步骤已执行完毕，你可以在编辑器中查看和修改内容，或切换平台版本。'
       )
+      setIsRunning(false)
     } catch (e) {
       const error = e instanceof Error ? e.message : String(e)
       useWorkspaceStore.getState().setStatus(currentId, 'failed')
       addEventSimple(currentId, 'error', 'system', '执行出错', error)
-    } finally {
       setIsRunning(false)
     }
   }, [currentId, current, isRunning, strategy, addEventSimple, clearEvents])
@@ -353,6 +394,8 @@ export default function AgentWorldPage() {
   const handleAction = useCallback(async (actionId: string, _event: ActivityEvent) => {
     if (!currentId) return
     if (actionId === 'confirm' || actionId === 'use_all' || actionId === 'adopt_views') {
+      // 这些 action 会触发 handleRun，加 isRunning 守卫防止重复触发（与 409 修复配合）
+      if (isRunning) return
       // 替换原 mock 触发逻辑：调用真实 API
       void handleRun()
     } else if (actionId === 'modify') {
@@ -365,7 +408,7 @@ export default function AgentWorldPage() {
     } else if (actionId === 'reverify') {
       addEventSimple(currentId, 'info', 'verify', '重新核查', '正在重新核查存疑信息...')
     }
-  }, [currentId, handleRun, addEventSimple, availablePlatforms, handleGenerateAll])
+  }, [currentId, isRunning, handleRun, addEventSimple, availablePlatforms, handleGenerateAll])
 
   const handleEditorChange = useCallback((content: string) => {
     if (!currentId) return
@@ -693,6 +736,7 @@ export default function AgentWorldPage() {
 
       <ActivityStream
         onAction={handleAction}
+        disabledActions={isRunning}
       />
 
       {/* Toast Container */}

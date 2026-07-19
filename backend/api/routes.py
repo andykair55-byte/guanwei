@@ -19,7 +19,11 @@ from agents.moderator import moderator_agent
 from agents.models import ModeratorInput
 from services.evidence import EvidenceService, get_evidence_service
 from models import PipelineRun, User
-from auth import get_current_user
+from auth import get_current_user, require_current_user
+
+# 复用 admin_routes 的条件限流（Redis 不可用则跳过）
+from api.admin_routes import conditional_rate_limiter
+from services.llm import llm_service
 
 logger = logging.getLogger(__name__)
 
@@ -467,3 +471,64 @@ async def get_rank_distribution(db: Session = Depends(get_db)):
     """获取段位分布"""
     service = get_metrics_service(db)
     return service.get_rank_distribution()
+
+
+# ================================================================
+#  小薇客服聊天代理（spec: 统一走后端 LLM，避免前端暴露 key）
+# ================================================================
+
+
+class _XiaoweiMessage(BaseModel):
+    role: str = Field(..., description="消息角色: system / user / assistant")
+    content: str = Field(..., description="消息内容")
+
+
+class XiaoweiChatRequest(BaseModel):
+    messages: List[_XiaoweiMessage] = Field(..., description="对话历史消息列表")
+    max_tokens: int = Field(default=1024, ge=1, le=4096, description="最大生成 token 数")
+    temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="采样温度")
+
+
+class XiaoweiChatResponse(BaseModel):
+    content: str = Field(..., description="小薇回复内容")
+
+
+@router.post(
+    "/xiaowei/chat",
+    response_model=XiaoweiChatResponse,
+    dependencies=conditional_rate_limiter(times=20, seconds=60),
+)
+async def xiaowei_chat(
+    req: XiaoweiChatRequest,
+    current_user: User = Depends(require_current_user),
+):
+    """小薇客服聊天代理
+
+    前端不再直接请求第三方 LLM API，而是把消息发到后端，
+    由后端复用 llm_service 的 `xiaowei.chat` 模块路由（key 池 / 熔断 / 降级）。
+    """
+    messages = [m.model_dump() for m in req.messages]
+    has_system = any(m["role"] == "system" for m in messages)
+    if not has_system:
+        messages.insert(0, {
+            "role": "system",
+            "content": "你是小薇，一个陪伴用户看文章的AI助手。回答简洁友好，用中文。",
+        })
+
+    if not any(m["role"] == "user" for m in messages):
+        raise HTTPException(status_code=400, detail="消息内容不能为空")
+
+    try:
+        content = await llm_service.generate_chat(
+            messages=messages,
+            module="xiaowei.chat",
+            temperature=req.temperature,
+            max_tokens=req.max_tokens,
+        )
+        return XiaoweiChatResponse(content=content)
+    except Exception as e:
+        logger.error(f"小薇聊天失败 [user={current_user.id}]: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=503,
+            detail=f"LLM 服务暂不可用: {e}",
+        )

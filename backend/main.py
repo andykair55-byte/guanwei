@@ -20,10 +20,11 @@ Base.metadata.create_all(bind=engine)
 
 # 初始化种子数据
 from seed import seed_database
-from seed_users import seed_extended_users, seed_more_melons
+from seed_users import seed_demo_user, seed_extended_users, seed_more_melons
 db = SessionLocal()
 try:
     seed_database(db)
+    seed_demo_user(db)
     user_ids = seed_extended_users(db)
     if user_ids:
         seed_more_melons(db, user_ids)

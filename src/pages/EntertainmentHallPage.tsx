@@ -11,22 +11,6 @@ import { useIsDesktop } from '../hooks/useIsDesktop'
    像素风工具函数 & 样式
    ═══════════════════════════════════════════════════════ */
 
-// 像素化边框（通过多层 box-shadow 模拟）
-const pixelBorderStyle: React.CSSProperties = {
-  boxShadow: `
-    0 -3px 0 0 #1a1a2e,
-    0 3px 0 0 #1a1a2e,
-    -3px 0 0 0 #1a1a2e,
-    3px 0 0 0 #1a1a2e,
-    -3px -3px 0 0 #1a1a2e,
-    3px -3px 0 0 #1a1a2e,
-    -3px 3px 0 0 #1a1a2e,
-    3px 3px 0 0 #1a1a2e
-  `,
-  borderRadius: '2px',
-  imageRendering: 'pixelated',
-}
-
 interface GameCard {
   id: string
   icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>
@@ -77,6 +61,19 @@ export default function EntertainmentHallPage() {
           players: '2,341 人在看',
           onClick: () => navigate('/entertainment/arena'),
         },
+        {
+          id: 'human-battle',
+          icon: Swords,
+          title: '人机对决',
+          desc: '选角色 · 与 AI 辩手单挑 · 评委逐轮打分',
+          btnText: '开战',
+          gradient: 'from-red-500 to-orange-500',
+          pixelColor: '#ef4444',
+          badge: 'NEW',
+          badgeColor: '#22c55e',
+          players: '586 人在战',
+          onClick: () => navigate('/entertainment/arena/character-select'),
+        },
       ],
     },
     // ── 👥 真人辩论厅 ──
@@ -110,6 +107,19 @@ export default function EntertainmentHallPage() {
           badgeColor: '#22c55e',
           players: '128 人在赛',
           onClick: () => navigate('/entertainment/debate/national'),
+        },
+        {
+          id: 'debate-multiplayer',
+          icon: Users,
+          title: '多人辩论',
+          desc: '6 人实时语音辩论 · AI 裁判 · 段位积分',
+          btnText: '敬请期待',
+          gradient: 'from-emerald-400 to-teal-600',
+          pixelColor: '#10b981',
+          badge: 'SOON',
+          badgeColor: '#f59e0b',
+          players: '即将上线',
+          onClick: () => navigate('/entertainment/debate/multiplayer'),
         },
       ],
     },

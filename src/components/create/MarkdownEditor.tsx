@@ -1,6 +1,7 @@
 import { useState, type RefObject } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import rehypeSanitize from 'rehype-sanitize' // spec-19: XSS 防护，清理 markdown 中的恶意 HTML
 import {
   Bold,
   Italic,
@@ -125,6 +126,7 @@ export default function MarkdownEditor({
             <div className="prose prose-sm max-w-none">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeSanitize]}
                 components={{
                   h1: ({ children }) => <h1 className="text-[22px] font-bold text-ink-900 mt-4 mb-3">{children}</h1>,
                   h2: ({ children }) => <h2 className="text-[18px] font-bold text-ink-900 mt-5 mb-2">{children}</h2>,

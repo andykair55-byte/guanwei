@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Users, Swords, Trophy, Zap, Clock, Flame, Search } from 'lucide-react'
+import { ArrowLeft, Plus, Swords, Trophy, Zap, Clock, Flame, Search } from 'lucide-react'
 import { useDebateStore } from '../stores/debateStore'
 import { useUserStore } from '../stores/userStore'
 import LobbyRoomCard from '../components/debate/LobbyRoomCard'

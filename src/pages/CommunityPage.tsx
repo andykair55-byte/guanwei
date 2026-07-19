@@ -1,67 +1,19 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
-import { createPortal } from 'react-dom'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  MessageCircle,
-  Heart,
-  Bookmark,
-  Share2,
-  Filter,
-  Lightbulb,
-  MoreHorizontal,
-  PenLine,
-  X,
+  Users,
   MessageSquare,
-  Flame,
-  HandHeart,
-  HelpCircle,
+  ArrowRight,
+  Search,
+  RefreshCw,
+  AlertCircle,
+  Sparkles,
 } from 'lucide-react'
-import {
-  getCommunityPosts,
-  getFeaturedPosts,
-  getFeaturedPostContent,
-  type CommunityPost,
-  type CommunityPostType,
-} from '../services/mockData'
-import CommentSection from '../components/CommentSection'
+import { useCommunityStore } from '../stores/communityStore'
+import type { Community, CommunityCategory } from '../services/mockData'
+import { usePlatform } from '../hooks/usePlatform'
 
-const TYPE_CONFIG: Record<CommunityPostType, { label: string; color: string; bgColor: string }> = {
-  hot: { label: '热帖', color: '#EF4444', bgColor: '#FEE2E2' },
-  normal: { label: '讨论', color: '#6366F1', bgColor: '#EEF2FF' },
-  charity: { label: '公益', color: '#10B981', bgColor: '#D1FAE5' },
-  help: { label: '求助', color: '#F59E0B', bgColor: '#FEF3C7' },
-}
-
-const typeTagConfig = {
-  hot: { icon: Flame, label: '热帖', bg: 'bg-red-500/90', text: 'text-white' },
-  charity: { icon: HandHeart, label: '公益', bg: 'bg-green-500/90', text: 'text-white' },
-  help: { icon: HelpCircle, label: '求助', bg: 'bg-amber-500/90', text: 'text-white' },
-  normal: null,
-}
-
-const MAIN_TABS = [
-  { key: 'all', label: '推荐', filter: undefined },
-  { key: 'hot', label: '热帖', filter: '热帖' },
-  { key: 'help', label: '求助', filter: '求助' },
-  { key: 'announce', label: '公告', filter: undefined },
-]
-
-const SUB_TABS = [
-  { key: 'all', label: '全部' },
-  { key: 'latest', label: '最新' },
-  { key: 'popular', label: '热门' },
-]
-
-function formatTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  const minutes = Math.floor(diff / 60000)
-  if (minutes < 60) return `${minutes}分钟前`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}小时前`
-  const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}天前`
-  return new Date(iso).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' })
-}
+// ── 工具函数 ──────────────────────────────────────────
 
 function formatCount(n: number): string {
   if (n >= 10000) return `${(n / 10000).toFixed(1)}万`
@@ -69,689 +21,322 @@ function formatCount(n: number): string {
   return String(n)
 }
 
-interface PostDisplayData {
-  id: string
-  type: CommunityPostType
-  authorName: string
-  authorAvatar: string
-  title: string
-  summary: string
-  thumbnail: string
-  comments: number
-  likes: number
-  collects: number
-  createdAt: string
-  content: string
-}
+// ── 分类筛选 ──────────────────────────────────────────
 
-// ─── PostItem 组件 ───────────────────────────────────────────
+const CATEGORIES: Array<{ key: 'all' | CommunityCategory; label: string }> = [
+  { key: 'all', label: '全部' },
+  { key: '科技', label: '科技' },
+  { key: '娱乐', label: '娱乐' },
+  { key: '社会', label: '社会' },
+  { key: '财经', label: '财经' },
+  { key: '教育', label: '教育' },
+  { key: '健康', label: '健康' },
+  { key: '游戏', label: '游戏' },
+  { key: '体育', label: '体育' },
+  { key: '旅行', label: '旅行' },
+  { key: '美食', label: '美食' },
+]
 
-interface PostItemProps {
-  post: PostDisplayData
-  index: number
-  onOpen: (postId: string) => void
-  itemRef: (el: HTMLElement | null) => void
-}
+// ── 社区卡片骨架屏 ──────────────────────────────────────────
 
-function PostItem({ post, index, onOpen, itemRef }: PostItemProps) {
-  const [liked, setLiked] = useState(false)
-  const [collected, setCollected] = useState(false)
-  const [likeCount, setLikeCount] = useState(post.likes)
-  const [collectCount, setCollectCount] = useState(post.collects)
-  const typeConfig = TYPE_CONFIG[post.type]
-
-  const handleClick = (e: React.MouseEvent<HTMLElement>) => {
-    onOpen(post.id)
-  }
-
+function CommunityCardSkeleton() {
   return (
-    <article
-      ref={itemRef}
-      className="px-8 py-5 hover:bg-gray-50/70 transition-colors cursor-pointer border-b border-gray-100/70 animate-fade-in-up group"
-      style={{ animationDelay: `${index * 30}ms` }}
-      onClick={handleClick}
-    >
-      <div className="flex gap-4">
-        {/* 左侧头像 */}
-        <img
-          src={post.authorAvatar}
-          alt={post.authorName}
-          className="w-11 h-11 rounded-full flex-shrink-0 object-cover bg-gray-100 mt-0.5 ring-1 ring-gray-100"
-        />
-
-        {/* 中间内容区 */}
-        <div className="flex-1 min-w-0 flex flex-col">
-          {/* 作者行 */}
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[15px] font-semibold text-gray-800">{post.authorName}</span>
-            <span
-              className="text-[11px] font-medium px-2 py-0.5 rounded-md"
-              style={{ backgroundColor: typeConfig.bgColor, color: typeConfig.color }}
-            >
-              {typeConfig.label}
-            </span>
-            <span className="text-[12px] text-gray-400">{formatTime(post.createdAt)}</span>
-          </div>
-
-          {/* 标题 */}
-          <h3 className="text-[17px] font-semibold text-gray-900 leading-snug mb-1.5 line-clamp-1 group-hover:text-red-600 transition-colors">
-            {post.title}
-          </h3>
-
-          {/* 摘要 */}
-          <p className="text-[14px] text-gray-500 leading-relaxed mb-3 line-clamp-2">
-            {post.summary}
-          </p>
-
-          {/* 互动栏 */}
-          <div className="flex items-center gap-7 text-[13px] text-gray-400 mt-auto">
-            <button
-              onClick={(e) => { e.stopPropagation() }}
-              className="flex items-center gap-1.5 hover:text-gray-600 transition-colors"
-            >
-              <MessageCircle size={16} strokeWidth={1.75} />
-              <span>{formatCount(post.comments)}</span>
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setLiked(!liked)
-                setLikeCount(liked ? likeCount - 1 : likeCount + 1)
-              }}
-              className={`flex items-center gap-1.5 transition-colors ${liked ? 'text-red-500' : 'hover:text-red-500'}`}
-            >
-              <Heart size={16} strokeWidth={1.75} className={liked ? 'fill-current' : ''} />
-              <span>{formatCount(likeCount)}</span>
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setCollected(!collected)
-                setCollectCount(collected ? collectCount - 1 : collectCount + 1)
-              }}
-              className={`flex items-center gap-1.5 transition-colors ${collected ? 'text-amber-500' : 'hover:text-amber-500'}`}
-            >
-              <Bookmark size={16} strokeWidth={1.75} className={collected ? 'fill-current' : ''} />
-              <span>{formatCount(collectCount)}</span>
-            </button>
-            <button
-              onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-1.5 hover:text-gray-600 transition-colors"
-            >
-              <Share2 size={16} strokeWidth={1.75} />
-            </button>
+    <div className="bg-surface rounded-2xl border border-line/40 overflow-hidden shadow-sm">
+      <div className="h-24 skeleton" />
+      <div className="p-5 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl skeleton" />
+          <div className="flex-1 space-y-1.5">
+            <div className="h-4 w-24 skeleton" />
+            <div className="h-3 w-16 skeleton" />
           </div>
         </div>
+        <div className="h-3 w-full skeleton" />
+        <div className="h-3 w-3/4 skeleton" />
+        <div className="flex gap-4 pt-2">
+          <div className="h-3 w-16 skeleton" />
+          <div className="h-3 w-16 skeleton" />
+        </div>
+      </div>
+    </div>
+  )
+}
 
-        {/* 右侧缩略图 */}
-        <div className="flex-shrink-0 w-[140px] h-[100px] rounded-xl overflow-hidden bg-gray-100 mt-0.5 shadow-sm">
-          <img
-            src={post.thumbnail}
-            alt=""
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
+// ── 社区卡片 ──────────────────────────────────────────
+
+interface CommunityCardProps {
+  community: Community
+  index: number
+  onClick: (id: string) => void
+}
+
+function CommunityCard({ community, index, onClick }: CommunityCardProps) {
+  return (
+    <button
+      onClick={() => onClick(community.id)}
+      className="group bg-surface rounded-2xl border border-line/40 overflow-hidden shadow-sm hover:shadow-card-hover hover:border-line transition-all duration-200 text-left press-pop animate-fade-in-up"
+      style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
+    >
+      {/* 封面图 */}
+      <div className="relative h-24 overflow-hidden bg-paper-100">
+        <img
+          src={community.coverImage}
+          alt=""
+          loading="lazy"
+          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+        {/* 渐变蒙层，确保 icon 可读 */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
+        {/* 社区图标 */}
+        <div className="absolute -bottom-5 left-5 w-12 h-12 rounded-xl bg-surface border-2 border-surface shadow-card flex items-center justify-center text-[22px]">
+          {community.icon}
+        </div>
+        {/* 分类徽章：粉色渐变 */}
+        <span
+          className="absolute top-3 right-3 px-2 py-0.5 text-[11px] font-bold text-white rounded-md shadow-sm backdrop-blur-sm"
+          style={{ background: 'linear-gradient(135deg, #EC4899, #F43F5E)' }}
+        >
+          {community.category}
+        </span>
+      </div>
+
+      {/* 内容 */}
+      <div className="px-5 pt-7 pb-4">
+        <div className="flex items-start justify-between gap-2 mb-1.5">
+          <h3 className="text-[16px] font-bold text-ink-900 leading-snug group-hover:text-seal transition-colors line-clamp-1">
+            {community.name}
+          </h3>
+          <ArrowRight
+            size={16}
+            className="text-ink-300 group-hover:text-seal group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-1"
           />
         </div>
+
+        <p className="text-[13px] text-ink-500 leading-relaxed line-clamp-2 mb-3 min-h-[36px]">
+          {community.description}
+        </p>
+
+        <div className="flex items-center gap-4 text-[12px] text-ink-400">
+          <span className="flex items-center gap-1">
+            <Users size={13} strokeWidth={1.75} />
+            <span className="font-medium text-ink-600">{formatCount(community.memberCount)}</span>
+            <span>成员</span>
+          </span>
+          <span className="flex items-center gap-1">
+            <MessageSquare size={13} strokeWidth={1.75} />
+            <span className="font-medium text-ink-600">{formatCount(community.postCount)}</span>
+            <span>帖子</span>
+          </span>
+        </div>
       </div>
-    </article>
+    </button>
   )
 }
 
-// ─── Banner 组件 ─────────────────────────────────────────────
-
-function BannerIllustration() {
-  return (
-    <div className="relative w-52 h-36 flex items-center justify-center">
-      {/* 底部卡片 */}
-      <div className="absolute bottom-2 right-0 w-44 h-12 bg-white/80 backdrop-blur-sm rounded-xl shadow-sm flex items-center px-3.5 gap-2.5">
-        <div className="w-4 h-4 rounded-full bg-indigo-400/60" />
-        <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-          <div className="w-2/3 h-full bg-pink-300/70 rounded-full" />
-        </div>
-        <div className="w-2 h-3.5 rounded-sm bg-violet-300/60" />
-      </div>
-      {/* 左侧大对话气泡 */}
-      <div className="absolute left-0 top-6 w-20 h-14 bg-gradient-to-br from-indigo-300/80 to-purple-300/80 rounded-2xl flex items-center justify-center shadow-md">
-        <div className="flex gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-white/70" />
-          <div className="w-2.5 h-2.5 rounded-full bg-white/70" />
-          <div className="w-2.5 h-2.5 rounded-full bg-white/70" />
-        </div>
-      </div>
-      {/* 右侧小对话气泡 */}
-      <div className="absolute right-2 top-2 w-14 h-11 bg-gradient-to-br from-violet-400/70 to-purple-400/70 rounded-2xl flex items-center justify-center shadow-md">
-        <div className="flex gap-1">
-          <div className="w-2 h-2 rounded-full bg-white/70" />
-          <div className="w-2 h-2 rounded-full bg-white/70" />
-          <div className="w-2 h-2 rounded-full bg-white/70" />
-        </div>
-      </div>
-      {/* 中间灯泡 */}
-      <div className="relative z-10 w-20 h-20 rounded-full bg-gradient-to-br from-rose-400 to-red-400 flex items-center justify-center shadow-lg shadow-rose-200/60">
-        <Lightbulb size={34} className="text-white" strokeWidth={1.8} fill="white" fillOpacity={0.1} />
-      </div>
-      {/* 灯泡光晕 */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 rounded-full bg-rose-200/40 blur-xl pointer-events-none" />
-      {/* 背景装饰光斑 */}
-      <div className="absolute -top-2 -right-2 w-14 h-14 rounded-full bg-violet-200/50 blur-lg pointer-events-none" />
-    </div>
-  )
-}
-
-// ─── PostDetailModal（居中弹窗，背景模糊） ────────────────────────
-
-interface PostDetailModalProps {
-  post: PostDisplayData | null
-  onClose: () => void
-}
-
-function PostDetailModal({ post, onClose }: PostDetailModalProps) {
-  const [visible, setVisible] = useState(false)
-  const [liked, setLiked] = useState(false)
-  const [bookmarked, setBookmarked] = useState(false)
-  const [likeCount, setLikeCount] = useState(post?.likes || 0)
-  const scrollRef = useRef<HTMLDivElement>(null)
-
-  // 挂载后触发入场动画，并重置滚动位置
-  useEffect(() => {
-    scrollRef.current?.scrollTo(0, 0)
-    const raf = requestAnimationFrame(() => setVisible(true))
-    return () => cancelAnimationFrame(raf)
-  }, [])
-
-  const handleClose = useCallback(() => {
-    setVisible(false)
-    setTimeout(() => onClose(), 250)
-  }, [onClose])
-
-  // ESC 关闭
-  useEffect(() => {
-    if (!post) return
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleClose()
-    }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  }, [post, handleClose])
-
-  if (!post) return null
-
-  const tag = typeTagConfig[post.type]
-  const TagIcon = tag?.icon
-  const showVerificationNote = post.type === 'help'
-
-  const modal = (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ pointerEvents: 'auto' }}
-    >
-      {/* 背景遮罩 + 模糊 */}
-      <div
-        className="absolute inset-0 transition-all duration-250 ease-out"
-        style={{
-          background: visible ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0)',
-          backdropFilter: visible ? 'blur(6px)' : 'blur(0px)',
-          WebkitBackdropFilter: visible ? 'blur(6px)' : 'blur(0px)',
-        }}
-        onClick={handleClose}
-      />
-
-      {/* 弹窗卡片 */}
-      <div
-        className="relative bg-white shadow-2xl flex flex-col overflow-hidden"
-        style={{
-          width: Math.min(680, window.innerWidth - 40),
-          maxHeight: 'calc(100vh - 60px)',
-          borderRadius: '16px',
-          opacity: visible ? 1 : 0,
-          transform: visible ? 'scale(1) translateY(0)' : 'scale(0.92) translateY(12px)',
-          transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)',
-          zIndex: 1,
-        }}
-      >
-        {/* 关闭按钮 */}
-        <button
-          onClick={handleClose}
-          className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition-all backdrop-blur-sm"
-          style={{ opacity: visible ? 1 : 0, transition: 'opacity 200ms ease 100ms' }}
-        >
-          <X size={18} />
-        </button>
-
-        {/* 详情内容（可滚动） */}
-        <div ref={scrollRef} className="w-full overflow-y-auto" style={{ maxHeight: 'calc(100vh - 60px)' }}>
-          {/* 帖子图片 */}
-          <div className="relative w-full h-64 overflow-hidden bg-gray-100 flex-shrink-0">
-            <img
-              src={post.thumbnail}
-              alt={post.title}
-              className="w-full h-full object-cover"
-            />
-            {tag && TagIcon && (
-              <span className={`absolute top-4 left-4 flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-bold rounded-lg ${tag.bg} ${tag.text} backdrop-blur-md`}>
-                <TagIcon size={14} />
-                {tag.label}
-              </span>
-            )}
-          </div>
-
-          <div className="px-6 py-5">
-            {/* 标题 */}
-            <h1 className="text-[22px] font-bold text-gray-900 leading-snug mb-4">
-              {post.title}
-            </h1>
-
-            {/* 作者信息 */}
-            <div className="flex items-center gap-3 mb-5">
-              <img
-                src={post.authorAvatar}
-                alt={post.authorName}
-                className="w-11 h-11 rounded-full bg-gray-100 ring-1 ring-gray-200"
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-[15px] font-semibold text-gray-900 truncate">{post.authorName}</p>
-                <p className="text-[12px] text-gray-400">{formatTime(post.createdAt)}</p>
-              </div>
-              <button className="px-4 py-2 rounded-full bg-red-500 text-white text-[13px] font-semibold hover:bg-red-600 transition-colors">
-                关注
-              </button>
-            </div>
-
-            {/* 正文 */}
-            <div className="text-[15px] text-gray-700 leading-[1.8] space-y-3 mb-5 whitespace-pre-line">
-              {post.content}
-            </div>
-
-            {/* 话题标签 */}
-            <div className="flex flex-wrap gap-2 mb-5">
-              <span className="text-[13px] text-red-500 bg-red-50 px-3 py-1 rounded-lg font-medium">
-                #{TYPE_CONFIG[post.type].label}
-              </span>
-            </div>
-
-            {/* 互动栏 */}
-            <div className="py-4 border-t border-gray-100 flex items-center gap-6">
-              <button
-                onClick={() => {
-                  setLiked(!liked)
-                  setLikeCount(prev => liked ? prev - 1 : prev + 1)
-                }}
-                className={`flex items-center gap-2 text-[14px] font-semibold transition-all ${
-                  liked ? 'text-red-500' : 'text-gray-600 hover:text-red-500'
-                }`}
-              >
-                <Heart size={20} className={liked ? 'fill-current' : ''} />
-                {formatCount(likeCount)}
-              </button>
-              <button className="flex items-center gap-2 text-[14px] font-semibold text-gray-600 hover:text-gray-900 transition-colors">
-                <MessageSquare size={20} />
-                {formatCount(post.comments)}
-              </button>
-              <button
-                onClick={() => setBookmarked(!bookmarked)}
-                className={`flex items-center gap-2 text-[14px] font-semibold transition-all ml-auto ${
-                  bookmarked ? 'text-amber-500' : 'text-gray-600 hover:text-amber-500'
-                }`}
-              >
-                <Bookmark size={20} className={bookmarked ? 'fill-current' : ''} />
-                收藏
-              </button>
-            </div>
-
-            {/* 评论区 */}
-            <div className="pt-3 border-t border-gray-100">
-              <div className="flex items-center gap-2 mb-3">
-                <MessageSquare size={18} className="text-gray-500" />
-                <h2 className="text-[15px] font-bold text-gray-900">评论区</h2>
-                <span className="text-[13px] text-gray-400">共 {formatCount(post.comments)} 条</span>
-              </div>
-              <div className="bg-gray-50 rounded-xl border border-gray-100">
-                <CommentSection melonId={post.id} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-
-  return createPortal(modal, document.body)
-}
-
-// ─── 主组件 ─────────────────────────────────────────────────
+// ── 主组件 ──────────────────────────────────────────
 
 export default function CommunityPage() {
   const navigate = useNavigate()
-  const [selectedMainTab, setSelectedMainTab] = useState('all')
-  const [selectedSubTab, setSelectedSubTab] = useState('all')
-  const [page, setPage] = useState(0)
-  const [posts, setPosts] = useState<CommunityPost[]>([])
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [hasMore, setHasMore] = useState(true)
-  const [initialLoading, setInitialLoading] = useState(true)
-  const sentinelRef = useRef<HTMLDivElement | null>(null)
-  const postRefs = useRef<Map<string, HTMLElement>>(new Map())
+  const { isMobile } = usePlatform()
+  const {
+    communities,
+    communitiesLoading,
+    communitiesError,
+    loadCommunities,
+  } = useCommunityStore()
 
-  // 弹窗状态
-  const [modalPost, setModalPost] = useState<PostDisplayData | null>(null)
+  const [activeCategory, setActiveCategory] = useState<'all' | CommunityCategory>('all')
+  const [searchQuery, setSearchQuery] = useState('')
 
-  // 初始化加载
   useEffect(() => {
-    setInitialLoading(true)
-    setPage(0)
-    setHasMore(true)
-    // 模拟加载延迟
-    const timer = setTimeout(() => {
-      const result = getCommunityPosts(undefined, 0, 12)
-      setPosts(result.posts)
-      setHasMore(result.hasMore)
-      setInitialLoading(false)
-    }, 200)
-    return () => clearTimeout(timer)
-  }, [selectedMainTab])
+    loadCommunities()
+  }, [loadCommunities])
 
-  // 组件卸载时清理 scroll lock
-  useEffect(() => () => {
-    document.documentElement.style.overflow = ''
-    const main = document.querySelector('main')
-    if (main) (main as HTMLElement).style.overflow = ''
-  }, [])
-
-  // 计算展示数据
-  const displayPosts: PostDisplayData[] = useMemo(() => {
-    let source: CommunityPost[] = []
-
-    if (selectedMainTab === 'all') {
-      // 推荐 tab：前3条是硬编码的设计图内容，后面是 mock 数据
-      const featured = getFeaturedPosts()
-      const featuredContents = featured.map(p => {
-        const content = getFeaturedPostContent(p.id)
-        return {
-          id: p.id,
-          type: p.type,
-          authorName: p.authorName,
-          authorAvatar: p.authorAvatar,
-          title: p.title,
-          summary: p.title.length > 0 ? `${p.title.slice(0, 50)}...` : '',
-          thumbnail: p.image,
-          comments: content?.comments || Math.floor(p.likes * 0.3),
-          likes: p.likes,
-          collects: content?.collects || Math.floor(p.likes * 0.6),
-          createdAt: p.createdAt,
-          content: content?.content || p.title,
-        }
-      })
-
-      // 从 mock 数据中补充（跳过前3条避免重复）
-      const rest = posts.slice(3).map(post => ({
-        id: post.id,
-        type: post.type,
-        authorName: post.authorName,
-        authorAvatar: post.authorAvatar,
-        title: post.title,
-        summary: `${post.title.slice(0, 60)}...`,
-        thumbnail: post.image,
-        comments: Math.floor(post.likes * 0.3),
-        likes: post.likes,
-        collects: Math.floor(post.likes * 0.6),
-        createdAt: post.createdAt,
-        content: post.title + '\n\n' + '欢迎在下方评论区分享你的看法和经历，一起参与讨论。',
-      }))
-
-      source = [...featuredContents, ...rest] as PostDisplayData[]
-    } else {
-      // 其他 tab 使用过滤后的数据
-      const tab = MAIN_TABS.find(t => t.key === selectedMainTab)
-      let filtered = posts
-
-      if (tab && tab.filter) {
-        const typeMap: Record<string, CommunityPostType> = { '热帖': 'hot', '求助': 'help' }
-        const targetType = typeMap[tab.filter]
-        if (targetType) {
-          filtered = posts.filter(p => p.type === targetType)
-        }
-      }
-
-      // 公告 tab 特殊处理
-      if (selectedMainTab === 'announce') {
-        filtered = posts.filter(p => p.type === 'hot').slice(0, 5)
-      }
-
-      // 子 tab 排序
-      const sorted = [...filtered]
-      if (selectedSubTab === 'latest') {
-        sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      } else if (selectedSubTab === 'popular') {
-        sorted.sort((a, b) => b.likes - a.likes)
-      }
-
-      source = sorted.map(post => ({
-        id: post.id,
-        type: post.type,
-        authorName: post.authorName,
-        authorAvatar: post.authorAvatar,
-        title: post.title,
-        summary: `${post.title.slice(0, 60)}...`,
-        thumbnail: post.image,
-        comments: Math.floor(post.likes * 0.3),
-        likes: post.likes,
-        collects: Math.floor(post.likes * 0.6),
-        createdAt: post.createdAt,
-        content: post.title + '\n\n' + '欢迎在下方评论区分享你的看法和经历，一起参与讨论。',
-      }))
+  const filteredCommunities = useMemo(() => {
+    let list = communities
+    if (activeCategory !== 'all') {
+      list = list.filter(c => c.category === activeCategory)
     }
-
-    return source
-  }, [posts, selectedMainTab, selectedSubTab])
-
-  // 加载更多
-  const handleLoadMore = useCallback(() => {
-    if (loadingMore || !hasMore || initialLoading) return
-
-    setLoadingMore(true)
-    setTimeout(() => {
-      const nextPage = page + 1
-      const result = getCommunityPosts(undefined, nextPage, 8)
-      if (result.posts.length === 0) {
-        setHasMore(false)
-      } else {
-        setPosts(prev => [...prev, ...result.posts])
-        setPage(nextPage)
-        setHasMore(result.hasMore)
-      }
-      setLoadingMore(false)
-    }, 500)
-  }, [page, loadingMore, hasMore, initialLoading])
-
-  // IntersectionObserver
-  useEffect(() => {
-    const sentinel = sentinelRef.current
-    if (!sentinel || !hasMore || initialLoading) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          handleLoadMore()
-        }
-      },
-      { rootMargin: '300px' },
-    )
-    observer.observe(sentinel)
-    return () => observer.disconnect()
-  }, [handleLoadMore, hasMore, initialLoading])
-
-  // 打开帖子详情
-  const handleOpenPost = useCallback((postId: string) => {
-    const post = displayPosts.find(p => p.id === postId)
-    if (post) {
-      setModalPost(post)
-      // 锁住背景滚动
-      document.documentElement.style.overflow = 'hidden'
-      const main = document.querySelector('main')
-      if (main) (main as HTMLElement).style.overflow = 'hidden'
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase()
+      list = list.filter(
+        c =>
+          c.name.toLowerCase().includes(q) ||
+          c.description.toLowerCase().includes(q) ||
+          c.category.toLowerCase().includes(q),
+      )
     }
-  }, [displayPosts])
+    return list
+  }, [communities, activeCategory, searchQuery])
 
-  // 关闭帖子详情
-  const handleClosePost = useCallback(() => {
-    setModalPost(null)
-    document.documentElement.style.overflow = ''
-    const main = document.querySelector('main')
-    if (main) (main as HTMLElement).style.overflow = ''
-  }, [])
+  const handleEnterCommunity = (id: string) => {
+    navigate(`/community/${id}`)
+  }
 
-  // 存储帖子 DOM 引用
-  const setPostRef = useCallback((id: string) => (el: HTMLElement | null) => {
-    if (el) {
-      postRefs.current.set(id, el)
-    } else {
-      postRefs.current.delete(id)
-    }
-  }, [])
+  const handleRetry = () => {
+    // 强制重新加载：清空已加载数据
+    useCommunityStore.setState({ communities: [], communitiesError: null })
+    loadCommunities()
+  }
 
   return (
-    <div className="min-h-full" style={{ background: 'linear-gradient(180deg, #FDF2F8 0%, #ffffff 320px)' }}>
-      {/* 顶部 Banner */}
-      <div className="mx-6 mt-5 mb-4 rounded-2xl overflow-hidden relative"
+    <div className={`min-h-full bg-paper-50 ${isMobile ? 'pb-[64px]' : ''}`}>
+      {/* ── 顶部 Banner ── */}
+      <div
+        className="relative overflow-hidden"
         style={{
-          background: 'linear-gradient(135deg, #FDF2F8 0%, #FAF5FF 30%, #F5F3FF 60%, #EEF2FF 100%)',
+          background: 'linear-gradient(135deg, #FDF2F8 0%, #FAF5FF 35%, #FFF1F2 70%, #FFFFFF 100%)',
         }}
       >
-        <div className="flex items-center justify-between px-8 py-6">
-          {/* 左侧文字 */}
-          <div className="flex flex-col gap-3">
-            <h1 className="text-[26px] font-bold text-gray-900 leading-tight">
-              连接观点·启迪思考
-            </h1>
-            <p className="text-[15px] text-gray-500 leading-relaxed">
-              在观微社区，发现多元视角，探索深度思考
-            </p>
+        <div className={`mx-auto ${isMobile ? 'px-5 py-7' : 'max-w-6xl px-8 py-10'}`}>
+          <div className="flex items-start justify-between gap-6">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles size={18} className="text-pink-500" strokeWidth={2} />
+                <span className="text-[12px] font-bold tracking-wider text-pink-600 uppercase">
+                  Community Hub
+                </span>
+              </div>
+              <h1 className="text-[26px] md:text-[32px] font-bold text-ink-900 leading-tight mb-2">
+                观微社区
+              </h1>
+              <p className="text-[14px] md:text-[15px] text-ink-600 leading-relaxed max-w-xl">
+                10 个官方社区，覆盖科技、娱乐、社会、财经等领域。
+                理性表达，事实优先，让每一次发声都有价值。
+              </p>
+            </div>
+
+            {!isMobile && (
+              <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+                <div className="px-4 py-2 bg-white/70 backdrop-blur rounded-xl border border-pink-100">
+                  <div className="text-[11px] text-ink-400 font-medium">在线社区</div>
+                  <div className="text-[20px] font-bold text-ink-900">{communities.length || 10}</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 装饰光斑 */}
+          <div className="absolute -top-6 right-10 w-32 h-32 rounded-full bg-pink-200/30 blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-1/4 w-24 h-24 rounded-full bg-rose-200/30 blur-2xl pointer-events-none" />
+        </div>
+      </div>
+
+      {/* ── 搜索栏 + 分类筛选 ── */}
+      <div className="sticky top-0 z-10 bg-white/85 backdrop-blur-xl border-b border-line/40">
+        <div className={`mx-auto ${isMobile ? 'px-4 py-3' : 'max-w-6xl px-8 py-3'}`}>
+          {/* 搜索框 */}
+          <div className="relative mb-3">
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-300 pointer-events-none"
+            />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="搜索社区名称、描述或分类"
+              className="w-full pl-9 pr-3 py-2 text-[14px] bg-paper-100 rounded-xl border border-transparent focus:bg-surface focus:border-pink-200 transition-all placeholder:text-ink-300 text-ink-800"
+            />
+          </div>
+
+          {/* 分类 chips */}
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-none -mx-1 px-1">
+            {CATEGORIES.map(cat => {
+              const isActive = activeCategory === cat.key
+              return (
+                <button
+                  key={cat.key}
+                  onClick={() => setActiveCategory(cat.key)}
+                  className={`px-3.5 py-1.5 text-[13px] font-semibold rounded-full transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
+                    isActive
+                      ? 'text-white shadow-sm'
+                      : 'text-ink-500 bg-paper-100 hover:text-ink-700 hover:bg-paper-200'
+                  }`}
+                  style={
+                    isActive
+                      ? { background: 'linear-gradient(135deg, #EC4899, #F43F5E)' }
+                      : undefined
+                  }
+                >
+                  {cat.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* ── 社区列表 ── */}
+      <div className={`mx-auto ${isMobile ? 'px-4 py-4' : 'max-w-6xl px-8 py-6'}`}>
+        {/* 错误状态 */}
+        {communitiesError && !communitiesLoading && (
+          <div className="flex flex-col items-center justify-center py-16 px-6">
+            <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mb-4">
+              <AlertCircle size={26} className="text-red-500" />
+            </div>
+            <p className="text-[15px] font-semibold text-ink-800 mb-1">加载社区失败</p>
+            <p className="text-[13px] text-ink-500 mb-4 text-center max-w-xs">{communitiesError}</p>
             <button
-              onClick={() => navigate('/publish')}
-              className="mt-1 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-rose-400 to-pink-500 text-white text-[14px] font-medium shadow-sm shadow-rose-200/50 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all w-fit"
+              onClick={handleRetry}
+              className="flex items-center gap-1.5 px-4 py-2 bg-seal text-white rounded-xl text-[13px] font-medium hover:bg-seal-600 transition-colors press-pop"
             >
-              <PenLine size={16} strokeWidth={2} />
-              <span>发布新观点</span>
+              <RefreshCw size={14} />
+              重试
             </button>
           </div>
-
-          {/* 右侧插画 */}
-          <BannerIllustration />
-        </div>
-
-        {/* 装饰性光斑 */}
-        <div className="absolute -top-6 right-8 w-24 h-24 rounded-full bg-violet-200/30 blur-2xl pointer-events-none" />
-        <div className="absolute bottom-0 left-10 w-20 h-20 rounded-full bg-pink-200/30 blur-xl pointer-events-none" />
-      </div>
-
-      {/* 主 Tab 导航 */}
-      <div className="sticky top-0 bg-white/95 backdrop-blur-md z-10 border-b border-gray-100">
-        <div className="flex items-center gap-2 px-8 py-3 overflow-x-auto scrollbar-none">
-          {MAIN_TABS.map((tab) => {
-            const isActive = selectedMainTab === tab.key
-            return (
-              <button
-                key={tab.key}
-                onClick={() => {
-                  setSelectedMainTab(tab.key)
-                  setSelectedSubTab('all')
-                }}
-                className={`px-5 py-2 text-[14px] font-semibold rounded-full transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
-                  isActive
-                    ? 'text-white shadow-md'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                }`}
-                style={isActive ? {
-                  background: 'linear-gradient(135deg, #f472b6 0%, #a78bfa 100%)',
-                  boxShadow: '0 2px 10px -2px rgba(167, 139, 250, 0.5)',
-                } : {}}
-              >
-                {tab.label}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* 子 Tab 筛选栏 */}
-      <div className="flex items-center justify-between px-8 py-3 border-b border-gray-50">
-        <div className="flex items-center gap-2">
-          {SUB_TABS.map((tab) => {
-            const isActive = selectedSubTab === tab.key
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setSelectedSubTab(tab.key)}
-                className={`px-3.5 py-1.5 text-[12px] font-semibold rounded-full transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
-                  isActive
-                    ? 'text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                }`}
-                style={isActive ? {
-                  background: 'linear-gradient(135deg, #fda4af 0%, #f472b6 100%)',
-                  boxShadow: '0 1px 6px -1px rgba(244, 114, 182, 0.4)',
-                } : {}}
-              >
-                {tab.label}
-              </button>
-            )
-          })}
-        </div>
-
-        <button className="flex items-center gap-1.5 text-[14px] text-gray-400 hover:text-gray-600 transition-colors">
-          <Filter size={16} strokeWidth={1.5} />
-          <span>筛选</span>
-          <MoreHorizontal size={14} strokeWidth={1.5} />
-        </button>
-      </div>
-
-      {/* 帖子列表 */}
-      <div>
-        {initialLoading ? (
-          <div className="py-16 flex flex-col items-center justify-center gap-3">
-            <div className="w-7 h-7 border-2 border-gray-100 border-t-gray-400 rounded-full animate-spin" />
-            <span className="text-[13px] text-gray-400">加载中...</span>
-          </div>
-        ) : (
-          <>
-            {displayPosts.map((post, i) => (
-              <PostItem
-                key={post.id}
-                post={post}
-                index={i}
-                onOpen={handleOpenPost}
-                itemRef={setPostRef(post.id)}
-              />
-            ))}
-          </>
         )}
 
-        {/* 加载更多 sentinel */}
-        <div
-          ref={sentinelRef}
-          className="h-20 flex items-center justify-center"
-        >
-          {!initialLoading && (
-            loadingMore ? (
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 border-2 border-gray-100 border-t-gray-400 rounded-full animate-spin" />
-                <span className="text-[13px] text-gray-400">加载中...</span>
-              </div>
-            ) : hasMore ? (
-              <span className="text-[13px] text-gray-300">下拉加载更多</span>
-            ) : (
-              <span className="text-[13px] text-gray-300">— 已经到底了 —</span>
-            )
-          )}
-        </div>
-      </div>
+        {/* 骨架屏 */}
+        {communitiesLoading && (
+          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2 lg:grid-cols-3'}`}>
+            {Array.from({ length: 9 }).map((_, i) => (
+              <CommunityCardSkeleton key={i} />
+            ))}
+          </div>
+        )}
 
-      {/* 帖子详情弹窗（用 key 强制 remount 确保动画正确） */}
-      <PostDetailModal
-        key={modalPost ? modalPost.id : 'closed'}
-        post={modalPost}
-        onClose={handleClosePost}
-      />
+        {/* 空状态：筛选无结果 */}
+        {!communitiesLoading && !communitiesError && filteredCommunities.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 px-6">
+            <div className="w-14 h-14 rounded-full bg-paper-200 flex items-center justify-center mb-4">
+              <Search size={24} className="text-ink-300" />
+            </div>
+            <p className="text-[15px] font-semibold text-ink-800 mb-1">没有找到匹配的社区</p>
+            <p className="text-[13px] text-ink-500 mb-4">试试换个关键词或分类</p>
+            <button
+              onClick={() => {
+                setSearchQuery('')
+                setActiveCategory('all')
+              }}
+              className="px-4 py-2 bg-paper-200 text-ink-700 rounded-xl text-[13px] font-medium hover:bg-paper-100 transition-colors press-pop"
+            >
+              清空筛选
+            </button>
+          </div>
+        )}
+
+        {/* 社区网格 */}
+        {!communitiesLoading && !communitiesError && filteredCommunities.length > 0 && (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-[13px] text-ink-500">
+                共 <span className="font-semibold text-ink-800">{filteredCommunities.length}</span> 个社区
+              </p>
+            </div>
+            <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2 lg:grid-cols-3'}`}>
+              {filteredCommunities.map((community, i) => (
+                <CommunityCard
+                  key={community.id}
+                  community={community}
+                  index={i}
+                  onClick={handleEnterCommunity}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }

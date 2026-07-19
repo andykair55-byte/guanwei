@@ -288,7 +288,7 @@ export default function ReverseImageSearch() {
                     }`}
                   >
                     <div className="aspect-[4/3] relative">
-                      <img src={makeImage(p.bg, p.fg, p.icon)} alt={p.label} className="w-full h-full object-cover" />
+                      <img src={makeImage(p.bg, p.fg, p.icon)} alt={p.label} loading="lazy" className="w-full h-full object-cover" />
                       {isActive && (
                         <div className="absolute inset-0 bg-seal/20 flex items-center justify-center">
                           <div className="w-7 h-7 rounded-full bg-seal flex items-center justify-center">

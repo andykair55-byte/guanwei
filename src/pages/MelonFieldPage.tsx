@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MessageCircle, Users, Sparkles, Swords, TrendingUp, Clock, Award, Flame, PenLine } from 'lucide-react'
 import { api } from '../services/api'
@@ -153,7 +153,7 @@ const MOCK_MELONS: Melon[] = [
   {
     id: 'mock-3', title: '远程办公比坐班更高效？最新研究颠覆你的认知',
     description: '斯坦福大学最新研究表明远程办公效率提升23%，但团队协作能力下降。',
-    coverImage: 'https://picsum.photos/seed/melon3/400/300', category: '社会', difficulty: 2,
+    coverImage: 'https://picsum.photos/seed/melon3/400/300', category: '社会热点', difficulty: 2,
     trueCount: 64, falseCount: 189, totalParticipants: 253,
     revealTime: new Date(Date.now() + 12 * 3600 * 1000).toISOString(), status: 'pending',
     likeCount: 64, commentCount: 189, evidenceCount: 23, isLiked: false,
@@ -173,7 +173,7 @@ const MOCK_MELONS: Melon[] = [
   {
     id: 'mock-5', title: '为什么顶尖大学里的学生反而更焦虑？',
     description: '调查显示名校学生的心理健康问题比例远高于普通院校。',
-    coverImage: 'https://picsum.photos/seed/melon5/400/300', category: '学习', difficulty: 2,
+    coverImage: 'https://picsum.photos/seed/melon5/400/300', category: '校园', difficulty: 2,
     trueCount: 55, falseCount: 178, totalParticipants: 233,
     revealTime: new Date(Date.now() + 24 * 3600 * 1000).toISOString(), status: 'pending',
     likeCount: 55, commentCount: 178, evidenceCount: 14, isLiked: false,
@@ -183,7 +183,7 @@ const MOCK_MELONS: Melon[] = [
   {
     id: 'mock-6', title: '年轻人该不该躺平？一场关于人生选择的辩论',
     description: '社交媒体上"躺平"话题持续发酵，不同代际观点碰撞激烈。',
-    coverImage: 'https://picsum.photos/seed/melon6/400/300', category: '社会', difficulty: 1,
+    coverImage: 'https://picsum.photos/seed/melon6/400/300', category: '社会热点', difficulty: 1,
     trueCount: 91, falseCount: 284, totalParticipants: 375,
     revealTime: new Date(Date.now() + 8 * 3600 * 1000).toISOString(), status: 'pending',
     likeCount: 91, commentCount: 284, evidenceCount: 11, isLiked: false,
@@ -193,7 +193,7 @@ const MOCK_MELONS: Melon[] = [
   {
     id: 'mock-7', title: '隔夜水和千滚水真的致癌吗？专家最新解读来了',
     description: '多位食品科学专家对网络流传的"致癌水"说法进行逐一辟谣。',
-    coverImage: 'https://picsum.photos/seed/melon7/400/300', category: '生活', difficulty: 2,
+    coverImage: 'https://picsum.photos/seed/melon7/400/300', category: '生活科普', difficulty: 2,
     trueCount: 48, falseCount: 156, totalParticipants: 204,
     revealTime: new Date(Date.now() + 18 * 3600 * 1000).toISOString(), status: 'pending',
     likeCount: 48, commentCount: 156, evidenceCount: 8, isLiked: false,
@@ -233,7 +233,7 @@ const MOCK_MELONS: Melon[] = [
   {
     id: 'mock-11', title: '每天走一万步能减肥？运动科学告诉你真相',
     description: '一万步理论源于日本计步器营销，但最新研究表明关键在于运动强度。',
-    coverImage: 'https://picsum.photos/seed/melon11/400/300', category: '生活', difficulty: 1,
+    coverImage: 'https://picsum.photos/seed/melon11/400/300', category: '生活科普', difficulty: 1,
     trueCount: 38, falseCount: 142, totalParticipants: 180,
     revealTime: new Date(Date.now() + 10 * 3600 * 1000).toISOString(), status: 'pending',
     likeCount: 38, commentCount: 142, evidenceCount: 7, isLiked: false,
@@ -392,9 +392,24 @@ export default function MelonFieldPage() {
   const navigate = useNavigate()
   const [melons, setMelons] = useState<Melon[]>([])
   const [selectedCategory, setSelectedCategory] = useState<string>('推荐')
+  const [sortBy, setSortBy] = useState<'latest' | 'hottest'>('latest')
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const sentinelRef = useRef<HTMLDivElement | null>(null)
+
+  // ── 排序逻辑：热度公式 = guesses * 0.6 + evidences * 0.4 ──
+  const sortedMelons = useMemo(() => {
+    if (sortBy === 'hottest') {
+      return [...melons].sort((a, b) =>
+        (b.totalParticipants * 0.6 + b.evidenceCount * 0.4) -
+        (a.totalParticipants * 0.6 + a.evidenceCount * 0.4)
+      )
+    }
+    // latest: 按 createdAt 降序
+    return [...melons].sort((a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+  }, [melons, sortBy])
 
   // 弹窗状态
   const [modalOpen, setModalOpen] = useState(false)
@@ -614,7 +629,35 @@ export default function MelonFieldPage() {
               </button>
             )
           })}
-          <div className="ml-auto flex items-center gap-2 text-[12px] text-gray-400 flex-shrink-0">
+          {/* 排序切换：最新 / 最热 */}
+          <div className="ml-auto flex items-center gap-1.5 flex-shrink-0 bg-gray-100/70 rounded-full p-0.5">
+            <button
+              onClick={() => setSortBy('latest')}
+              className={`px-3 py-1 text-[12px] font-semibold rounded-full transition-all duration-200 flex items-center gap-1 ${
+                sortBy === 'latest'
+                  ? 'bg-white text-emerald-700 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+              aria-pressed={sortBy === 'latest'}
+            >
+              <Clock size={11} strokeWidth={2.5} />
+              <span>最新</span>
+            </button>
+            <button
+              onClick={() => setSortBy('hottest')}
+              className={`px-3 py-1 text-[12px] font-semibold rounded-full transition-all duration-200 flex items-center gap-1 ${
+                sortBy === 'hottest'
+                  ? 'bg-white text-amber-600 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+              aria-pressed={sortBy === 'hottest'}
+              title="热度 = 猜瓜数 × 0.6 + 佐证数 × 0.4"
+            >
+              <Flame size={11} strokeWidth={2.5} />
+              <span>最热</span>
+            </button>
+          </div>
+          <div className="flex items-center gap-1.5 text-[12px] text-gray-400 flex-shrink-0">
             <TrendingUp size={12} />
             <span>{melons.length} 个瓜</span>
           </div>
@@ -647,7 +690,7 @@ export default function MelonFieldPage() {
           ) : (
             <>
               <div className="grid grid-cols-5 gap-5">
-                {melons.map((melon, i) => (
+                {sortedMelons.map((melon, i) => (
                   <MelonCard
                     key={melon.id}
                     melon={melon}

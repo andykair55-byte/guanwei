@@ -22,9 +22,9 @@ const CATEGORY_COLORS: Record<string, string> = {
   '娱乐': 'bg-pink-100 text-pink-600',
 }
 
-export default function JudgeCard({ caseData, onVote }: JudgeCardProps) {
+export default function JudgeCard({ caseData, onVote, onNext }: JudgeCardProps) {
   const [showEvidence, setShowEvidence] = useState(false)
-  const [voting, setVoting] = useState<JudgeVote | null>(null)
+  const [, setVoting] = useState<JudgeVote | null>(null)
   const [showResult, setShowResult] = useState(false)
   const [animatingOut, setAnimatingOut] = useState(false)
 
@@ -58,8 +58,6 @@ export default function JudgeCard({ caseData, onVote }: JudgeCardProps) {
   if (c.userVoted && showResult) {
     const isSupport = c.userVoted === 'support'
     const isOppose = c.userVoted === 'oppose'
-    const isSkip = c.userVoted === 'skip'
-    const userPercent = isSupport ? supportPercent : isOppose ? opposePercent : 100 - supportPercent - opposePercent
 
     return (
       <div className="bg-surface rounded-2xl shadow-card border border-line/20 overflow-hidden animate-fade-in-up">

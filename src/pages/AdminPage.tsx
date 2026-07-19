@@ -5,8 +5,9 @@ import {
   ArrowLeft, Search, Trash2, Eye, Edit3, CheckCircle2, XCircle,
   Clock, AlertTriangle, RefreshCw, Shield, BarChart3, Activity,
   ChevronRight, ChevronLeft, Plus, Minus, Loader2, Download,
-  ScrollText, Server, History, LogOut, Lock
+  ScrollText, Server, History, LogOut, Lock, Gavel, ThumbsUp, ThumbsDown
 } from 'lucide-react'
+import { useVerificationStore } from '../stores/verificationStore'
 
 const BASE = import.meta.env.VITE_API_BASE_URL || ''
 
@@ -331,6 +332,7 @@ function Pagination({ page, pages, onPage }: { page: number; pages: number; onPa
 // ================================================================
 
 function MelonsTab() {
+  const [view, setView] = useState<'list' | 'reveal'>('list')
   const [data, setData] = useState<PaginatedResponse<MelonItem>>({ total: 0, page: 1, size: 20, pages: 0, items: [] })
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState({ status: '', category: '' })
@@ -357,7 +359,7 @@ function MelonsTab() {
   }
 
   const toggleSelect = (id: number) => {
-    setSelected(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next })
+    setSelected(prev => { const next = new Set(prev); if (next.has(id)) { next.delete(id) } else { next.add(id) } return next })
   }
   const toggleAll = () => {
     if (selected.size === data.items.length) setSelected(new Set())
@@ -393,88 +395,306 @@ function MelonsTab() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[20px] font-semibold">瓜管理</h1>
-          <p className="text-[13px] text-[#5f6368]">共 {data.total} 条 {selected.size > 0 && `· 已选 ${selected.size}`}</p>
+          <p className="text-[13px] text-[#5f6368]">{view === 'reveal' ? '开奖面板：pending 瓜列表 + 一键开奖' : `共 ${data.total} 条 ${selected.size > 0 ? `· 已选 ${selected.size}` : ''}`}</p>
         </div>
-        <div className="flex items-center gap-2">
-          {selected.size > 0 && (
+        <div className="flex items-center gap-3">
+          {/* 子面板切换 */}
+          <div className="flex bg-[#f1f3f4] rounded-lg p-0.5">
+            <button onClick={() => setView('list')} className={`px-3 py-1.5 rounded-md text-[12px] flex items-center gap-1.5 ${view === 'list' ? 'bg-white shadow-sm font-medium text-[#202124]' : 'text-[#5f6368]'}`}>
+              <FileText size={12} />列表管理
+            </button>
+            <button onClick={() => setView('reveal')} className={`px-3 py-1.5 rounded-md text-[12px] flex items-center gap-1.5 ${view === 'reveal' ? 'bg-white shadow-sm font-medium text-[#202124]' : 'text-[#5f6368]'}`}>
+              <Gavel size={12} />开奖面板
+            </button>
+          </div>
+          {view === 'list' && (
             <>
-              <button onClick={doBatchReveal} className="h-8 px-3 rounded-lg text-[12px] bg-[#e8f0fe] text-[#1a73e8] hover:bg-[#d2e3fc]">批量揭瓜</button>
-              <button onClick={doBatchDelete} className="h-8 px-3 rounded-lg text-[12px] bg-[#fce8e6] text-[#d93025] hover:bg-[#f8d7da]">批量删除</button>
+              {selected.size > 0 && (
+                <>
+                  <button onClick={doBatchReveal} className="h-8 px-3 rounded-lg text-[12px] bg-[#e8f0fe] text-[#1a73e8] hover:bg-[#d2e3fc]">批量揭瓜</button>
+                  <button onClick={doBatchDelete} className="h-8 px-3 rounded-lg text-[12px] bg-[#fce8e6] text-[#d93025] hover:bg-[#f8d7da]">批量删除</button>
+                </>
+              )}
+              <button onClick={exportCsv} className="h-8 px-3 rounded-lg text-[12px] border border-[#dadce0] text-[#5f6368] hover:bg-[#f1f3f4] flex items-center gap-1.5">
+                <Download size={12} />导出 CSV
+              </button>
+              <select value={filter.status} onChange={e => setFilter(f => ({ ...f, status: e.target.value }))}
+                className="h-8 px-3 rounded-lg border border-[#dadce0] text-[12px] bg-white text-[#5f6368]">
+                <option value="">全部状态</option><option value="pending">待揭</option><option value="verified">已验证</option><option value="revealed">已揭</option>
+              </select>
+              <select value={filter.category} onChange={e => setFilter(f => ({ ...f, category: e.target.value }))}
+                className="h-8 px-3 rounded-lg border border-[#dadce0] text-[12px] bg-white text-[#5f6368]">
+                <option value="">全部分类</option>
+                {['科技', '健康', '社会', '财经', '娱乐', '国际', '历史', '生活科普', '社会热点'].map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </>
           )}
-          <button onClick={exportCsv} className="h-8 px-3 rounded-lg text-[12px] border border-[#dadce0] text-[#5f6368] hover:bg-[#f1f3f4] flex items-center gap-1.5">
-            <Download size={12} />导出 CSV
-          </button>
-          <select value={filter.status} onChange={e => setFilter(f => ({ ...f, status: e.target.value }))}
-            className="h-8 px-3 rounded-lg border border-[#dadce0] text-[12px] bg-white text-[#5f6368]">
-            <option value="">全部状态</option><option value="pending">待揭</option><option value="verified">已验证</option><option value="revealed">已揭</option>
-          </select>
-          <select value={filter.category} onChange={e => setFilter(f => ({ ...f, category: e.target.value }))}
-            className="h-8 px-3 rounded-lg border border-[#dadce0] text-[12px] bg-white text-[#5f6368]">
-            <option value="">全部分类</option>
-            {['科技', '健康', '社会', '财经', '娱乐', '国际', '历史', '生活科普', '社会热点'].map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
         </div>
       </div>
 
-      {loading ? <LoadingState /> : (
-        <div className="bg-white rounded-xl border border-[#dadce0] overflow-hidden">
-          <table className="w-full text-[12px]">
-            <thead>
-              <tr className="border-b border-[#dadce0] bg-[#f8f9fa]">
-                <th className="px-3 py-2.5 w-8"><input type="checkbox" checked={selected.size === data.items.length && data.items.length > 0} onChange={toggleAll} /></th>
-                <th className="px-3 py-2.5 text-left font-medium text-[#5f6368] cursor-pointer hover:text-[#202124]" onClick={() => toggleSort('id')}>ID {sortIcon('id')}</th>
-                <th className="px-3 py-2.5 text-left font-medium text-[#5f6368]">标题</th>
-                <th className="px-3 py-2.5 text-left font-medium text-[#5f6368] cursor-pointer hover:text-[#202124]" onClick={() => toggleSort('category')}>分类 {sortIcon('category')}</th>
-                <th className="px-3 py-2.5 text-left font-medium text-[#5f6368]">状态</th>
-                <th className="px-3 py-2.5 text-left font-medium text-[#5f6368] cursor-pointer hover:text-[#202124]" onClick={() => toggleSort('participant_count')}>参与 {sortIcon('participant_count')}</th>
-                <th className="px-3 py-2.5 text-left font-medium text-[#5f6368]">真/假</th>
-                <th className="px-3 py-2.5 text-left font-medium text-[#5f6368] cursor-pointer hover:text-[#202124]" onClick={() => toggleSort('created_at')}>创建时间 {sortIcon('created_at')}</th>
-                <th className="px-3 py-2.5 text-right font-medium text-[#5f6368]">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.map(m => (
-                <tr key={m.id} className={`border-b border-[#f1f3f4] hover:bg-[#f8f9fa] ${selected.has(m.id) ? 'bg-[#e8f0fe]/30' : ''}`}>
-                  <td className="px-3 py-2.5"><input type="checkbox" checked={selected.has(m.id)} onChange={() => toggleSelect(m.id)} /></td>
-                  <td className="px-3 py-2.5 text-[#5f6368]">#{m.id}</td>
-                  <td className="px-3 py-2.5 font-medium max-w-[200px] truncate">{m.title}</td>
-                  <td className="px-3 py-2.5 text-[#5f6368]">{m.category}</td>
-                  <td className="px-3 py-2.5"><span className={`px-2 py-0.5 rounded text-[11px] font-medium ${statusBadge(m.status)}`}>{m.status}</span></td>
-                  <td className="px-3 py-2.5 text-[#5f6368]">{m.participant_count}</td>
-                  <td className="px-3 py-2.5 text-[#5f6368]">
-                    {m.result === null ? '-' : m.result ? <CheckCircle2 size={13} className="text-[#1e8e3e] inline" /> : <XCircle size={13} className="text-[#d93025] inline" />} {m.true_count}/{m.false_count}
-                  </td>
-                  <td className="px-3 py-2.5 text-[#5f6368]">{new Date(m.created_at).toLocaleDateString('zh-CN')}</td>
-                  <td className="px-3 py-2.5 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      {m.status !== 'revealed' && (
-                        <button onClick={() => { setRevealId(m.id); setRevealResult(true) }} className="p-1 rounded hover:bg-[#e8f0fe] text-[#1a73e8]" title="揭瓜"><Eye size={13} /></button>
-                      )}
-                      <button onClick={() => doDelete(m.id)} className="p-1 rounded hover:bg-[#fce8e6] text-[#d93025]" title="删除"><Trash2 size={13} /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {data.items.length === 0 && <div className="py-12 text-center text-[13px] text-[#5f6368]">暂无数据</div>}
-          <Pagination page={data.page} pages={data.pages} onPage={p => load(p)} />
+      {view === 'reveal' ? (
+        <MelonManagerPanel />
+      ) : (
+        <>
+          {loading ? <LoadingState /> : (
+            <div className="bg-white rounded-xl border border-[#dadce0] overflow-hidden">
+              <table className="w-full text-[12px]">
+                <thead>
+                  <tr className="border-b border-[#dadce0] bg-[#f8f9fa]">
+                    <th className="px-3 py-2.5 w-8"><input type="checkbox" checked={selected.size === data.items.length && data.items.length > 0} onChange={toggleAll} /></th>
+                    <th className="px-3 py-2.5 text-left font-medium text-[#5f6368] cursor-pointer hover:text-[#202124]" onClick={() => toggleSort('id')}>ID {sortIcon('id')}</th>
+                    <th className="px-3 py-2.5 text-left font-medium text-[#5f6368]">标题</th>
+                    <th className="px-3 py-2.5 text-left font-medium text-[#5f6368] cursor-pointer hover:text-[#202124]" onClick={() => toggleSort('category')}>分类 {sortIcon('category')}</th>
+                    <th className="px-3 py-2.5 text-left font-medium text-[#5f6368]">状态</th>
+                    <th className="px-3 py-2.5 text-left font-medium text-[#5f6368] cursor-pointer hover:text-[#202124]" onClick={() => toggleSort('participant_count')}>参与 {sortIcon('participant_count')}</th>
+                    <th className="px-3 py-2.5 text-left font-medium text-[#5f6368]">真/假</th>
+                    <th className="px-3 py-2.5 text-left font-medium text-[#5f6368] cursor-pointer hover:text-[#202124]" onClick={() => toggleSort('created_at')}>创建时间 {sortIcon('created_at')}</th>
+                    <th className="px-3 py-2.5 text-right font-medium text-[#5f6368]">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.items.map(m => (
+                    <tr key={m.id} className={`border-b border-[#f1f3f4] hover:bg-[#f8f9fa] ${selected.has(m.id) ? 'bg-[#e8f0fe]/30' : ''}`}>
+                      <td className="px-3 py-2.5"><input type="checkbox" checked={selected.has(m.id)} onChange={() => toggleSelect(m.id)} /></td>
+                      <td className="px-3 py-2.5 text-[#5f6368]">#{m.id}</td>
+                      <td className="px-3 py-2.5 font-medium max-w-[200px] truncate">{m.title}</td>
+                      <td className="px-3 py-2.5 text-[#5f6368]">{m.category}</td>
+                      <td className="px-3 py-2.5"><span className={`px-2 py-0.5 rounded text-[11px] font-medium ${statusBadge(m.status)}`}>{m.status}</span></td>
+                      <td className="px-3 py-2.5 text-[#5f6368]">{m.participant_count}</td>
+                      <td className="px-3 py-2.5 text-[#5f6368]">
+                        {m.result === null ? '-' : m.result ? <CheckCircle2 size={13} className="text-[#1e8e3e] inline" /> : <XCircle size={13} className="text-[#d93025] inline" />} {m.true_count}/{m.false_count}
+                      </td>
+                      <td className="px-3 py-2.5 text-[#5f6368]">{new Date(m.created_at).toLocaleDateString('zh-CN')}</td>
+                      <td className="px-3 py-2.5 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {m.status !== 'revealed' && (
+                            <button onClick={() => { setRevealId(m.id); setRevealResult(true) }} className="p-1 rounded hover:bg-[#e8f0fe] text-[#1a73e8]" title="揭瓜"><Eye size={13} /></button>
+                          )}
+                          <button onClick={() => doDelete(m.id)} className="p-1 rounded hover:bg-[#fce8e6] text-[#d93025]" title="删除"><Trash2 size={13} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {data.items.length === 0 && <div className="py-12 text-center text-[13px] text-[#5f6368]">暂无数据</div>}
+              <Pagination page={data.page} pages={data.pages} onPage={p => load(p)} />
+            </div>
+          )}
+
+          {revealId !== null && (
+            <Modal onClose={() => setRevealId(null)}>
+              <h3 className="text-[14px] font-semibold mb-4">揭瓜 #{revealId}</h3>
+              <div className="flex gap-2 mb-4">
+                <button onClick={() => setRevealResult(true)} className={`flex-1 py-2 rounded-lg text-[13px] border ${revealResult ? 'bg-[#e6f4ea] border-[#1e8e3e] text-[#1e8e3e] font-medium' : 'border-[#dadce0] text-[#5f6368]'}`}>属实</button>
+                <button onClick={() => setRevealResult(false)} className={`flex-1 py-2 rounded-lg text-[13px] border ${!revealResult ? 'bg-[#fce8e6] border-[#d93025] text-[#d93025] font-medium' : 'border-[#dadce0] text-[#5f6368]'}`}>虚假</button>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setRevealId(null)} className="px-3 py-1.5 rounded-lg text-[12px] text-[#5f6368] hover:bg-[#f1f3f4]">取消</button>
+                <button onClick={() => doReveal(revealId)} className="px-3 py-1.5 rounded-lg text-[12px] bg-[#1a73e8] text-white">确认揭瓜</button>
+              </div>
+            </Modal>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+// ================================================================
+//  MelonManager Panel (开奖面板)
+//  使用 verificationStore，支持 mock fallback
+// ================================================================
+
+function MelonManagerPanel() {
+  const adminMelons = useVerificationStore(s => s.adminMelons)
+  const adminMelonsLoading = useVerificationStore(s => s.adminMelonsLoading)
+  const adminMelonsError = useVerificationStore(s => s.adminMelonsError)
+  const fetchAdminMelons = useVerificationStore(s => s.fetchAdminMelons)
+  const revealMelon = useVerificationStore(s => s.revealMelon)
+
+  const [revealing, setRevealing] = useState<string | number | null>(null)
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'warning' } | null>(null)
+
+  useEffect(() => {
+    fetchAdminMelons()
+  }, [fetchAdminMelons])
+
+  const showToast = (message: string, type: 'success' | 'warning' = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 2500)
+  }
+
+  const handleQuickReveal = async (melonId: string | number, result: boolean, title: string) => {
+    if (revealing !== null) return
+    setRevealing(melonId)
+    try {
+      const res = await revealMelon(melonId, result)
+      showToast(res.message || (res.success ? `「${title}」开奖成功` : '开奖失败'), res.success ? 'success' : 'warning')
+    } catch (e: any) {
+      showToast(e?.message || '开奖失败', 'warning')
+    } finally {
+      setRevealing(null)
+    }
+  }
+
+  const pendingMelons = adminMelons.filter(m => m.status === 'pending')
+  const revealedMelons = adminMelons.filter(m => m.status === 'revealed')
+
+  if (adminMelonsLoading && adminMelons.length === 0) return <LoadingState />
+
+  return (
+    <div className="relative">
+      {/* 错误提示 */}
+      {adminMelonsError && (
+        <div className="mb-4 px-4 py-2.5 rounded-lg bg-[#fce8e6] text-[#d93025] text-[12px] flex items-center gap-2">
+          <AlertTriangle size={14} />
+          <span>{adminMelonsError}</span>
+          <button onClick={() => fetchAdminMelons()} className="ml-auto underline">重试</button>
         </div>
       )}
 
-      {revealId !== null && (
-        <Modal onClose={() => setRevealId(null)}>
-          <h3 className="text-[14px] font-semibold mb-4">揭瓜 #{revealId}</h3>
-          <div className="flex gap-2 mb-4">
-            <button onClick={() => setRevealResult(true)} className={`flex-1 py-2 rounded-lg text-[13px] border ${revealResult ? 'bg-[#e6f4ea] border-[#1e8e3e] text-[#1e8e3e] font-medium' : 'border-[#dadce0] text-[#5f6368]'}`}>属实</button>
-            <button onClick={() => setRevealResult(false)} className={`flex-1 py-2 rounded-lg text-[13px] border ${!revealResult ? 'bg-[#fce8e6] border-[#d93025] text-[#d93025] font-medium' : 'border-[#dadce0] text-[#5f6368]'}`}>虚假</button>
+      {/* 顶部操作栏 */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fef7e0] text-[#e8710a] text-[12px] font-medium">
+            <Clock size={12} />
+            <span>{pendingMelons.length} 个待开奖</span>
           </div>
-          <div className="flex justify-end gap-2">
-            <button onClick={() => setRevealId(null)} className="px-3 py-1.5 rounded-lg text-[12px] text-[#5f6368] hover:bg-[#f1f3f4]">取消</button>
-            <button onClick={() => doReveal(revealId)} className="px-3 py-1.5 rounded-lg text-[12px] bg-[#1a73e8] text-white">确认揭瓜</button>
+          {revealedMelons.length > 0 && (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e8f0fe] text-[#1a73e8] text-[12px] font-medium">
+              <CheckCircle2 size={12} />
+              <span>{revealedMelons.length} 个已开奖</span>
+            </div>
+          )}
+        </div>
+        <button
+          onClick={() => fetchAdminMelons()}
+          disabled={adminMelonsLoading}
+          className="h-8 px-3 rounded-lg text-[12px] border border-[#dadce0] text-[#5f6368] hover:bg-[#f1f3f4] flex items-center gap-1.5 disabled:opacity-50"
+        >
+          <RefreshCw size={12} className={adminMelonsLoading ? 'animate-spin' : ''} />刷新
+        </button>
+      </div>
+
+      {/* Pending 列表 */}
+      <div className="mb-6">
+        <h3 className="text-[13px] font-semibold text-[#202124] mb-3 flex items-center gap-1.5">
+          <Gavel size={14} className="text-[#1a73e8]" />
+          待开奖瓜列表
+        </h3>
+        {pendingMelons.length === 0 ? (
+          <div className="py-12 text-center text-[13px] text-[#5f6368] bg-white rounded-xl border border-[#dadce0]">
+            <CheckCircle2 size={24} className="mx-auto text-[#1e8e3e] mb-2" />
+            暂无待开奖的瓜
           </div>
-        </Modal>
+        ) : (
+          <div className="space-y-2">
+            {pendingMelons.map(m => (
+              <div
+                key={m.id}
+                className="bg-white rounded-xl border border-[#dadce0] p-4 flex items-center gap-4 hover:border-[#1a73e8]/30 transition-colors"
+              >
+                {/* ID + 封面 */}
+                <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-[#f1f3f4] flex items-center justify-center text-[14px] font-bold text-[#5f6368]">
+                  #{String(m.id).replace(/\D/g, '')}
+                </div>
+                {/* 标题 + 信息 */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium text-[#202124] truncate">{m.title}</p>
+                  <div className="flex items-center gap-3 mt-1 text-[11px] text-[#80868b]">
+                    <span className="px-1.5 py-0.5 rounded bg-[#f1f3f4]">{m.category}</span>
+                    <span>参与 {m.totalParticipants}</span>
+                    <span>真 {m.trueCount} / 假 {m.falseCount}</span>
+                    <span>佐证 {m.evidenceCount}</span>
+                  </div>
+                </div>
+                {/* 一键开奖按钮组 */}
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={() => handleQuickReveal(m.id, true, m.title)}
+                    disabled={revealing !== null}
+                    className="px-3 py-1.5 rounded-lg text-[12px] font-medium border border-[#1e8e3e]/30 bg-[#e6f4ea] text-[#1e8e3e] hover:bg-[#d1ead8] disabled:opacity-50 flex items-center gap-1"
+                    title="判定为真"
+                  >
+                    {revealing === m.id ? <Loader2 size={12} className="animate-spin" /> : <ThumbsUp size={12} />}
+                    判真
+                  </button>
+                  <button
+                    onClick={() => handleQuickReveal(m.id, false, m.title)}
+                    disabled={revealing !== null}
+                    className="px-3 py-1.5 rounded-lg text-[12px] font-medium border border-[#d93025]/30 bg-[#fce8e6] text-[#d93025] hover:bg-[#f8d7da] disabled:opacity-50 flex items-center gap-1"
+                    title="判定为假"
+                  >
+                    {revealing === m.id ? <Loader2 size={12} className="animate-spin" /> : <ThumbsDown size={12} />}
+                    判假
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 已开奖列表（折叠展示） */}
+      {revealedMelons.length > 0 && (
+        <div>
+          <h3 className="text-[13px] font-semibold text-[#202124] mb-3 flex items-center gap-1.5">
+            <CheckCircle2 size={14} className="text-[#1e8e3e]" />
+            已开奖记录
+          </h3>
+          <div className="bg-white rounded-xl border border-[#dadce0] overflow-hidden">
+            <table className="w-full text-[12px]">
+              <thead>
+                <tr className="border-b border-[#dadce0] bg-[#f8f9fa]">
+                  <th className="px-4 py-2.5 text-left font-medium text-[#5f6368]">ID</th>
+                  <th className="px-4 py-2.5 text-left font-medium text-[#5f6368]">标题</th>
+                  <th className="px-4 py-2.5 text-left font-medium text-[#5f6368]">结果</th>
+                  <th className="px-4 py-2.5 text-left font-medium text-[#5f6368]">参与</th>
+                  <th className="px-4 py-2.5 text-left font-medium text-[#5f6368]">真/假</th>
+                </tr>
+              </thead>
+              <tbody>
+                {revealedMelons.slice(0, 20).map(m => (
+                  <tr key={m.id} className="border-b border-[#f1f3f4] hover:bg-[#f8f9fa]">
+                    <td className="px-4 py-2.5 text-[#5f6368]">#{String(m.id).replace(/\D/g, '')}</td>
+                    <td className="px-4 py-2.5 font-medium max-w-[300px] truncate">{m.title}</td>
+                    <td className="px-4 py-2.5">
+                      {m.result === true ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-[#e6f4ea] text-[#1e8e3e] font-medium">
+                          <ThumbsUp size={10} />真
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] bg-[#fce8e6] text-[#d93025] font-medium">
+                          <ThumbsDown size={10} />假
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-[#5f6368]">{m.totalParticipants}</td>
+                    <td className="px-4 py-2.5 text-[#5f6368]">{m.trueCount} / {m.falseCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {revealedMelons.length > 20 && (
+              <div className="px-4 py-2 text-[11px] text-[#80868b] border-t border-[#f1f3f4]">
+                仅显示前 20 条，共 {revealedMelons.length} 条已开奖记录
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Toast 提示 */}
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 px-4 py-2.5 rounded-lg text-[13px] font-medium shadow-lg ${
+            toast.type === 'success' ? 'bg-[#1e8e3e] text-white' : 'bg-[#d93025] text-white'
+          }`}
+          role="status"
+        >
+          {toast.message}
+        </div>
       )}
     </div>
   )

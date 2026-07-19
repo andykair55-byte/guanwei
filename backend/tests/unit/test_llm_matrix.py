@@ -260,8 +260,9 @@ class TestLLMMatrixFailover:
         """主 provider 全部 key 失败，切到 fallback provider 成功
 
         LLM 路由改造后（spec 2026-07-17-llm-module-routing），provider 级故障转移
-        由 module 路由链提供。default 链为 ["glm","internlm","deepseek"]。
-        本测试 mock glm 全 key 失败，验证切到 internlm 成功。
+        由 module 路由链提供。default 链为 ["glm","groq","internlm","deepseek"]。
+        本测试 mock glm 全 key 失败，groq 因未配置 GROQ_API_KEY 被 ValueError 跳过，
+        验证切到 internlm 成功。
         """
         monkeypatch.setenv("GLM_API_KEY", "glm-key")
         monkeypatch.setenv("INTERNLM_API_KEY", "ilm-key")

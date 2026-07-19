@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { api, getToken } from '../services/api'
 
 export interface LLMConfig {
   apiKey: string
@@ -62,32 +63,24 @@ export const useLLMStore = create<LLMStore>()(
         if (!config.baseUrl) return { success: false, message: '请填写 API 地址' }
         if (!config.model) return { success: false, message: '请填写模型名称' }
 
+        // spec-19: 改为后端代理，避免浏览器直接 fetch 第三方 API 触发 CORS。
+        // 后端会复用 services/llm.py 的 PROVIDERS 配置，校验 api_key 是否可用。
         try {
-          const res = await fetch(`${config.baseUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${config.apiKey}`,
-            },
-            body: JSON.stringify({
-              model: config.model,
-              messages: [{ role: 'user', content: 'Say "OK" in one word.' }],
-              max_tokens: 10,
-            }),
+          const res = await api.testLLMConnection({
+            provider: config.provider,
+            api_key: config.apiKey,
+            base_url: config.baseUrl || undefined,
+            model: config.model || undefined,
           })
-
-          if (!res.ok) {
-            const err = await res.text()
-            let msg = `HTTP ${res.status}`
-            try { msg = JSON.parse(err).error?.message || msg } catch { /* ignore */ }
-            return { success: false, message: msg }
+          if (res.success) {
+            return { success: true, message: `连接成功！模型: ${res.model || '未知'}` }
           }
-
-          const data = await res.json()
-          const reply = data.choices?.[0]?.message?.content?.trim() || ''
-          return { success: true, message: `连接成功！模型回复: ${reply}` }
+          return { success: false, message: res.error || '连接失败' }
         } catch (e) {
-          return { success: false, message: `网络错误: ${e instanceof Error ? e.message : String(e)}` }
+          return {
+            success: false,
+            message: `请求失败: ${e instanceof Error ? e.message : String(e)}`,
+          }
         }
       },
 
@@ -133,23 +126,24 @@ export const useLLMStore = create<LLMStore>()(
 )
 
 // 统一 LLM 调用函数，所有 service 共用
+// 方案 B：统一走后端代理，避免浏览器直接暴露 API Key，并复用后端的 key 池/熔断/模块路由。
 export async function callLLM(
   messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>,
   options?: { maxTokens?: number; temperature?: number }
 ): Promise<string> {
-  const { config } = useLLMStore.getState()
-  if (!config.apiKey) throw new Error('未配置 LLM，请在设置中填写 API Key')
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || ''
+  const token = getToken()
+  if (!token) throw new Error('请先登录后再使用小薇')
 
-  const res = await fetch(`${config.baseUrl}/chat/completions`, {
+  const res = await fetch(`${baseUrl}/xiaowei/chat`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.apiKey}`,
+      'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify({
-      model: config.model,
       messages,
-      max_tokens: options?.maxTokens ?? 2048,
+      max_tokens: options?.maxTokens ?? 1024,
       temperature: options?.temperature ?? 0.7,
     }),
   })
@@ -157,10 +151,10 @@ export async function callLLM(
   if (!res.ok) {
     const err = await res.text()
     let msg = `LLM 请求失败: HTTP ${res.status}`
-    try { msg = JSON.parse(err).error?.message || msg } catch { /* ignore */ }
+    try { msg = JSON.parse(err).detail || msg } catch { /* ignore */ }
     throw new Error(msg)
   }
 
   const data = await res.json()
-  return data.choices?.[0]?.message?.content || ''
+  return data.content || ''
 }

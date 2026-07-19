@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   X, Heart, MessageCircle, Bookmark, Share2, Send,
   Users, Clock, Flame, Eye, ThumbsUp, ThumbsDown,
-  Check, Link2, PenLine,
-  AlertCircle, ArrowLeft, Star
+  Check, Link2,
+  AlertCircle, ArrowLeft, Star, Sparkles
 } from 'lucide-react'
 import { api } from '../services/api'
 import { transformMelon, transformReport, transformEvidenceList } from '../utils/transform'
@@ -12,6 +12,37 @@ import { generateMockEvidence, generateMockReport } from '../services/mockData'
 import { usePlatform } from '../hooks/usePlatform'
 import { usePageContext } from '../hooks/usePageContext'
 import type { Melon, Report, Evidence, Comment } from '../types'
+
+// ── 并发安全：猜瓜防重复 localStorage 工具 ──────────
+const GUESSED_STORAGE_KEY = 'guessedMelonIds'
+
+function getGuessedMelonIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(GUESSED_STORAGE_KEY)
+    return new Set(raw ? JSON.parse(raw) : [])
+  } catch {
+    return new Set()
+  }
+}
+
+function markMelonGuessed(melonId: string | number) {
+  try {
+    const set = getGuessedMelonIds()
+    set.add(String(melonId))
+    localStorage.setItem(GUESSED_STORAGE_KEY, JSON.stringify([...set]))
+  } catch { /* localStorage 不可用时静默降级 */ }
+}
+
+function isMelonGuessed(melonId: string | number): boolean {
+  return getGuessedMelonIds().has(String(melonId))
+}
+
+// ── 简易 Toast 类型 ──────────────────────────────
+interface ToastState {
+  message: string
+  type?: 'info' | 'success' | 'warning'
+  visible: boolean
+}
 
 // ── 辅助函数 ──────────────────────────────────────────
 
@@ -198,6 +229,19 @@ export default function MelonDetailPage() {
   const [comments, setComments] = useState<Comment[]>(MOCK_COMMENTS)
   const [replyTarget, setReplyTarget] = useState<{ parentId: string; replyToUser: string } | null>(null)
   const [activeTab, setActiveTab] = useState<'desc' | 'evidence'>('desc')
+  const [toast, setToast] = useState<ToastState>({ message: '', visible: false })
+
+  // 统一 toast 显示（自动 2s 后消失）
+  const showToast = useCallback((message: string, type: 'info' | 'success' | 'warning' = 'info') => {
+    setToast({ message, type, visible: true })
+    setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 2000)
+  }, [])
+
+  // AI 辅助写佐证：工作间未就绪，先用 toast 提示
+  const handleAIAssistEvidence = useCallback(() => {
+    // 工作间尚未开放，仅提示
+    showToast('工作间即将开放', 'info')
+  }, [showToast])
 
   const melonId = Number(id)
 
@@ -218,7 +262,12 @@ export default function MelonDetailPage() {
           setHasSubmitted(true)
           if (myGuess.evidence) setEvidence(myGuess.evidence.content || '')
         }
-      } catch { /* 未猜过 */ }
+      } catch {
+        // API 不可用时，回退到 localStorage 防重复记录
+        if (isMelonGuessed(melonId)) {
+          setHasSubmitted(true)
+        }
+      }
 
       if (transformed.status === 'revealed') {
         try {
@@ -277,12 +326,22 @@ export default function MelonDetailPage() {
 
   const handleSubmit = async () => {
     if (choice === null || submitting) return
+    // 并发安全：localStorage 防重复
+    if (isMelonGuessed(melonId)) {
+      setHasSubmitted(true)
+      showToast('你已经猜过这个瓜了', 'warning')
+      return
+    }
     setSubmitting(true)
     try {
-      await api.submitGuess(melonId, choice, evidence || undefined)
+      // requestId 去重：同一提交多次重试也只入账一次
+      const requestId = `guess-${melonId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      await api.submitGuess(melonId, choice, evidence || undefined, requestId)
+      markMelonGuessed(melonId)
       setHasSubmitted(true)
+      showToast('提交成功，等待开奖', 'success')
     } catch (e: any) {
-      alert(e.message || '提交失败')
+      showToast(e.message || '提交失败', 'warning')
     } finally {
       setSubmitting(false)
     }
@@ -407,6 +466,7 @@ export default function MelonDetailPage() {
   // ── Web 端：小红书风格左右分栏大卡片 ─────────────
   if (isWeb) {
     return (
+      <>
       <div className="h-full w-full flex items-center justify-center bg-paper-50 p-6 overflow-auto">
         <div className="w-full max-w-[1400px] bg-white rounded-2xl shadow-2xl overflow-hidden flex animate-fade-in-up" style={{ height: 'calc(100vh - 100px)', minHeight: '600px' }}>
           {/* 左侧：图片 + 内容区 */}
@@ -702,6 +762,27 @@ export default function MelonDetailPage() {
                 </div>
               ) : (
                 <div className="px-5 py-4">
+                  {/* AI 辅助写佐证入口 */}
+                  <button
+                    onClick={handleAIAssistEvidence}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 mb-3 rounded-xl border border-seal/30 bg-gradient-to-r from-seal/10 via-emerald-50 to-seal/5 hover:border-seal/50 hover:shadow-md hover:shadow-seal/10 transition-all group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-seal to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm shadow-seal/30">
+                      <Sparkles size={16} className="text-white" strokeWidth={2.5} />
+                    </div>
+                    <div className="flex-1 text-left min-w-0">
+                      <p className="text-[13px] font-semibold text-ink-800 leading-tight">
+                        AI 辅助写佐证
+                      </p>
+                      <p className="text-[11px] text-ink-500 mt-0.5">
+                        工作间智能生成证据草稿，帮你快速成稿
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-bold text-seal bg-seal/10 px-2 py-0.5 rounded-full flex-shrink-0 group-hover:bg-seal/20 transition-colors">
+                      即将开放
+                    </span>
+                  </button>
+
                   {evidences.length > 0 ? (
                     <div className="space-y-3">
                       {[...evidences]
@@ -861,11 +942,29 @@ export default function MelonDetailPage() {
           </div>
         </div>
       </div>
+      {/* Toast 提示 */}
+      {toast.visible && (
+        <div
+          className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded-full text-[13px] font-medium shadow-lg backdrop-blur-md transition-all duration-300 ${
+            toast.type === 'success'
+              ? 'bg-seal/95 text-white'
+              : toast.type === 'warning'
+                ? 'bg-gold/95 text-white'
+                : 'bg-ink-900/95 text-white'
+          }`}
+          style={{ animation: 'toast-slide-in 0.3s ease-out' }}
+          role="status"
+        >
+          {toast.message}
+        </div>
+      )}
+      </>
     )
   }
 
   // ── Mobile 端：保持简洁的竖向布局 ────────────────
   return (
+    <>
     <div className="min-h-screen bg-paper-texture pb-8">
       <div className="sticky top-0 z-20 glass border-b border-line/50">
         <div className="flex items-center h-12 px-4 max-w-[480px] mx-auto">
@@ -896,5 +995,22 @@ export default function MelonDetailPage() {
         </div>
       </div>
     </div>
+    {/* Toast 提示 */}
+    {toast.visible && (
+      <div
+        className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] px-4 py-2.5 rounded-full text-[13px] font-medium shadow-lg backdrop-blur-md transition-all duration-300 ${
+          toast.type === 'success'
+            ? 'bg-seal/95 text-white'
+            : toast.type === 'warning'
+              ? 'bg-gold/95 text-white'
+              : 'bg-ink-900/95 text-white'
+        }`}
+        style={{ animation: 'toast-slide-in 0.3s ease-out' }}
+        role="status"
+      >
+        {toast.message}
+      </div>
+    )}
+    </>
   )
 }

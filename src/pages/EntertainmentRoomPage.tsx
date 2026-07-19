@@ -10,7 +10,7 @@ import {
   generateAIQueueEntry, createSpeech,
 } from '../services/entertainmentDebateService'
 import {
-  DEMO_SPEAK_DURATION, CONTINUE_THRESHOLD, calculateScore,
+  DEMO_SPEAK_DURATION,
   type EntRoom, type EntSpeech, type QueueEntry,
 } from '../types/entertainmentDebate'
 import { usePlatform } from '../hooks/usePlatform'
@@ -59,13 +59,13 @@ export default function EntertainmentRoomPage() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
     }
-  }, [room?.currentSpeakerIndex])
+  }, [room?.currentSpeakerIndex]) // eslint-disable-line react-hooks/exhaustive-deps -- 故意只用原始值依赖，避免每次 setRoom 都重启 interval
 
   // 时间到 → 处理发言结束
   useEffect(() => {
     if (!room || room.speakTimer > 0) return
     handleSpeakTimeUp()
-  }, [room?.speakTimer])
+  }, [room?.speakTimer]) // eslint-disable-line react-hooks/exhaustive-deps -- 故意只用原始值依赖，handleSpeakTimeUp 通过闭包引用
 
   // 自动滚动到最新发言
   useEffect(() => {
@@ -118,29 +118,7 @@ export default function EntertainmentRoomPage() {
       })
       setLatestSpeech(speech)
     })
-  }, [room?.currentSpeakerIndex, room?.speakTimer])
-
-  // 发言时间到
-  const handleSpeakTimeUp = useCallback(() => {
-    if (!room || room.currentSpeakerIndex === null) return
-    if (timerRef.current) clearInterval(timerRef.current)
-
-    const speaker = room.seats[room.currentSpeakerIndex]
-
-    // 如果是AI发言，评分后切换
-    if (speaker?.isAI) {
-      // AI发言已经在上面处理了，这里检查是否有队列
-      advanceToNextSpeaker()
-    } else if (speaker?.userId === 'me') {
-      // 用户发言时间到，如果没提交则自动提交
-      if (speechInput.trim()) {
-        submitUserSpeech()
-      } else {
-        // 没发言，直接换人
-        advanceToNextSpeaker()
-      }
-    }
-  }, [room, speechInput])
+  }, [room?.currentSpeakerIndex, room?.speakTimer]) // eslint-disable-line react-hooks/exhaustive-deps -- 故意只用原始值依赖，避免 room 变化时重复触发 AI 发言
 
   // 切换到下一个发言者
   const advanceToNextSpeaker = useCallback(() => {
@@ -223,6 +201,28 @@ export default function EntertainmentRoomPage() {
       advanceToNextSpeaker()
     }, 2000)
   }, [room, speechInput, advanceToNextSpeaker])
+
+  // 发言时间到
+  const handleSpeakTimeUp = useCallback(() => {
+    if (!room || room.currentSpeakerIndex === null) return
+    if (timerRef.current) clearInterval(timerRef.current)
+
+    const speaker = room.seats[room.currentSpeakerIndex]
+
+    // 如果是AI发言，评分后切换
+    if (speaker?.isAI) {
+      // AI发言已经在上面处理了，这里检查是否有队列
+      advanceToNextSpeaker()
+    } else if (speaker?.userId === 'me') {
+      // 用户发言时间到，如果没提交则自动提交
+      if (speechInput.trim()) {
+        submitUserSpeech()
+      } else {
+        // 没发言，直接换人
+        advanceToNextSpeaker()
+      }
+    }
+  }, [room, speechInput, submitUserSpeech, advanceToNextSpeaker])
 
   // 用户提交观点排队
   const handleSubmitOpinion = useCallback(async () => {

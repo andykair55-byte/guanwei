@@ -12,6 +12,9 @@ dist/
 .env.*.local
 backend/.env
 
+# Secret key (DEV_MODE 持久化文件，切勿提交)
+backend/.secret_key
+
 # IDE
 .vscode/
 .idea/

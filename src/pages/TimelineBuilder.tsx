@@ -1,24 +1,30 @@
-﻿import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ArrowLeft, Clock, RefreshCw, GitBranch, ChevronDown, ChevronUp,
-  Calendar, Hash, AlertCircle, CheckCircle,
+  ArrowLeft, Clock, RefreshCw, GitBranch,
+  Hash, AlertCircle, Sparkles, Send,
+  AlertTriangle, Wand2,
 } from 'lucide-react'
 import { useIsDesktop } from '../hooks/useIsDesktop'
-
-
+import EvidenceTimeline from '../components/EvidenceTimeline'
+import { callLLM, useLLMStore } from '../stores/llmStore'
+import {
+  TIMELINE_TEMPLATES, matchTimelineTemplate,
+  type TimelineTemplate,
+} from '../services/mockData'
+import type { TimelineNode, TimelineNodeStatus } from '../types'
 
 // ===== 类型 =====
 
-interface TimelineEvent {
-  id: string
-  date: string          // 原始日期文本
-  sortKey: number       // 用于排序的时间戳
-  event: string         // 事件描述
-  source: string        // 来源句子
-}
-
 type AnalysisState = 'idle' | 'analyzing' | 'done'
+type GenerationMethod = 'llm' | 'regex' | 'template' | null
+
+interface BuildResult {
+  nodes: TimelineNode[]
+  method: GenerationMethod
+  templateType?: TimelineTemplate['type']
+  warning?: string
+}
 
 // ===== 示例 =====
 
@@ -28,7 +34,7 @@ const EXAMPLE_TEXTS = [
   `3天前，某明星工作室发布声明称已起诉造谣者。昨天，有媒体曝光了法院传票。今天凌晨，该明星本人首次公开回应，表示将追究到底。`,
 ]
 
-// ===== 日期提取 =====
+// ===== 日期提取（保留原有 regex 实现，作为 LLM 不可用时的 fallback） =====
 
 interface DateMatch {
   raw: string
@@ -80,7 +86,7 @@ function extractDates(text: string): DateMatch[] {
         return now - n * 60000
       },
     },
-    // 今天 / 昨天 / 前天 / 昨天凌晨 / 今天凌晨
+    // 今天 / 昨天 / 前天
     {
       regex: /(今天|昨天|前天)/g,
       parser: (m) => {
@@ -123,48 +129,6 @@ function extractDates(text: string): DateMatch[] {
   })
 }
 
-function buildTimeline(text: string): TimelineEvent[] {
-  const dates = extractDates(text)
-  if (dates.length === 0) return []
-
-  // 按日期在文本中的位置排序
-  dates.sort((a, b) => a.index - b.index)
-
-  // 把文本按句子拆分，匹配每个句子是否有日期
-  const sentences = text.split(/(?<=[。！？；\n])/).filter(s => s.trim())
-  const events: TimelineEvent[] = []
-
-  for (const sentence of sentences) {
-    const trimmed = sentence.trim()
-    if (!trimmed) continue
-
-    // 在这个句子里找日期
-    const sentenceDates = dates.filter(d =>
-      trimmed.includes(d.raw)
-    )
-
-    if (sentenceDates.length > 0) {
-      const dateMatch = sentenceDates[0]
-      // 事件描述 = 去掉日期部分后的文本
-      const eventText = trimmed.replace(dateMatch.raw, '').replace(/^[，,、\s]+/, '').trim()
-      if (eventText.length > 2) {
-        events.push({
-          id: `ev-${dateMatch.index}`,
-          date: dateMatch.raw,
-          sortKey: dateMatch.sortKey,
-          event: eventText,
-          source: trimmed,
-        })
-      }
-    }
-  }
-
-  // 按时间排序
-  events.sort((a, b) => a.sortKey - b.sortKey)
-
-  return events
-}
-
 function formatDate(sortKey: number): string {
   const d = new Date(sortKey)
   const now = new Date()
@@ -183,60 +147,269 @@ function formatDate(sortKey: number): string {
   return `${y}年${mo}月${day}日`
 }
 
+// 从原文按 regex 提取 → 转换为 TimelineNode[]
+function buildFromRegex(text: string): TimelineNode[] {
+  const dates = extractDates(text)
+  if (dates.length === 0) return []
+
+  dates.sort((a, b) => a.index - b.index)
+
+  const sentences = text.split(/(?<=[。！？；\n])/).filter(s => s.trim())
+  const nodes: TimelineNode[] = []
+
+  for (const sentence of sentences) {
+    const trimmed = sentence.trim()
+    if (!trimmed) continue
+
+    const sentenceDates = dates.filter(d => trimmed.includes(d.raw))
+    if (sentenceDates.length === 0) continue
+
+    const dateMatch = sentenceDates[0]
+    const eventText = trimmed.replace(dateMatch.raw, '').replace(/^[，,、\s]+/, '').trim()
+    if (eventText.length > 2) {
+      nodes.push({
+        id: `ev-${dateMatch.index}`,
+        date: dateMatch.raw,
+        sortKey: dateMatch.sortKey,
+        label: eventText,
+        detail: trimmed,
+        sources: ['用户输入文本'],
+        status: 'unverified',
+      })
+    }
+  }
+
+  nodes.sort((a, b) => (a.sortKey || 0) - (b.sortKey || 0))
+  return nodes
+}
+
+// LLM 调用：解析 LLM 返回的 JSON 节点
+function parseLLMResponse(raw: string): TimelineNode[] {
+  // 容忍 ```json 包裹 / 前后多余文字
+  let cleaned = raw.trim()
+  const fenceMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (fenceMatch) cleaned = fenceMatch[1].trim()
+
+  // 找到第一个 [ 到最后一个 ]
+  const start = cleaned.indexOf('[')
+  const end = cleaned.lastIndexOf(']')
+  if (start === -1 || end === -1 || end <= start) return []
+  const jsonStr = cleaned.slice(start, end + 1)
+
+  try {
+    const parsed = JSON.parse(jsonStr)
+    if (!Array.isArray(parsed)) return []
+    return parsed
+      .filter((n: unknown): n is Record<string, unknown> => !!n && typeof n === 'object')
+      .map((n, i) => {
+        const status = (n.status as string) as TimelineNodeStatus
+        const validStatus: TimelineNodeStatus =
+          status === 'confirmed' || status === 'disputed' || status === 'unverified'
+            ? status
+            : 'unverified'
+        const sources = Array.isArray(n.sources) ? n.sources.map(String) : undefined
+        return {
+          id: `llm-${i}`,
+          date: String(n.date ?? ''),
+          label: String(n.label ?? n.title ?? ''),
+          detail: n.detail ? String(n.detail) : n.summary ? String(n.summary) : undefined,
+          sources,
+          status: validStatus,
+        } as TimelineNode
+      })
+      .filter(n => n.date && n.label)
+  } catch {
+    return []
+  }
+}
+
+// 调用 LLM 生成时间线
+async function generateWithLLM(text: string): Promise<TimelineNode[]> {
+  const systemPrompt = `你是一个时间线分析助手。从用户提供的文本中提取关键时间节点，按时间先后顺序输出。
+要求：
+1. 输出 JSON 数组，每个元素包含字段：date(日期文本)、label(事件标题，10-20字)、detail(详情，30-80字)、sources(信息来源数组)、status(节点状态："confirmed"已证实/"disputed"有争议/"unverified"未证实)
+2. 仅输出 JSON，不要任何额外文字、不要 markdown 代码块
+3. 若文本无明显时间节点，输出空数组 []`
+
+  const userPrompt = `请提取以下文本的时间线节点：\n\n${text}`
+  const reply = await callLLM(
+    [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    { maxTokens: 2048, temperature: 0.3 }
+  )
+  return parseLLMResponse(reply)
+}
+
+// 将任意来源的节点合并去重（多源合并展示）
+function mergeMultiSource(nodes: TimelineNode[]): TimelineNode[] {
+  if (nodes.length < 2) return nodes
+  const merged: TimelineNode[] = []
+  const used = new Set<number>()
+  for (let i = 0; i < nodes.length; i++) {
+    if (used.has(i)) continue
+    const cur = { ...nodes[i] }
+    for (let j = i + 1; j < nodes.length; j++) {
+      if (used.has(j)) continue
+      const other = nodes[j]
+      // 同日期同标签视作多源
+      if (cur.date === other.date && cur.label === other.label) {
+        cur.multiSource = true
+        const curSrc = cur.sources || []
+        const otherSrc = other.sources || []
+        const allSrc = Array.from(new Set([...curSrc, ...otherSrc]))
+        cur.sources = allSrc.length > 0 ? allSrc : cur.sources
+        used.add(j)
+      }
+    }
+    merged.push(cur)
+  }
+  return merged
+}
+
+// 生成时间线快照（用于发布到社区）
+function buildSnapshotText(nodes: TimelineNode[], source: string): string {
+  if (nodes.length === 0) return source
+  const lines = nodes.map((n, i) => {
+    const statusLabel =
+      n.status === 'confirmed' ? '[已证实]'
+      : n.status === 'disputed' ? '[有争议]'
+      : '[未证实]'
+    const multiTag = n.multiSource ? ' [多源]' : ''
+    const detail = n.detail ? `\n  ${n.detail}` : ''
+    const sources = n.sources && n.sources.length > 0 ? `\n  来源：${n.sources.join('、')}` : ''
+    return `${i + 1}. ${n.date} ${statusLabel}${multiTag} ${n.label}${detail}${sources}`
+  })
+  return `【时间线快照】\n${lines.join('\n\n')}\n\n原文摘录：${source.slice(0, 200)}`
+}
+
 // ===== 组件 =====
 
 export default function TimelineBuilder() {
   const navigate = useNavigate()
   const isDesktop = useIsDesktop()
-  const [input, setInput] = useState('')
-  const [events, setEvents] = useState<TimelineEvent[]>([])
-  const [state, setState] = useState<AnalysisState>('idle')
-  const [expandedAll, setExpandedAll] = useState(false)
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
+  const llmConfig = useLLMStore(s => s.config)
+  const hasLLM = !!llmConfig.apiKey
 
-  const handleAnalyze = useCallback(() => {
+  const [input, setInput] = useState('')
+  const [state, setState] = useState<AnalysisState>('idle')
+  const [result, setResult] = useState<BuildResult | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedTemplate, setSelectedTemplate] = useState<TimelineTemplate['type'] | null>(null)
+
+  const canGenerate = input.trim().length > 0 && state !== 'analyzing'
+
+  const handleAnalyze = useCallback(async () => {
     if (!input.trim() || state === 'analyzing') return
     setState('analyzing')
+    setError(null)
+    setResult(null)
 
-    // 模拟分析延迟
-    setTimeout(() => {
-      const result = buildTimeline(input)
-      setEvents(result)
+    // 优先尝试 LLM
+    if (hasLLM) {
+      try {
+        const llmNodes = await generateWithLLM(input)
+        if (llmNodes.length > 0) {
+          const merged = mergeMultiSource(llmNodes)
+          setResult({ nodes: merged, method: 'llm' })
+          setState('done')
+          return
+        }
+        // LLM 返回空 → 降级到 regex
+      } catch (e) {
+        // LLM 失败 → 降级到 regex，记录错误
+        setError(e instanceof Error ? e.message : String(e))
+      }
+    }
+
+    // 模拟分析延迟（让用户看到 loading）
+    await new Promise(r => setTimeout(r, 600))
+
+    // 尝试 regex 提取
+    const regexNodes = buildFromRegex(input)
+    if (regexNodes.length > 0) {
+      const merged = mergeMultiSource(regexNodes)
+      const warning = hasLLM
+        ? 'LLM 暂不可用，已使用本地正则提取'
+        : '未配置 LLM，已使用本地正则提取'
+      setResult({ nodes: merged, method: 'regex', warning })
       setState('done')
-    }, 800)
-  }, [input, state])
+      return
+    }
+
+    // regex 也找不到 → 用模板匹配
+    const tpl = matchTimelineTemplate(input)
+    const warning = hasLLM
+      ? `文本未识别到具体日期，已使用「${tpl.label}」模板`
+      : `未配置 LLM 且文本未识别到日期，已使用「${tpl.label}」模板`
+    setResult({
+      nodes: tpl.nodes,
+      method: 'template',
+      templateType: tpl.type,
+      warning,
+    })
+    setSelectedTemplate(tpl.type)
+    setState('done')
+  }, [input, state, hasLLM])
+
+  // 手动选择模板
+  const handleSelectTemplate = useCallback((tpl: TimelineTemplate) => {
+    setState('analyzing')
+    setError(null)
+    setTimeout(() => {
+      setResult({
+        nodes: tpl.nodes,
+        method: 'template',
+        templateType: tpl.type,
+        warning: `已套用「${tpl.label}」模板`,
+      })
+      setSelectedTemplate(tpl.type)
+      setState('done')
+    }, 400)
+  }, [])
 
   const handleReset = () => {
     setInput('')
-    setEvents([])
+    setResult(null)
     setState('idle')
-    setExpandedAll(false)
-    setExpandedItems(new Set())
+    setError(null)
+    setSelectedTemplate(null)
   }
 
-  const toggleItem = (id: string) => {
-    setExpandedItems(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
+  const handlePublishToCommunity = () => {
+    if (!result || result.nodes.length === 0) return
+    const snapshot = buildSnapshotText(result.nodes, input)
+    const title = input.trim().slice(0, 30) || '时间线讨论'
+    navigate('/publish', {
+      state: {
+        prefillTitle: `【时间线】${title}`,
+        prefillContent: snapshot,
+        prefillTags: ['时间线', '观微观察'],
+        prefillCategory: 'hot',
+      },
     })
   }
 
-  const toggleAll = () => {
-    if (expandedAll) {
-      setExpandedItems(new Set())
-    } else {
-      setExpandedItems(new Set(events.map(e => e.id)))
-    }
-    setExpandedAll(!expandedAll)
-  }
+  const containerClass = isDesktop ? 'max-w-3xl mx-auto w-full' : ''
+
+  const methodLabel = useMemo(() => {
+    if (!result) return null
+    if (result.method === 'llm') return { text: 'LLM 生成', icon: Sparkles, color: 'text-bamboo' }
+    if (result.method === 'regex') return { text: '本地正则', icon: Hash, color: 'text-seal' }
+    if (result.method === 'template') return { text: '模板套用', icon: Wand2, color: 'text-gold-600' }
+    return null
+  }, [result])
 
   return (
     <div className="flex flex-col min-h-full bg-paper-texture">
       {/* 顶部导航 */}
-      <div className={`px-5 pt-4 pb-2 flex items-center gap-3 ${isDesktop ? 'max-w-3xl mx-auto w-full' : ''}`}>
-        <button onClick={() => navigate(-1)} className="p-1.5 -ml-1.5 rounded-lg hover:bg-paper-dark transition-colors active:scale-95">
+      <div className={`px-5 pt-4 pb-2 flex items-center gap-3 ${containerClass}`}>
+        <button
+          onClick={() => navigate(-1)}
+          className="p-1.5 -ml-1.5 rounded-lg hover:bg-paper-dark transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seal/40"
+          aria-label="返回"
+        >
           <ArrowLeft size={20} className="text-ink-700" />
         </button>
         <div className="flex-1">
@@ -244,13 +417,17 @@ export default function TimelineBuilder() {
           <p className="text-[11px] text-ink-400">从混乱信息中提取事件脉络</p>
         </div>
         {state === 'done' && (
-          <button onClick={handleReset} className="p-1.5 rounded-lg hover:bg-paper-dark transition-colors active:scale-95">
+          <button
+            onClick={handleReset}
+            className="p-1.5 rounded-lg hover:bg-paper-dark transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seal/40"
+            aria-label="重置"
+          >
             <RefreshCw size={16} className="text-ink-500" />
           </button>
         )}
       </div>
 
-      <div className={`flex-1 px-5 pb-6 overflow-y-auto ${isDesktop ? 'max-w-3xl mx-auto w-full' : ''}`}>
+      <div className={`flex-1 px-5 pb-6 overflow-y-auto ${containerClass}`}>
         {/* ===== 输入状态 ===== */}
         {state === 'idle' && (
           <div className="animate-fade-in-up space-y-4">
@@ -259,17 +436,50 @@ export default function TimelineBuilder() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="粘贴一段新闻、事件描述或聊天记录...&#10;&#10;工具会自动提取其中的时间节点，按时间顺序排列成事件脉络。&#10;&#10;支持格式：2024年1月15日、2024-01-15、3天前、昨天..."
-                rows={8}
-                className="w-full text-[14px] text-ink-900 placeholder:text-ink-400 resize-none leading-relaxed"
+                rows={6}
+                className="w-full text-[14px] text-ink-900 placeholder:text-ink-400 resize-none leading-relaxed focus:outline-none"
+                aria-label="时间线文本输入"
               />
               <button
                 onClick={handleAnalyze}
-                disabled={!input.trim()}
-                className="w-full py-3.5 rounded-xl bg-amber-600 text-white font-semibold text-[14px] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed mt-2"
+                disabled={!canGenerate}
+                className="w-full py-3.5 rounded-xl bg-amber-600 text-white font-semibold text-[14px] active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed mt-2 hover:bg-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 motion-reduce:transition-none"
               >
                 <GitBranch size={16} />
-                重建时间线
+                {hasLLM ? 'LLM 重建时间线' : '重建时间线'}
+                {hasLLM && <Sparkles size={12} className="opacity-80" />}
               </button>
+              {/* 空输入防护提示 */}
+              {!input.trim() && (
+                <p className="text-[11px] text-ink-400 mt-2 text-center">
+                  请输入事件描述后再生成时间线
+                </p>
+              )}
+            </div>
+
+            {/* 快速选择模板 */}
+            <div>
+              <p className="text-[12px] text-ink-400 font-medium mb-2 flex items-center gap-1.5">
+                <Wand2 size={12} />
+                或直接套用模板：
+              </p>
+              <div className="space-y-2">
+                {TIMELINE_TEMPLATES.map((tpl) => (
+                  <button
+                    key={tpl.type}
+                    onClick={() => handleSelectTemplate(tpl)}
+                    className="w-full text-left p-3 bg-surface rounded-xl shadow-card text-[12px] hover:shadow-card-hover transition-shadow active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40"
+                  >
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="font-semibold text-ink-800">{tpl.label}</span>
+                      <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                        {tpl.nodes.length} 节点
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-ink-500">{tpl.description}</p>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* 示例 */}
@@ -280,7 +490,7 @@ export default function TimelineBuilder() {
                   <button
                     key={i}
                     onClick={() => setInput(text)}
-                    className="w-full text-left p-3 bg-surface rounded-xl shadow-card text-[12px] text-ink-500 leading-relaxed line-clamp-2 hover:shadow-card-hover transition-shadow active:scale-[0.99]"
+                    className="w-full text-left p-3 bg-surface rounded-xl shadow-card text-[12px] text-ink-500 leading-relaxed line-clamp-2 hover:shadow-card-hover transition-shadow active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40"
                   >
                     {text.slice(0, 80)}...
                   </button>
@@ -293,15 +503,16 @@ export default function TimelineBuilder() {
               <p className="text-[12px] text-ink-500 font-semibold mb-3">工作原理</p>
               <div className="space-y-2.5">
                 {[
-                  { icon: Hash, text: '自动识别文本中的各种日期格式' },
-                  { icon: Calendar, text: '按时间先后排序，重建事件脉络' },
-                  { icon: GitBranch, text: '可视化时间线，一目了然事件发展' },
+                  { icon: Sparkles, text: hasLLM ? '已配置 LLM，优先调用大模型提取节点' : 'LLM 未配置，将使用本地正则 + 模板降级', highlight: hasLLM },
+                  { icon: Hash, text: '本地正则识别多种日期格式（年月日/相对时间）' },
+                  { icon: Wand2, text: '无日期时套用预设模板（产品/人物/争议）' },
+                  { icon: GitBranch, text: '可视化时间线，节点可展开查看详情' },
                 ].map((step, i) => {
                   const StepIcon = step.icon
                   return (
                     <div key={i} className="flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
-                        <StepIcon size={13} className="text-amber-600" />
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${step.highlight ? 'bg-bamboo-50' : 'bg-amber-50'}`}>
+                        <StepIcon size={13} className={step.highlight ? 'text-bamboo' : 'text-amber-600'} />
                       </div>
                       <p className="text-[12px] text-ink-700">{step.text}</p>
                     </div>
@@ -316,138 +527,141 @@ export default function TimelineBuilder() {
         {state === 'analyzing' && (
           <div className="animate-fade-in-up">
             <div className="bg-surface rounded-2xl shadow-card p-6 flex flex-col items-center justify-center gap-4">
-              <div className="w-12 h-12 rounded-full border-2 border-amber-300/30 border-t-amber-600 animate-spin" />
+              <div className="w-12 h-12 rounded-full border-2 border-amber-300/30 border-t-amber-600 animate-spin motion-reduce:animate-none" />
               <div className="text-center">
                 <p className="text-[14px] text-ink-700 font-medium">正在提取时间节点...</p>
-                <p className="text-[11px] text-ink-400 mt-1">识别日期 · 解析事件 · 排序重组</p>
+                <p className="text-[11px] text-ink-400 mt-1">
+                  {hasLLM ? 'LLM 分析中 · 解析事件 · 排序重组' : '识别日期 · 解析事件 · 排序重组'}
+                </p>
               </div>
             </div>
           </div>
         )}
 
         {/* ===== 结果 ===== */}
-        {state === 'done' && (
+        {state === 'done' && result && (
           <div className="animate-fade-in-up space-y-4">
-            {events.length === 0 ? (
+            {result.nodes.length === 0 ? (
               <div className="bg-surface rounded-2xl shadow-card p-8 flex flex-col items-center gap-3">
                 <AlertCircle size={32} className="text-ink-300" />
                 <p className="text-[14px] text-ink-500 font-medium">未检测到时间节点</p>
                 <p className="text-[12px] text-ink-400 text-center">
                   文本中没有找到可识别的日期格式。<br />
-                  请确保包含具体日期，如"2024年1月15日"或"3天前"。
+                  请确保包含具体日期，或直接套用上方模板。
                 </p>
                 <button
                   onClick={handleReset}
-                  className="mt-2 px-4 py-2 rounded-xl bg-paper-dark text-[12px] text-ink-500 font-medium active:scale-[0.97] transition-transform"
+                  className="mt-2 px-4 py-2 rounded-xl bg-paper-dark text-[12px] text-ink-500 font-medium active:scale-[0.97] transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-seal/40"
                 >
                   重新输入
                 </button>
               </div>
             ) : (
               <>
-                {/* 统计 */}
+                {/* 统计与状态 */}
                 <div className="bg-surface rounded-2xl shadow-card p-4 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Clock size={16} className="text-amber-600" />
                     <span className="text-[13px] text-ink-700 font-semibold">时间线</span>
+                    {methodLabel && (
+                      <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-medium bg-paper-dark ${methodLabel.color}`}>
+                        <methodLabel.icon size={10} />
+                        {methodLabel.text}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-[12px] text-ink-400">{events.length} 个节点</span>
-                    <button
-                      onClick={toggleAll}
-                      className="text-[11px] text-amber-600 font-medium"
-                    >
-                      {expandedAll ? '全部收起' : '全部展开'}
-                    </button>
+                    <span className="text-[12px] text-ink-400">{result.nodes.length} 个节点</span>
                   </div>
                 </div>
 
-                {/* 时间线 */}
-                <div className="relative">
-                  {/* 连接线 */}
-                  <div className="absolute left-[19px] top-4 bottom-4 w-px bg-amber-200/60" />
+                {/* 降级提示 */}
+                {result.warning && (
+                  <div className="bg-amber-50/60 border border-amber-200/50 rounded-xl p-3 flex items-start gap-2">
+                    <AlertTriangle size={13} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-[11.5px] text-amber-800 leading-relaxed">{result.warning}</p>
+                  </div>
+                )}
 
-                  <div className="space-y-3">
-                    {events.map((ev, i) => {
-                      const isExpanded = expandedItems.has(ev.id)
-                      const isFirst = i === 0
-                      const isLast = i === events.length - 1
+                {/* LLM 错误提示 */}
+                {error && (
+                  <div className="bg-seal-50 border border-seal/20 rounded-xl p-3 flex items-start gap-2">
+                    <AlertCircle size={13} className="text-seal flex-shrink-0 mt-0.5" />
+                    <p className="text-[11.5px] text-seal leading-relaxed">
+                      LLM 调用失败：{error}。已自动降级到本地模式。
+                    </p>
+                  </div>
+                )}
 
-                      return (
-                        <div key={ev.id} className="relative flex gap-4">
-                          {/* 时间轴节点 */}
-                          <div className="relative z-10 flex flex-col items-center flex-shrink-0">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
-                              isFirst
-                                ? 'bg-amber-600 border-amber-600 text-white'
-                                : 'bg-surface border-amber-300 text-amber-600'
-                            }`}>
-                              {isFirst ? <CheckCircle size={16} /> : <span className="text-[11px] font-bold">{i + 1}</span>}
-                            </div>
-                          </div>
+                {/* 时间线可视化（复用 EvidenceTimeline） */}
+                <div className="bg-surface rounded-2xl shadow-card overflow-hidden">
+                  <EvidenceTimeline
+                    nodes={result.nodes}
+                    title="事件时间线"
+                    defaultExpanded={true}
+                    expandable={true}
+                    theme="hot"
+                  />
+                </div>
 
-                          {/* 事件卡片 */}
-                          <div
-                            className={`flex-1 bg-surface rounded-2xl shadow-card overflow-hidden transition-all ${
-                              isLast ? 'mb-0' : ''
+                {/* 模板切换器（仅 template 模式显示） */}
+                {result.method === 'template' && (
+                  <div className="bg-surface rounded-2xl shadow-card p-3">
+                    <p className="text-[11px] text-ink-400 font-medium mb-2 flex items-center gap-1.5">
+                      <Wand2 size={11} />
+                      切换模板
+                    </p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {TIMELINE_TEMPLATES.map((tpl) => {
+                        const active = selectedTemplate === tpl.type
+                        return (
+                          <button
+                            key={tpl.type}
+                            onClick={() => handleSelectTemplate(tpl)}
+                            className={`p-2 rounded-lg text-[11px] font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 ${
+                              active
+                                ? 'bg-amber-600 text-white shadow-sm'
+                                : 'bg-paper-dark text-ink-600 hover:bg-paper-200'
                             }`}
                           >
-                            <button
-                              onClick={() => toggleItem(ev.id)}
-                              className="w-full px-4 py-3 flex items-start gap-3 text-left"
-                            >
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-md ${
-                                    isFirst ? 'bg-amber-600 text-white' : 'bg-amber-50 text-amber-700'
-                                  }`}>
-                                    {formatDate(ev.sortKey)}
-                                  </span>
-                                  <span className="text-[10px] text-ink-400">{ev.date}</span>
-                                </div>
-                                <p className="text-[13px] text-ink-900 leading-relaxed">{ev.event}</p>
-                              </div>
-                              {isExpanded
-                                ? <ChevronUp size={14} className="text-ink-400 mt-1 flex-shrink-0" />
-                                : <ChevronDown size={14} className="text-ink-400 mt-1 flex-shrink-0" />
-                              }
-                            </button>
-
-                            {isExpanded && (
-                              <div className="px-4 pb-3 border-t border-line/20">
-                                <p className="text-[11px] text-ink-400 mt-2 leading-relaxed">
-                                  <span className="font-medium text-ink-500">原文：</span>{ev.source}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
+                            {tpl.label}
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* 时间跨度 */}
-                {events.length >= 2 && (
+                {/* 时间跨度（仅当节点带 sortKey 时显示） */}
+                {result.nodes.length >= 2 && result.nodes[0].sortKey && result.nodes[result.nodes.length - 1].sortKey && (
                   <div className="bg-amber-50/50 border border-amber-200/30 rounded-2xl p-4 flex items-center justify-between">
                     <div>
                       <p className="text-[12px] text-amber-800 font-medium">时间跨度</p>
                       <p className="text-[11px] text-amber-600 mt-0.5">
-                        {formatDate(events[0].sortKey)} → {formatDate(events[events.length - 1].sortKey)}
+                        {formatDate(result.nodes[0].sortKey!)} → {formatDate(result.nodes[result.nodes.length - 1].sortKey!)}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-[18px] font-bold text-amber-700">
-                        {Math.max(1, Math.round((events[events.length - 1].sortKey - events[0].sortKey) / 86400000))}
+                        {Math.max(1, Math.round((result.nodes[result.nodes.length - 1].sortKey! - result.nodes[0].sortKey!) / 86400000))}
                       </p>
                       <p className="text-[10px] text-amber-500">天</p>
                     </div>
                   </div>
                 )}
 
+                {/* 发布为热点讨论 */}
+                <button
+                  onClick={handlePublishToCommunity}
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-[#F97316] to-[#EF4444] text-white font-semibold text-[14px] active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F97316]/50 motion-reduce:transition-none"
+                >
+                  <Send size={15} />
+                  发布为热点讨论
+                </button>
+
                 <div className="text-center py-3">
                   <p className="text-[9px] text-ink-400 leading-relaxed">
-                    时间线基于文本中的日期信息自动提取<br />
+                    时间线基于{result.method === 'llm' ? '大模型分析' : result.method === 'regex' ? '文本中的日期信息' : '预设模板'}自动生成<br />
                     实际事件顺序可能与提取结果存在偏差
                   </p>
                 </div>

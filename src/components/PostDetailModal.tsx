@@ -246,7 +246,7 @@ export interface PostDetailModalProps {
 }
 
 // ── 主组件 ────────────────────────────────────────────
-export default function PostDetailModal({ melon, isOpen, originRect, onClose }: PostDetailModalProps) {
+export default function PostDetailModal({ melon, isOpen, onClose }: PostDetailModalProps) {
   const navigate = useNavigate()
   const modalRef = useRef<HTMLDivElement>(null)
 

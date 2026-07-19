@@ -10,6 +10,7 @@ export interface User {
   correctGuesses: number;
   badges: Badge[];
   publishedCount?: number;  // 发布分析数（AI辅助创作统计）
+  bio?: string;             // 个人简介
   createdAt: string;
 }
 
@@ -173,6 +174,67 @@ export interface EvidenceTimelineItem {
   summary: string;
   credibility: 1 | 2 | 3 | 4 | 5;
   status?: 'confirmed' | 'disputed' | 'unverified';  // 节点状态：已证实/有争议/未证实
+}
+
+// 时间线节点状态：confirmed 绿 / disputed 黄 / unverified 灰
+export type TimelineNodeStatus = 'confirmed' | 'disputed' | 'unverified';
+
+// 通用时间线节点 - 在 EvidenceTimeline / TimelineBuilder / HotEventDetailPage 之间复用
+export interface TimelineNode {
+  id?: string;
+  date: string;          // 显示用日期文本（如 "03-12" / "2024年1月15日"）
+  sortKey?: number;      // 可选：用于排序的时间戳
+  label: string;         // 节点标题/事件描述
+  detail?: string;       // 节点详情
+  sources?: string[];    // 信息来源
+  status?: TimelineNodeStatus;
+  multiSource?: boolean; // 多源合并节点标记
+}
+
+// 热点事件状态
+export type HotEventStatus = 'developing' | 'resolved' | 'tracking';
+
+// 热点事件分类（与 MelonCategory 对齐 + 校园/娱乐/健康）
+export type HotEventCategory = '科技' | '社会热点' | '生活科普' | '财经' | '校园' | '娱乐' | '健康';
+
+// 热点事件卡片（列表页用）
+export interface HotEventCard {
+  id: number;
+  title: string;
+  summary: string;
+  category: HotEventCategory;
+  status: HotEventStatus;
+  followers: number;
+  lastUpdate: string;
+  nodes: TimelineNode[];
+  totalNodes: number;
+  viewCount: number;
+  date: string;
+  coverImage: string;
+  discussionCount: number;
+  mediaCoverage: number;
+  relatedMelonIds?: string[]; // 关联瓜 ID（1-2 个）
+}
+
+// 热点事件详情
+export interface HotEvent {
+  id: number;
+  title: string;
+  summary: string;
+  fullDescription: string;
+  category: HotEventCategory | string;
+  status: '发酵中' | '已解决' | '持续追踪';
+  followers: number;
+  lastUpdate: string;
+  nodes: TimelineNode[];
+  viewCount: number;
+  tags: string[];
+  relatedEvents: number[];
+  keyFigures: { name: string; role: string; avatar: string }[];
+  mediaCoverage: number;
+  discussionCount: number;
+  coverImage: string;
+  relatedMelonIds?: string[];
 }
 
 // 每日状态

@@ -346,6 +346,20 @@ async function executePlan(workspaceId: string, mode: 'assist' | 'auto'): Promis
 
     // 映射 run 返回状态到 workspace 状态
     const runStatus = result.status
+
+    // 后端异步执行：status === 'running' 时管线在后台跑，状态由 WS 事件驱动更新
+    // 此时不应切换 store 状态、不应释放执行锁（state.phase / pipelineStatus 保持 running）
+    if (runStatus === 'running') {
+      addEvent(
+        workspaceId,
+        'info',
+        'orchestrator',
+        '管线已启动',
+        'Agent 管线正在后台执行，进度将通过事件流推送，完成后状态会自动更新。'
+      )
+      return
+    }
+
     const wsStatus: WorkspaceStatus =
       runStatus === 'partial' ? 'partial' :
       runStatus === 'failed' ? 'failed' : 'completed'

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Settings, Trophy, Coins, ChevronRight, Award, Loader2,
@@ -51,7 +51,6 @@ function PixelAvatarDecor() {
 
 export default function ProfilePage() {
   const { user, fetchStats, fetchPoints } = useAuthStore()
-  const [activeSection, setActiveSection] = useState('overview')
 
   useEffect(() => {
     fetchStats()

@@ -138,21 +138,21 @@ async function generateThemeRound(
       reason: r.judgeReason,
     }
     const round: DebateRound = {
+      round: roundNum,
       affirm: {
-        charId: affirmChar.id,
-        charName: affirmChar.name,
+        characterId: affirmChar.id,
         content: r.affirm,
         thinkingSteps: r.affirmThinking || [],
       },
       negate: {
-        charId: negateChar.id,
-        charName: negateChar.name,
+        characterId: negateChar.id,
         content: r.negate,
         thinkingSteps: r.negateThinking || [],
       },
       score,
       highlight: r.highlightSide ? {
         side: r.highlightSide,
+        characterId: r.highlightSide === 'affirm' ? affirmChar.id : negateChar.id,
         type: r.highlightType || 'killer-analogy',
         label: r.highlightLabel || '名场面',
         quote: r.highlightQuote || r.affirm.slice(0, 20),

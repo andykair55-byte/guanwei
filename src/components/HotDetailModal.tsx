@@ -337,7 +337,7 @@ export interface HotDetailModalProps {
 }
 
 // ── 主组件 ────────────────────────────────────────────
-export default function HotDetailModal({ event, isOpen, originRect, onClose }: HotDetailModalProps) {
+export default function HotDetailModal({ event, isOpen, onClose }: HotDetailModalProps) {
   const navigate = useNavigate()
   const modalRef = useRef<HTMLDivElement>(null)
 

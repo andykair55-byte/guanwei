@@ -1,18 +1,28 @@
 import { create } from 'zustand'
-import { api } from '../services/api'
+import { api, getToken } from '../services/api'
 import { transformUser } from '../utils/transform'
 import type { User, UserStats, PointsRecord } from '../types'
 
-// 无后端时自动用 demo 账号登录
+// 无后端或 token 失效时自动用兜底账号登录
+// 顺序：admin/123（后端 seed.py 一定有）→ test/123456 → 放弃
 async function autoLoginMock() {
-  try {
-    const res: any = await api.login('demo', 'demo')
-    localStorage.setItem('token', res.access_token)
-    const user = transformUser(res.user)
-    useAuthStore.setState({ user, token: res.access_token })
-  } catch {
-    // 完全失败，保持未登录状态
+  const candidates: Array<[string, string]> = [
+    ['admin', '123'],
+    ['test', '123456'],
+  ]
+  for (const [username, password] of candidates) {
+    try {
+      const res: any = await api.login(username, password)
+      localStorage.setItem('token', res.access_token)
+      const user = transformUser(res.user)
+      useAuthStore.setState({ user, token: res.access_token })
+      return
+    } catch {
+      // 清除可能残留的无效 token，继续尝试下一个候选账号
+      localStorage.removeItem('token')
+    }
   }
+  // 所有候选账号都失败，保持未登录状态
 }
 
 interface AuthState {
@@ -33,7 +43,8 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  token: localStorage.getItem('token'),
+  // spec-19: 用 getToken 而非直接 localStorage.getItem，自动过滤过期 JWT
+  token: getToken(),
   isLoading: false,
   stats: null,
   pointsRecords: [],
@@ -119,18 +130,20 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   init: () => {
-    const token = localStorage.getItem('token')
+    // spec-19: 用 getToken 而非直接 localStorage.getItem，过期 JWT 会被自动清除
+    const token = getToken()
     if (token) {
       set({ token })
       api.getMe().then((apiUser: any) => {
         const user = transformUser(apiUser)
         set({ user })
       }).catch(() => {
-        // Token 无效，用 mock 自动登录
+        // Token 无效（401/签名失效等），先清掉旧 token 再用兜底账号登录
+        localStorage.removeItem('token')
         autoLoginMock()
       })
     } else {
-      // 无 token，自动用 demo 账号登录
+      // 无 token（或已过期被 getToken 清除），自动用兜底账号登录
       autoLoginMock()
     }
   }

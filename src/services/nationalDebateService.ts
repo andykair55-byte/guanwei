@@ -5,7 +5,7 @@ import { callLLM } from '../stores/llmStore'
 import {
   NATIONAL_PHASES, DEMO_SPEED_MULTIPLIER, calculateTotalScore,
   DEFAULT_JUDGES, aggregateScores, determineWinner, determineMVP,
-  type NationalDebateRoom, type NationalSeat, type NationalSpeech,
+  type NationalDebateRoom, type NationalSeat,
   type DebaterScore, type SeatId, type NationalPhase, type ScoreDimension,
   type JudgeSeatScore, type DebateSide,
 } from '../types/nationalDebate'
@@ -99,9 +99,9 @@ const MOCK_SPEECHES: Record<string, string> = {
   'attack-affirm-2': '反方一辩提到挂科率数据，请问是否控制了学生家庭经济状况这一变量？贫困生往往同时面临学业压力和兼职需求，简单归因是否忽略了结构问题？',
   'attack-negate-1': '正方二辩恰恰暴露了我方论点：当制度保障不足时，学生被迫兼职。这不能证明兼职"利大于弊"，只能证明助学金制度需要完善。',
   'attack-negate-3': '请问正方二辩，顶尖高校普遍建议大一新生不要兼职，这是否说明即便在资源充足的学校，兼职仍可能影响学业适应？',
-  'attack-affirm-2': '高校的建议针对的是"过度兼职"，而非兼职本身。适度兼职与适度运动一样，是学校应该引导而非禁止的事情。',
+  'attack-affirm-2-2': '高校的建议针对的是"过度兼职"，而非兼职本身。适度兼职与适度运动一样，是学校应该引导而非禁止的事情。',
   'attack-affirm-3': '请问反方二辩，您方主张用奖学金替代兼职，但国家奖学金覆盖率不足 3%，助学金也无法覆盖所有学生，剩下 90% 多的学生怎么办？',
-  'attack-negate-2': '覆盖率不足是制度问题，应该推动制度改革，而非让学生用学业去填补制度漏洞。这是方向性的错误。',
+  'attack-negate-2-2': '覆盖率不足是制度问题，应该推动制度改革，而非让学生用学业去填补制度漏洞。这是方向性的错误。',
 
   'attack-summary-negate-1': '攻辩阶段，对方无法回应三个核心问题：78% 数据来源不明、混淆兼职与实践、将制度缺失美化为兼职合理性。对方所有论证都建立在"适度"这个模糊前提上。',
   'attack-summary-affirm-1': '我方已明确：合理兼职不等于荒废学业。反方将"过度兼职"等同于"兼职"，是以偏概全。现实是：助学金不够、实习门槛高、学费在涨，兼职是成长的补充而非敌人。',

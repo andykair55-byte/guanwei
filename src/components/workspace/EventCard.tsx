@@ -3,6 +3,8 @@ import type { ActivityEvent, AgentTypeLabel, EventAction } from '../../types/act
 interface EventCardProps {
   event: ActivityEvent
   onAction?: (actionId: string, event: ActivityEvent) => void
+  /** true 时禁用所有 action 按钮（如运行中防止重复触发） */
+  disabledActions?: boolean
 }
 
 const AGENT_ICON_CLASS: Record<AgentTypeLabel, string> = {
@@ -54,7 +56,7 @@ function formatTime(timestamp: number) {
   return `${hours}:${minutes}`
 }
 
-export default function EventCard({ event, onAction }: EventCardProps) {
+export default function EventCard({ event, onAction, disabledActions }: EventCardProps) {
   const iconClass = AGENT_ICON_CLASS[event.agentType] || 'commander'
   const statusClass = STATUS_MAP[event.type] || 'done'
   const isStarted = event.type === 'agent_started'
@@ -129,8 +131,9 @@ export default function EventCard({ event, onAction }: EventCardProps) {
           {event.actions.map((action: EventAction) => (
             <button
               key={action.id}
-              className={`ws-activity-action-btn${action.style === 'primary' ? ' primary' : ''}`}
+              className={`ws-activity-action-btn${action.style === 'primary' ? ' primary' : ''} disabled:opacity-50 disabled:cursor-not-allowed`}
               onClick={() => onAction?.(action.id, event)}
+              disabled={disabledActions}
             >
               {action.label}
             </button>

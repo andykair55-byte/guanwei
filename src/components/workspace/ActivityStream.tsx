@@ -7,6 +7,8 @@ import type { ActivityEvent, AgentTypeLabel } from '../../types/activity'
 interface ActivityStreamProps {
   onAction?: (actionId: string, event: ActivityEvent) => void
   className?: string
+  /** 是否禁用会触发 run 的 action 按钮（运行中时为 true） */
+  disabledActions?: boolean
 }
 
 // 管线阶段定义：搜索 → 研究 → 核查 → 写作 → 平台
@@ -54,7 +56,7 @@ const FILTERS: { key: 'all' | AgentTypeLabel; label: string }[] = [
   { key: 'writing', label: '写作' },
 ]
 
-export default function ActivityStream({ onAction, className }: ActivityStreamProps) {
+export default function ActivityStream({ onAction, className, disabledActions }: ActivityStreamProps) {
   const currentId = useWorkspaceStore(s => s.currentId)
   const eventsByWorkspace = useActivityStore(s => s.eventsByWorkspace)
   const filter = useActivityStore(s => s.filter)
@@ -200,6 +202,7 @@ export default function ActivityStream({ onAction, className }: ActivityStreamPr
                     key={event.id}
                     event={event}
                     onAction={onAction}
+                    disabledActions={disabledActions}
                   />
                 ))}
               </div>
@@ -213,6 +216,7 @@ export default function ActivityStream({ onAction, className }: ActivityStreamPr
                 key={event.id}
                 event={event}
                 onAction={onAction}
+                disabledActions={disabledActions}
               />
             ))}
           </>

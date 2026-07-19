@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, Crown, Flame, Radio, Eye, Heart,
-  Zap, Trophy, Swords, Sparkles,
+  Zap, Trophy, Swords,
 } from 'lucide-react'
 import { getAllThemePacks } from '../services/themePackService'
-import { TOPICS } from '../services/debateArenaService'
 import { FACTION_MAP } from '../pages/AIArena'
 
 // 角色立绘图片映射（和战斗页一致）
@@ -256,6 +255,7 @@ export default function AIArenaLobby() {
     return {
       id: pack.id,
       title: `${pack.affirm.name} vs ${pack.negate.name}`,
+      subtitle: pack.description,
       desc: pack.description,
       affirmName: pack.affirm.name,
       negateName: pack.negate.name,

@@ -1,0 +1,1753 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for services/debateRoomService.ts</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../index.html">All files</a> / <a href="index.html">services</a> debateRoomService.ts</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/556</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/556</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a>
+<a name='L125'></a><a href='#L125'>125</a>
+<a name='L126'></a><a href='#L126'>126</a>
+<a name='L127'></a><a href='#L127'>127</a>
+<a name='L128'></a><a href='#L128'>128</a>
+<a name='L129'></a><a href='#L129'>129</a>
+<a name='L130'></a><a href='#L130'>130</a>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a>
+<a name='L136'></a><a href='#L136'>136</a>
+<a name='L137'></a><a href='#L137'>137</a>
+<a name='L138'></a><a href='#L138'>138</a>
+<a name='L139'></a><a href='#L139'>139</a>
+<a name='L140'></a><a href='#L140'>140</a>
+<a name='L141'></a><a href='#L141'>141</a>
+<a name='L142'></a><a href='#L142'>142</a>
+<a name='L143'></a><a href='#L143'>143</a>
+<a name='L144'></a><a href='#L144'>144</a>
+<a name='L145'></a><a href='#L145'>145</a>
+<a name='L146'></a><a href='#L146'>146</a>
+<a name='L147'></a><a href='#L147'>147</a>
+<a name='L148'></a><a href='#L148'>148</a>
+<a name='L149'></a><a href='#L149'>149</a>
+<a name='L150'></a><a href='#L150'>150</a>
+<a name='L151'></a><a href='#L151'>151</a>
+<a name='L152'></a><a href='#L152'>152</a>
+<a name='L153'></a><a href='#L153'>153</a>
+<a name='L154'></a><a href='#L154'>154</a>
+<a name='L155'></a><a href='#L155'>155</a>
+<a name='L156'></a><a href='#L156'>156</a>
+<a name='L157'></a><a href='#L157'>157</a>
+<a name='L158'></a><a href='#L158'>158</a>
+<a name='L159'></a><a href='#L159'>159</a>
+<a name='L160'></a><a href='#L160'>160</a>
+<a name='L161'></a><a href='#L161'>161</a>
+<a name='L162'></a><a href='#L162'>162</a>
+<a name='L163'></a><a href='#L163'>163</a>
+<a name='L164'></a><a href='#L164'>164</a>
+<a name='L165'></a><a href='#L165'>165</a>
+<a name='L166'></a><a href='#L166'>166</a>
+<a name='L167'></a><a href='#L167'>167</a>
+<a name='L168'></a><a href='#L168'>168</a>
+<a name='L169'></a><a href='#L169'>169</a>
+<a name='L170'></a><a href='#L170'>170</a>
+<a name='L171'></a><a href='#L171'>171</a>
+<a name='L172'></a><a href='#L172'>172</a>
+<a name='L173'></a><a href='#L173'>173</a>
+<a name='L174'></a><a href='#L174'>174</a>
+<a name='L175'></a><a href='#L175'>175</a>
+<a name='L176'></a><a href='#L176'>176</a>
+<a name='L177'></a><a href='#L177'>177</a>
+<a name='L178'></a><a href='#L178'>178</a>
+<a name='L179'></a><a href='#L179'>179</a>
+<a name='L180'></a><a href='#L180'>180</a>
+<a name='L181'></a><a href='#L181'>181</a>
+<a name='L182'></a><a href='#L182'>182</a>
+<a name='L183'></a><a href='#L183'>183</a>
+<a name='L184'></a><a href='#L184'>184</a>
+<a name='L185'></a><a href='#L185'>185</a>
+<a name='L186'></a><a href='#L186'>186</a>
+<a name='L187'></a><a href='#L187'>187</a>
+<a name='L188'></a><a href='#L188'>188</a>
+<a name='L189'></a><a href='#L189'>189</a>
+<a name='L190'></a><a href='#L190'>190</a>
+<a name='L191'></a><a href='#L191'>191</a>
+<a name='L192'></a><a href='#L192'>192</a>
+<a name='L193'></a><a href='#L193'>193</a>
+<a name='L194'></a><a href='#L194'>194</a>
+<a name='L195'></a><a href='#L195'>195</a>
+<a name='L196'></a><a href='#L196'>196</a>
+<a name='L197'></a><a href='#L197'>197</a>
+<a name='L198'></a><a href='#L198'>198</a>
+<a name='L199'></a><a href='#L199'>199</a>
+<a name='L200'></a><a href='#L200'>200</a>
+<a name='L201'></a><a href='#L201'>201</a>
+<a name='L202'></a><a href='#L202'>202</a>
+<a name='L203'></a><a href='#L203'>203</a>
+<a name='L204'></a><a href='#L204'>204</a>
+<a name='L205'></a><a href='#L205'>205</a>
+<a name='L206'></a><a href='#L206'>206</a>
+<a name='L207'></a><a href='#L207'>207</a>
+<a name='L208'></a><a href='#L208'>208</a>
+<a name='L209'></a><a href='#L209'>209</a>
+<a name='L210'></a><a href='#L210'>210</a>
+<a name='L211'></a><a href='#L211'>211</a>
+<a name='L212'></a><a href='#L212'>212</a>
+<a name='L213'></a><a href='#L213'>213</a>
+<a name='L214'></a><a href='#L214'>214</a>
+<a name='L215'></a><a href='#L215'>215</a>
+<a name='L216'></a><a href='#L216'>216</a>
+<a name='L217'></a><a href='#L217'>217</a>
+<a name='L218'></a><a href='#L218'>218</a>
+<a name='L219'></a><a href='#L219'>219</a>
+<a name='L220'></a><a href='#L220'>220</a>
+<a name='L221'></a><a href='#L221'>221</a>
+<a name='L222'></a><a href='#L222'>222</a>
+<a name='L223'></a><a href='#L223'>223</a>
+<a name='L224'></a><a href='#L224'>224</a>
+<a name='L225'></a><a href='#L225'>225</a>
+<a name='L226'></a><a href='#L226'>226</a>
+<a name='L227'></a><a href='#L227'>227</a>
+<a name='L228'></a><a href='#L228'>228</a>
+<a name='L229'></a><a href='#L229'>229</a>
+<a name='L230'></a><a href='#L230'>230</a>
+<a name='L231'></a><a href='#L231'>231</a>
+<a name='L232'></a><a href='#L232'>232</a>
+<a name='L233'></a><a href='#L233'>233</a>
+<a name='L234'></a><a href='#L234'>234</a>
+<a name='L235'></a><a href='#L235'>235</a>
+<a name='L236'></a><a href='#L236'>236</a>
+<a name='L237'></a><a href='#L237'>237</a>
+<a name='L238'></a><a href='#L238'>238</a>
+<a name='L239'></a><a href='#L239'>239</a>
+<a name='L240'></a><a href='#L240'>240</a>
+<a name='L241'></a><a href='#L241'>241</a>
+<a name='L242'></a><a href='#L242'>242</a>
+<a name='L243'></a><a href='#L243'>243</a>
+<a name='L244'></a><a href='#L244'>244</a>
+<a name='L245'></a><a href='#L245'>245</a>
+<a name='L246'></a><a href='#L246'>246</a>
+<a name='L247'></a><a href='#L247'>247</a>
+<a name='L248'></a><a href='#L248'>248</a>
+<a name='L249'></a><a href='#L249'>249</a>
+<a name='L250'></a><a href='#L250'>250</a>
+<a name='L251'></a><a href='#L251'>251</a>
+<a name='L252'></a><a href='#L252'>252</a>
+<a name='L253'></a><a href='#L253'>253</a>
+<a name='L254'></a><a href='#L254'>254</a>
+<a name='L255'></a><a href='#L255'>255</a>
+<a name='L256'></a><a href='#L256'>256</a>
+<a name='L257'></a><a href='#L257'>257</a>
+<a name='L258'></a><a href='#L258'>258</a>
+<a name='L259'></a><a href='#L259'>259</a>
+<a name='L260'></a><a href='#L260'>260</a>
+<a name='L261'></a><a href='#L261'>261</a>
+<a name='L262'></a><a href='#L262'>262</a>
+<a name='L263'></a><a href='#L263'>263</a>
+<a name='L264'></a><a href='#L264'>264</a>
+<a name='L265'></a><a href='#L265'>265</a>
+<a name='L266'></a><a href='#L266'>266</a>
+<a name='L267'></a><a href='#L267'>267</a>
+<a name='L268'></a><a href='#L268'>268</a>
+<a name='L269'></a><a href='#L269'>269</a>
+<a name='L270'></a><a href='#L270'>270</a>
+<a name='L271'></a><a href='#L271'>271</a>
+<a name='L272'></a><a href='#L272'>272</a>
+<a name='L273'></a><a href='#L273'>273</a>
+<a name='L274'></a><a href='#L274'>274</a>
+<a name='L275'></a><a href='#L275'>275</a>
+<a name='L276'></a><a href='#L276'>276</a>
+<a name='L277'></a><a href='#L277'>277</a>
+<a name='L278'></a><a href='#L278'>278</a>
+<a name='L279'></a><a href='#L279'>279</a>
+<a name='L280'></a><a href='#L280'>280</a>
+<a name='L281'></a><a href='#L281'>281</a>
+<a name='L282'></a><a href='#L282'>282</a>
+<a name='L283'></a><a href='#L283'>283</a>
+<a name='L284'></a><a href='#L284'>284</a>
+<a name='L285'></a><a href='#L285'>285</a>
+<a name='L286'></a><a href='#L286'>286</a>
+<a name='L287'></a><a href='#L287'>287</a>
+<a name='L288'></a><a href='#L288'>288</a>
+<a name='L289'></a><a href='#L289'>289</a>
+<a name='L290'></a><a href='#L290'>290</a>
+<a name='L291'></a><a href='#L291'>291</a>
+<a name='L292'></a><a href='#L292'>292</a>
+<a name='L293'></a><a href='#L293'>293</a>
+<a name='L294'></a><a href='#L294'>294</a>
+<a name='L295'></a><a href='#L295'>295</a>
+<a name='L296'></a><a href='#L296'>296</a>
+<a name='L297'></a><a href='#L297'>297</a>
+<a name='L298'></a><a href='#L298'>298</a>
+<a name='L299'></a><a href='#L299'>299</a>
+<a name='L300'></a><a href='#L300'>300</a>
+<a name='L301'></a><a href='#L301'>301</a>
+<a name='L302'></a><a href='#L302'>302</a>
+<a name='L303'></a><a href='#L303'>303</a>
+<a name='L304'></a><a href='#L304'>304</a>
+<a name='L305'></a><a href='#L305'>305</a>
+<a name='L306'></a><a href='#L306'>306</a>
+<a name='L307'></a><a href='#L307'>307</a>
+<a name='L308'></a><a href='#L308'>308</a>
+<a name='L309'></a><a href='#L309'>309</a>
+<a name='L310'></a><a href='#L310'>310</a>
+<a name='L311'></a><a href='#L311'>311</a>
+<a name='L312'></a><a href='#L312'>312</a>
+<a name='L313'></a><a href='#L313'>313</a>
+<a name='L314'></a><a href='#L314'>314</a>
+<a name='L315'></a><a href='#L315'>315</a>
+<a name='L316'></a><a href='#L316'>316</a>
+<a name='L317'></a><a href='#L317'>317</a>
+<a name='L318'></a><a href='#L318'>318</a>
+<a name='L319'></a><a href='#L319'>319</a>
+<a name='L320'></a><a href='#L320'>320</a>
+<a name='L321'></a><a href='#L321'>321</a>
+<a name='L322'></a><a href='#L322'>322</a>
+<a name='L323'></a><a href='#L323'>323</a>
+<a name='L324'></a><a href='#L324'>324</a>
+<a name='L325'></a><a href='#L325'>325</a>
+<a name='L326'></a><a href='#L326'>326</a>
+<a name='L327'></a><a href='#L327'>327</a>
+<a name='L328'></a><a href='#L328'>328</a>
+<a name='L329'></a><a href='#L329'>329</a>
+<a name='L330'></a><a href='#L330'>330</a>
+<a name='L331'></a><a href='#L331'>331</a>
+<a name='L332'></a><a href='#L332'>332</a>
+<a name='L333'></a><a href='#L333'>333</a>
+<a name='L334'></a><a href='#L334'>334</a>
+<a name='L335'></a><a href='#L335'>335</a>
+<a name='L336'></a><a href='#L336'>336</a>
+<a name='L337'></a><a href='#L337'>337</a>
+<a name='L338'></a><a href='#L338'>338</a>
+<a name='L339'></a><a href='#L339'>339</a>
+<a name='L340'></a><a href='#L340'>340</a>
+<a name='L341'></a><a href='#L341'>341</a>
+<a name='L342'></a><a href='#L342'>342</a>
+<a name='L343'></a><a href='#L343'>343</a>
+<a name='L344'></a><a href='#L344'>344</a>
+<a name='L345'></a><a href='#L345'>345</a>
+<a name='L346'></a><a href='#L346'>346</a>
+<a name='L347'></a><a href='#L347'>347</a>
+<a name='L348'></a><a href='#L348'>348</a>
+<a name='L349'></a><a href='#L349'>349</a>
+<a name='L350'></a><a href='#L350'>350</a>
+<a name='L351'></a><a href='#L351'>351</a>
+<a name='L352'></a><a href='#L352'>352</a>
+<a name='L353'></a><a href='#L353'>353</a>
+<a name='L354'></a><a href='#L354'>354</a>
+<a name='L355'></a><a href='#L355'>355</a>
+<a name='L356'></a><a href='#L356'>356</a>
+<a name='L357'></a><a href='#L357'>357</a>
+<a name='L358'></a><a href='#L358'>358</a>
+<a name='L359'></a><a href='#L359'>359</a>
+<a name='L360'></a><a href='#L360'>360</a>
+<a name='L361'></a><a href='#L361'>361</a>
+<a name='L362'></a><a href='#L362'>362</a>
+<a name='L363'></a><a href='#L363'>363</a>
+<a name='L364'></a><a href='#L364'>364</a>
+<a name='L365'></a><a href='#L365'>365</a>
+<a name='L366'></a><a href='#L366'>366</a>
+<a name='L367'></a><a href='#L367'>367</a>
+<a name='L368'></a><a href='#L368'>368</a>
+<a name='L369'></a><a href='#L369'>369</a>
+<a name='L370'></a><a href='#L370'>370</a>
+<a name='L371'></a><a href='#L371'>371</a>
+<a name='L372'></a><a href='#L372'>372</a>
+<a name='L373'></a><a href='#L373'>373</a>
+<a name='L374'></a><a href='#L374'>374</a>
+<a name='L375'></a><a href='#L375'>375</a>
+<a name='L376'></a><a href='#L376'>376</a>
+<a name='L377'></a><a href='#L377'>377</a>
+<a name='L378'></a><a href='#L378'>378</a>
+<a name='L379'></a><a href='#L379'>379</a>
+<a name='L380'></a><a href='#L380'>380</a>
+<a name='L381'></a><a href='#L381'>381</a>
+<a name='L382'></a><a href='#L382'>382</a>
+<a name='L383'></a><a href='#L383'>383</a>
+<a name='L384'></a><a href='#L384'>384</a>
+<a name='L385'></a><a href='#L385'>385</a>
+<a name='L386'></a><a href='#L386'>386</a>
+<a name='L387'></a><a href='#L387'>387</a>
+<a name='L388'></a><a href='#L388'>388</a>
+<a name='L389'></a><a href='#L389'>389</a>
+<a name='L390'></a><a href='#L390'>390</a>
+<a name='L391'></a><a href='#L391'>391</a>
+<a name='L392'></a><a href='#L392'>392</a>
+<a name='L393'></a><a href='#L393'>393</a>
+<a name='L394'></a><a href='#L394'>394</a>
+<a name='L395'></a><a href='#L395'>395</a>
+<a name='L396'></a><a href='#L396'>396</a>
+<a name='L397'></a><a href='#L397'>397</a>
+<a name='L398'></a><a href='#L398'>398</a>
+<a name='L399'></a><a href='#L399'>399</a>
+<a name='L400'></a><a href='#L400'>400</a>
+<a name='L401'></a><a href='#L401'>401</a>
+<a name='L402'></a><a href='#L402'>402</a>
+<a name='L403'></a><a href='#L403'>403</a>
+<a name='L404'></a><a href='#L404'>404</a>
+<a name='L405'></a><a href='#L405'>405</a>
+<a name='L406'></a><a href='#L406'>406</a>
+<a name='L407'></a><a href='#L407'>407</a>
+<a name='L408'></a><a href='#L408'>408</a>
+<a name='L409'></a><a href='#L409'>409</a>
+<a name='L410'></a><a href='#L410'>410</a>
+<a name='L411'></a><a href='#L411'>411</a>
+<a name='L412'></a><a href='#L412'>412</a>
+<a name='L413'></a><a href='#L413'>413</a>
+<a name='L414'></a><a href='#L414'>414</a>
+<a name='L415'></a><a href='#L415'>415</a>
+<a name='L416'></a><a href='#L416'>416</a>
+<a name='L417'></a><a href='#L417'>417</a>
+<a name='L418'></a><a href='#L418'>418</a>
+<a name='L419'></a><a href='#L419'>419</a>
+<a name='L420'></a><a href='#L420'>420</a>
+<a name='L421'></a><a href='#L421'>421</a>
+<a name='L422'></a><a href='#L422'>422</a>
+<a name='L423'></a><a href='#L423'>423</a>
+<a name='L424'></a><a href='#L424'>424</a>
+<a name='L425'></a><a href='#L425'>425</a>
+<a name='L426'></a><a href='#L426'>426</a>
+<a name='L427'></a><a href='#L427'>427</a>
+<a name='L428'></a><a href='#L428'>428</a>
+<a name='L429'></a><a href='#L429'>429</a>
+<a name='L430'></a><a href='#L430'>430</a>
+<a name='L431'></a><a href='#L431'>431</a>
+<a name='L432'></a><a href='#L432'>432</a>
+<a name='L433'></a><a href='#L433'>433</a>
+<a name='L434'></a><a href='#L434'>434</a>
+<a name='L435'></a><a href='#L435'>435</a>
+<a name='L436'></a><a href='#L436'>436</a>
+<a name='L437'></a><a href='#L437'>437</a>
+<a name='L438'></a><a href='#L438'>438</a>
+<a name='L439'></a><a href='#L439'>439</a>
+<a name='L440'></a><a href='#L440'>440</a>
+<a name='L441'></a><a href='#L441'>441</a>
+<a name='L442'></a><a href='#L442'>442</a>
+<a name='L443'></a><a href='#L443'>443</a>
+<a name='L444'></a><a href='#L444'>444</a>
+<a name='L445'></a><a href='#L445'>445</a>
+<a name='L446'></a><a href='#L446'>446</a>
+<a name='L447'></a><a href='#L447'>447</a>
+<a name='L448'></a><a href='#L448'>448</a>
+<a name='L449'></a><a href='#L449'>449</a>
+<a name='L450'></a><a href='#L450'>450</a>
+<a name='L451'></a><a href='#L451'>451</a>
+<a name='L452'></a><a href='#L452'>452</a>
+<a name='L453'></a><a href='#L453'>453</a>
+<a name='L454'></a><a href='#L454'>454</a>
+<a name='L455'></a><a href='#L455'>455</a>
+<a name='L456'></a><a href='#L456'>456</a>
+<a name='L457'></a><a href='#L457'>457</a>
+<a name='L458'></a><a href='#L458'>458</a>
+<a name='L459'></a><a href='#L459'>459</a>
+<a name='L460'></a><a href='#L460'>460</a>
+<a name='L461'></a><a href='#L461'>461</a>
+<a name='L462'></a><a href='#L462'>462</a>
+<a name='L463'></a><a href='#L463'>463</a>
+<a name='L464'></a><a href='#L464'>464</a>
+<a name='L465'></a><a href='#L465'>465</a>
+<a name='L466'></a><a href='#L466'>466</a>
+<a name='L467'></a><a href='#L467'>467</a>
+<a name='L468'></a><a href='#L468'>468</a>
+<a name='L469'></a><a href='#L469'>469</a>
+<a name='L470'></a><a href='#L470'>470</a>
+<a name='L471'></a><a href='#L471'>471</a>
+<a name='L472'></a><a href='#L472'>472</a>
+<a name='L473'></a><a href='#L473'>473</a>
+<a name='L474'></a><a href='#L474'>474</a>
+<a name='L475'></a><a href='#L475'>475</a>
+<a name='L476'></a><a href='#L476'>476</a>
+<a name='L477'></a><a href='#L477'>477</a>
+<a name='L478'></a><a href='#L478'>478</a>
+<a name='L479'></a><a href='#L479'>479</a>
+<a name='L480'></a><a href='#L480'>480</a>
+<a name='L481'></a><a href='#L481'>481</a>
+<a name='L482'></a><a href='#L482'>482</a>
+<a name='L483'></a><a href='#L483'>483</a>
+<a name='L484'></a><a href='#L484'>484</a>
+<a name='L485'></a><a href='#L485'>485</a>
+<a name='L486'></a><a href='#L486'>486</a>
+<a name='L487'></a><a href='#L487'>487</a>
+<a name='L488'></a><a href='#L488'>488</a>
+<a name='L489'></a><a href='#L489'>489</a>
+<a name='L490'></a><a href='#L490'>490</a>
+<a name='L491'></a><a href='#L491'>491</a>
+<a name='L492'></a><a href='#L492'>492</a>
+<a name='L493'></a><a href='#L493'>493</a>
+<a name='L494'></a><a href='#L494'>494</a>
+<a name='L495'></a><a href='#L495'>495</a>
+<a name='L496'></a><a href='#L496'>496</a>
+<a name='L497'></a><a href='#L497'>497</a>
+<a name='L498'></a><a href='#L498'>498</a>
+<a name='L499'></a><a href='#L499'>499</a>
+<a name='L500'></a><a href='#L500'>500</a>
+<a name='L501'></a><a href='#L501'>501</a>
+<a name='L502'></a><a href='#L502'>502</a>
+<a name='L503'></a><a href='#L503'>503</a>
+<a name='L504'></a><a href='#L504'>504</a>
+<a name='L505'></a><a href='#L505'>505</a>
+<a name='L506'></a><a href='#L506'>506</a>
+<a name='L507'></a><a href='#L507'>507</a>
+<a name='L508'></a><a href='#L508'>508</a>
+<a name='L509'></a><a href='#L509'>509</a>
+<a name='L510'></a><a href='#L510'>510</a>
+<a name='L511'></a><a href='#L511'>511</a>
+<a name='L512'></a><a href='#L512'>512</a>
+<a name='L513'></a><a href='#L513'>513</a>
+<a name='L514'></a><a href='#L514'>514</a>
+<a name='L515'></a><a href='#L515'>515</a>
+<a name='L516'></a><a href='#L516'>516</a>
+<a name='L517'></a><a href='#L517'>517</a>
+<a name='L518'></a><a href='#L518'>518</a>
+<a name='L519'></a><a href='#L519'>519</a>
+<a name='L520'></a><a href='#L520'>520</a>
+<a name='L521'></a><a href='#L521'>521</a>
+<a name='L522'></a><a href='#L522'>522</a>
+<a name='L523'></a><a href='#L523'>523</a>
+<a name='L524'></a><a href='#L524'>524</a>
+<a name='L525'></a><a href='#L525'>525</a>
+<a name='L526'></a><a href='#L526'>526</a>
+<a name='L527'></a><a href='#L527'>527</a>
+<a name='L528'></a><a href='#L528'>528</a>
+<a name='L529'></a><a href='#L529'>529</a>
+<a name='L530'></a><a href='#L530'>530</a>
+<a name='L531'></a><a href='#L531'>531</a>
+<a name='L532'></a><a href='#L532'>532</a>
+<a name='L533'></a><a href='#L533'>533</a>
+<a name='L534'></a><a href='#L534'>534</a>
+<a name='L535'></a><a href='#L535'>535</a>
+<a name='L536'></a><a href='#L536'>536</a>
+<a name='L537'></a><a href='#L537'>537</a>
+<a name='L538'></a><a href='#L538'>538</a>
+<a name='L539'></a><a href='#L539'>539</a>
+<a name='L540'></a><a href='#L540'>540</a>
+<a name='L541'></a><a href='#L541'>541</a>
+<a name='L542'></a><a href='#L542'>542</a>
+<a name='L543'></a><a href='#L543'>543</a>
+<a name='L544'></a><a href='#L544'>544</a>
+<a name='L545'></a><a href='#L545'>545</a>
+<a name='L546'></a><a href='#L546'>546</a>
+<a name='L547'></a><a href='#L547'>547</a>
+<a name='L548'></a><a href='#L548'>548</a>
+<a name='L549'></a><a href='#L549'>549</a>
+<a name='L550'></a><a href='#L550'>550</a>
+<a name='L551'></a><a href='#L551'>551</a>
+<a name='L552'></a><a href='#L552'>552</a>
+<a name='L553'></a><a href='#L553'>553</a>
+<a name='L554'></a><a href='#L554'>554</a>
+<a name='L555'></a><a href='#L555'>555</a>
+<a name='L556'></a><a href='#L556'>556</a>
+<a name='L557'></a><a href='#L557'>557</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" >/**</span></span></span>
+<span class="cstat-no" title="statement not covered" > * 辩论房间服务</span>
+<span class="cstat-no" title="statement not covered" > * 管理房间生命周期、入场/离场、发言、抬走投票等核心逻辑</span>
+<span class="cstat-no" title="statement not covered" > * Mock-first：无后端时完全可用</span>
+<span class="cstat-no" title="statement not covered" > */</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >import type {</span>
+<span class="cstat-no" title="statement not covered" >  DebateRoom, DebateSeat, DebateSpeech, RoundJudgment, DebateSummary,</span>
+<span class="cstat-no" title="statement not covered" >  LobbyRoom, DebateSide,</span>
+<span class="cstat-no" title="statement not covered" >} from '../types/debate'</span>
+<span class="cstat-no" title="statement not covered" >import { DEFAULT_ROOM_RULES, calculateEntryCost, getDebatePhase, getCharLimit } from '../types/debate'</span>
+<span class="cstat-no" title="statement not covered" >import { judgeRound, type JudgeInput, type JudgeResult } from './aiJudgeService'</span>
+<span class="cstat-no" title="statement not covered" >import { translateSpeech } from './aiTranslatorService'</span>
+<span class="cstat-no" title="statement not covered" >import { generateSummary, type SummaryInput } from './aiSummaryService'</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >// ===== 延迟工具 =====</span>
+<span class="cstat-no" title="statement not covered" >function delay(ms = 150): Promise&lt;void&gt; {</span>
+<span class="cstat-no" title="statement not covered" >  return new Promise(r =&gt; setTimeout(r, ms + Math.random() * 100))</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >// ===== Mock 数据 =====</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >const MOCK_NICKNAMES = [</span>
+<span class="cstat-no" title="statement not covered" >  '逻辑怪', '数据控', '真相猎人', '理性派', '吃瓜达人',</span>
+<span class="cstat-no" title="statement not covered" >  '辩论新手', '老瓜农', '围观群众', '侦探小白', '硬核玩家',</span>
+<span class="cstat-no" title="statement not covered" >]</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >const MOCK_TOPICS = [</span>
+<span class="cstat-no" title="statement not covered" >  { id: 'melon-1', topic: '大学学历在AI时代还有价值吗？', affirm: '有', negate: '没有' },</span>
+<span class="cstat-no" title="statement not covered" >  { id: 'melon-2', topic: '短视频正在摧毁深度思考能力', affirm: '是', negate: '否' },</span>
+<span class="cstat-no" title="statement not covered" >  { id: 'melon-3', topic: '远程办公比坐班更高效', affirm: '支持', negate: '反对' },</span>
+<span class="cstat-no" title="statement not covered" >  { id: 'melon-4', topic: '社交媒体让人更孤独', affirm: '同意', negate: '不同意' },</span>
+<span class="cstat-no" title="statement not covered" >  { id: 'melon-5', topic: 'AI创作的作品算不算艺术', affirm: '算', negate: '不算' },</span>
+<span class="cstat-no" title="statement not covered" >  { id: 'melon-6', topic: '网红带货是不是新型传销', affirm: '是', negate: '不是' },</span>
+<span class="cstat-no" title="statement not covered" >  { id: 'melon-7', topic: '年轻人该不该躺平', affirm: '该', negate: '不该' },</span>
+<span class="cstat-no" title="statement not covered" >  { id: 'melon-8', topic: '外卖平台该不该给骑手交社保', affirm: '该', negate: '不该' },</span>
+<span class="cstat-no" title="statement not covered" >  { id: 'melon-9', topic: '明星代言翻车要不要担责', affirm: '要', negate: '不要' },</span>
+<span class="cstat-no" title="statement not covered" >  { id: 'melon-10', topic: '算法推荐是不是在操控你的想法', affirm: '是', negate: '不是' },</span>
+<span class="cstat-no" title="statement not covered" >]</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >// 通用话题模板，用于melon-10以上的动态房间</span>
+<span class="cstat-no" title="statement not covered" >const GENERIC_TOPICS = [</span>
+<span class="cstat-no" title="statement not covered" >  { topic: '这个瓜到底是真是假？', affirm: '真的', negate: '假的' },</span>
+<span class="cstat-no" title="statement not covered" >  { topic: '这件事谁的责任更大？', affirm: '甲方', negate: '乙方' },</span>
+<span class="cstat-no" title="statement not covered" >  { topic: '舆论方向对不对？', affirm: '对', negate: '不对' },</span>
+<span class="cstat-no" title="statement not covered" >  { topic: '当事人该不该道歉？', affirm: '该', negate: '不该' },</span>
+<span class="cstat-no" title="statement not covered" >]</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >const MOCK_SPEECHES_POOL = [</span>
+<span class="cstat-no" title="statement not covered" >  '从数据来看，这个观点站不住脚。根据最新统计，超过70%的受访者持相反意见。',</span>
+<span class="cstat-no" title="statement not covered" >  '对方辩友提到了效率问题，但忽略了质量维度。效率不等于效果。',</span>
+<span class="cstat-no" title="statement not covered" >  '我用一个简单例子说明：如果这个论点成立，那我们是不是可以说所有传统都会被颠覆？',</span>
+<span class="cstat-no" title="statement not covered" >  '请注意区分相关性和因果性。你提到的数据并不能直接证明你的观点。',</span>
+<span class="cstat-no" title="statement not covered" >  '我完全不同意对方的逻辑链条。这里存在明显的滑坡论证。',</span>
+<span class="cstat-no" title="statement not covered" >  '让我们回到问题本质。讨论这个议题的核心标准应该是什么？',</span>
+<span class="cstat-no" title="statement not covered" >  '对方一直在回避关键问题。请问你如何解释这个反例？',</span>
+<span class="cstat-no" title="statement not covered" >  '我的论点基于三个支柱：事实、逻辑和价值观。请逐一反驳。',</span>
+<span class="cstat-no" title="statement not covered" >  '这个观点太片面了。你只看到了好处，完全忽视了代价。',</span>
+<span class="cstat-no" title="statement not covered" >  '历史已经多次证明，类似的论断最终都被推翻了。',</span>
+<span class="cstat-no" title="statement not covered" >  '我建议对方辩友先搞清楚定义再讨论。我们现在说的是一回事吗？',</span>
+<span class="cstat-no" title="statement not covered" >  '从实践角度来看，理论再完美，落地才是关键。',</span>
+<span class="cstat-no" title="statement not covered" >]</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >// ===== 内存状态 =====</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >let roomsCache: DebateRoom[] = []</span>
+<span class="cstat-no" title="statement not covered" >let speechesCache: Map&lt;string, DebateSpeech[]&gt; = new Map()</span>
+<span class="cstat-no" title="statement not covered" >let judgmentsCache: Map&lt;string, RoundJudgment[]&gt; = new Map()</span>
+<span class="cstat-no" title="statement not covered" >let summaryCache: Map&lt;string, DebateSummary&gt; = new Map()</span>
+<span class="cstat-no" title="statement not covered" >let initialized = false</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >function generateMockSeats(_topic: typeof MOCK_TOPICS[0], status: 'waiting' | 'debating' | 'ended'): DebateSeat[] {</span>
+<span class="cstat-no" title="statement not covered" >  const seats: DebateSeat[] = []</span>
+<span class="cstat-no" title="statement not covered" >  const sides: DebateSide[] = ['affirm', 'negate']</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  for (let s = 0; s &lt; 2; s++) {</span>
+<span class="cstat-no" title="statement not covered" >    for (let i = 0; i &lt; 3; i++) {</span>
+<span class="cstat-no" title="statement not covered" >      const idx = s * 3 + i</span>
+<span class="cstat-no" title="statement not covered" >      const isOccupied = status === 'debating' || (status === 'waiting' &amp;&amp; i &lt; 2)</span>
+<span class="cstat-no" title="statement not covered" >      seats.push({</span>
+<span class="cstat-no" title="statement not covered" >        index: idx,</span>
+<span class="cstat-no" title="statement not covered" >        side: sides[s],</span>
+<span class="cstat-no" title="statement not covered" >        status: isOccupied ? 'occupied' : 'vacant',</span>
+<span class="cstat-no" title="statement not covered" >        userId: isOccupied ? `mock-u-${idx}` : undefined,</span>
+<span class="cstat-no" title="statement not covered" >        nickname: isOccupied ? MOCK_NICKNAMES[idx % MOCK_NICKNAMES.length] : undefined,</span>
+<span class="cstat-no" title="statement not covered" >        avatar: isOccupied ? `https://picsum.photos/seed/debater-${idx}/80/80` : undefined,</span>
+<span class="cstat-no" title="statement not covered" >        joinedAt: isOccupied ? new Date(Date.now() - Math.random() * 3600000).toISOString() : undefined,</span>
+<span class="cstat-no" title="statement not covered" >        roundScore: status === 'debating' ? Math.floor(Math.random() * 20) + 5 : 0,</span>
+<span class="cstat-no" title="statement not covered" >        removalVotes: 0,</span>
+<span class="cstat-no" title="statement not covered" >      })</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >  }</span>
+<span class="cstat-no" title="statement not covered" >  return seats</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >function initMockRooms() {</span>
+<span class="cstat-no" title="statement not covered" >  if (initialized) return</span>
+<span class="cstat-no" title="statement not covered" >  initialized = true</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  roomsCache = MOCK_TOPICS.map((t, i) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    const statuses: ('waiting' | 'debating' | 'ended')[] = ['debating', 'debating', 'waiting', 'debating', 'ended', 'debating', 'waiting', 'debating', 'debating', 'ended']</span>
+<span class="cstat-no" title="statement not covered" >    const status = statuses[i] || (i % 3 === 0 ? 'debating' : 'waiting')</span>
+<span class="cstat-no" title="statement not covered" >    const round = status === 'debating' ? (i % 3) + 2 : status === 'ended' ? 6 : 0</span>
+<span class="cstat-no" title="statement not covered" >    const phase = getDebatePhase(round, DEFAULT_ROOM_RULES)</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    return {</span>
+<span class="cstat-no" title="statement not covered" >      id: `room-${t.id}`,</span>
+<span class="cstat-no" title="statement not covered" >      topicId: t.id,</span>
+<span class="cstat-no" title="statement not covered" >      topic: t.topic,</span>
+<span class="cstat-no" title="statement not covered" >      affirmLabel: t.affirm,</span>
+<span class="cstat-no" title="statement not covered" >      negateLabel: t.negate,</span>
+<span class="cstat-no" title="statement not covered" >      status: status as DebateRoom['status'],</span>
+<span class="cstat-no" title="statement not covered" >      currentRound: round,</span>
+<span class="cstat-no" title="statement not covered" >      currentPhase: phase,</span>
+<span class="cstat-no" title="statement not covered" >      maxSeats: 6,</span>
+<span class="cstat-no" title="statement not covered" >      seats: generateMockSeats(t, status),</span>
+<span class="cstat-no" title="statement not covered" >      spectatorCount: Math.floor(Math.random() * 500) + 50,</span>
+<span class="cstat-no" title="statement not covered" >      createdAt: new Date(Date.now() - Math.random() * 86400000 * 3).toISOString(),</span>
+<span class="cstat-no" title="statement not covered" >      entryCostBase: 30,</span>
+<span class="cstat-no" title="statement not covered" >      currentEntryCost: status === 'debating' &amp;&amp; i % 2 === 1 ? 60 : 30,</span>
+<span class="cstat-no" title="statement not covered" >      substitutionCount: status === 'debating' &amp;&amp; i % 2 === 1 ? 1 : 0,</span>
+<span class="cstat-no" title="statement not covered" >      rules: { ...DEFAULT_ROOM_RULES },</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >  })</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  // 为debating状态的房间生成mock发言</span>
+<span class="cstat-no" title="statement not covered" >  roomsCache.filter(r =&gt; r.status === 'debating').forEach(room =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    generateMockSpeechesForRoom(room)</span>
+<span class="cstat-no" title="statement not covered" >  })</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >function generateMockSpeechesForRoom(room: DebateRoom) {</span>
+<span class="cstat-no" title="statement not covered" >  const speeches: DebateSpeech[] = []</span>
+<span class="cstat-no" title="statement not covered" >  for (let round = 1; round &lt;= room.currentRound; round++) {</span>
+<span class="cstat-no" title="statement not covered" >    const phase = getDebatePhase(round, room.rules)</span>
+<span class="cstat-no" title="statement not covered" >    const charLimit = getCharLimit(phase, room.rules)</span>
+<span class="cstat-no" title="statement not covered" >    const occupiedSeats = room.seats.filter(s =&gt; s.status === 'occupied')</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    occupiedSeats.forEach((seat, si) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >      speeches.push({</span>
+<span class="cstat-no" title="statement not covered" >        id: `${room.id}-r${round}-s${seat.index}`,</span>
+<span class="cstat-no" title="statement not covered" >        roomId: room.id,</span>
+<span class="cstat-no" title="statement not covered" >        round,</span>
+<span class="cstat-no" title="statement not covered" >        seatIndex: seat.index,</span>
+<span class="cstat-no" title="statement not covered" >        userId: seat.userId!,</span>
+<span class="cstat-no" title="statement not covered" >        nickname: seat.nickname!,</span>
+<span class="cstat-no" title="statement not covered" >        avatar: seat.avatar!,</span>
+<span class="cstat-no" title="statement not covered" >        side: seat.side,</span>
+<span class="cstat-no" title="statement not covered" >        content: MOCK_SPEECHES_POOL[(round * 3 + si) % MOCK_SPEECHES_POOL.length],</span>
+<span class="cstat-no" title="statement not covered" >        translatedContent: null as any,</span>
+<span class="cstat-no" title="statement not covered" >        speechType: 'text',</span>
+<span class="cstat-no" title="statement not covered" >        charLimit,</span>
+<span class="cstat-no" title="statement not covered" >        createdAt: new Date(Date.now() - (room.currentRound - round) * 300000 - si * 60000).toISOString(),</span>
+<span class="cstat-no" title="statement not covered" >      })</span>
+<span class="cstat-no" title="statement not covered" >    })</span>
+<span class="cstat-no" title="statement not covered" >  }</span>
+<span class="cstat-no" title="statement not covered" >  speechesCache.set(room.id, speeches)</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >/** 为未知melon ID动态创建房间 */</span>
+<span class="cstat-no" title="statement not covered" >function createDynamicRoom(melonId: string, roomIdOverride?: string): DebateRoom {</span>
+<span class="cstat-no" title="statement not covered" >  const num = parseInt(melonId.replace(/\D/g, '')) || 0</span>
+<span class="cstat-no" title="statement not covered" >  const tpl = GENERIC_TOPICS[num % GENERIC_TOPICS.length]</span>
+<span class="cstat-no" title="statement not covered" >  const topic = { id: melonId, topic: tpl.topic, affirm: tpl.affirm, negate: tpl.negate }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  // 根据melon ID的hash决定房间状态</span>
+<span class="cstat-no" title="statement not covered" >  const statusRoll = num % 5</span>
+<span class="cstat-no" title="statement not covered" >  const status: ('waiting' | 'debating' | 'ended') = statusRoll &lt; 3 ? 'debating' : statusRoll === 3 ? 'waiting' : 'ended'</span>
+<span class="cstat-no" title="statement not covered" >  const round = status === 'debating' ? (num % 3) + 1 : status === 'ended' ? 6 : 0</span>
+<span class="cstat-no" title="statement not covered" >  const phase = getDebatePhase(round, DEFAULT_ROOM_RULES)</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  const room: DebateRoom = {</span>
+<span class="cstat-no" title="statement not covered" >    id: roomIdOverride || `room-${melonId}`,</span>
+<span class="cstat-no" title="statement not covered" >    topicId: melonId,</span>
+<span class="cstat-no" title="statement not covered" >    topic: tpl.topic,</span>
+<span class="cstat-no" title="statement not covered" >    affirmLabel: tpl.affirm,</span>
+<span class="cstat-no" title="statement not covered" >    negateLabel: tpl.negate,</span>
+<span class="cstat-no" title="statement not covered" >    status,</span>
+<span class="cstat-no" title="statement not covered" >    currentRound: round,</span>
+<span class="cstat-no" title="statement not covered" >    currentPhase: phase,</span>
+<span class="cstat-no" title="statement not covered" >    maxSeats: 6,</span>
+<span class="cstat-no" title="statement not covered" >    seats: generateMockSeats(topic, status),</span>
+<span class="cstat-no" title="statement not covered" >    spectatorCount: Math.floor(Math.random() * 300) + 20,</span>
+<span class="cstat-no" title="statement not covered" >    createdAt: new Date(Date.now() - Math.random() * 86400000 * 2).toISOString(),</span>
+<span class="cstat-no" title="statement not covered" >    entryCostBase: 30,</span>
+<span class="cstat-no" title="statement not covered" >    currentEntryCost: 30,</span>
+<span class="cstat-no" title="statement not covered" >    substitutionCount: 0,</span>
+<span class="cstat-no" title="statement not covered" >    rules: { ...DEFAULT_ROOM_RULES },</span>
+<span class="cstat-no" title="statement not covered" >  }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  roomsCache.push(room)</span>
+<span class="cstat-no" title="statement not covered" >  if (status === 'debating') {</span>
+<span class="cstat-no" title="statement not covered" >    generateMockSpeechesForRoom(room)</span>
+<span class="cstat-no" title="statement not covered" >  } else {</span>
+<span class="cstat-no" title="statement not covered" >    speechesCache.set(room.id, [])</span>
+<span class="cstat-no" title="statement not covered" >  }</span>
+<span class="cstat-no" title="statement not covered" >  judgmentsCache.set(room.id, [])</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  return room</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >// ===== Mock API =====</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >function toLobbyRoom(room: DebateRoom): LobbyRoom {</span>
+<span class="cstat-no" title="statement not covered" >  return {</span>
+<span class="cstat-no" title="statement not covered" >    id: room.id,</span>
+<span class="cstat-no" title="statement not covered" >    topic: room.topic,</span>
+<span class="cstat-no" title="statement not covered" >    affirmLabel: room.affirmLabel,</span>
+<span class="cstat-no" title="statement not covered" >    negateLabel: room.negateLabel,</span>
+<span class="cstat-no" title="statement not covered" >    status: room.status,</span>
+<span class="cstat-no" title="statement not covered" >    currentRound: room.currentRound,</span>
+<span class="cstat-no" title="statement not covered" >    currentPhase: room.currentPhase,</span>
+<span class="cstat-no" title="statement not covered" >    occupiedSeats: room.seats.filter(s =&gt; s.status === 'occupied').length,</span>
+<span class="cstat-no" title="statement not covered" >    maxSeats: room.maxSeats,</span>
+<span class="cstat-no" title="statement not covered" >    spectatorCount: room.spectatorCount,</span>
+<span class="cstat-no" title="statement not covered" >    entryCost: room.currentEntryCost,</span>
+<span class="cstat-no" title="statement not covered" >    createdAt: room.createdAt,</span>
+<span class="cstat-no" title="statement not covered" >  }</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >export const debateRoomService = {</span>
+<span class="cstat-no" title="statement not covered" >  /** 获取大厅房间列表 */</span>
+<span class="cstat-no" title="statement not covered" >  async getRooms(): Promise&lt;LobbyRoom[]&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    initMockRooms()</span>
+<span class="cstat-no" title="statement not covered" >    await delay(200)</span>
+<span class="cstat-no" title="statement not covered" >    return roomsCache.map(toLobbyRoom)</span>
+<span class="cstat-no" title="statement not covered" >  },</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  /** 获取房间详情 — 不存在时动态创建 */</span>
+<span class="cstat-no" title="statement not covered" >  async getRoom(roomId: string): Promise&lt;DebateRoom | null&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    initMockRooms()</span>
+<span class="cstat-no" title="statement not covered" >    await delay(100)</span>
+<span class="cstat-no" title="statement not covered" >    const existing = roomsCache.find(r =&gt; r.id === roomId)</span>
+<span class="cstat-no" title="statement not covered" >    if (existing) return existing</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    // 从 room-melon-X 中提取 melon-X，动态创建</span>
+<span class="cstat-no" title="statement not covered" >    if (roomId.startsWith('room-melon-')) {</span>
+<span class="cstat-no" title="statement not covered" >      const melonId = roomId.replace('room-', '')</span>
+<span class="cstat-no" title="statement not covered" >      return createDynamicRoom(melonId)</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    // 从 room-X 中提取 X，动态创建（MelonFieldPage 导航用）</span>
+<span class="cstat-no" title="statement not covered" >    if (roomId.startsWith('room-')) {</span>
+<span class="cstat-no" title="statement not covered" >      const num = roomId.replace('room-', '')</span>
+<span class="cstat-no" title="statement not covered" >      return createDynamicRoom(`melon-${num}`, roomId)</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    return null</span>
+<span class="cstat-no" title="statement not covered" >  },</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  /** 创建房间 */</span>
+<span class="cstat-no" title="statement not covered" >  async createRoom(topic: string, affirmLabel: string, negateLabel: string): Promise&lt;DebateRoom&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    initMockRooms()</span>
+<span class="cstat-no" title="statement not covered" >    await delay(400)</span>
+<span class="cstat-no" title="statement not covered" >    const room: DebateRoom = {</span>
+<span class="cstat-no" title="statement not covered" >      id: `room-new-${Date.now()}`,</span>
+<span class="cstat-no" title="statement not covered" >      topicId: `custom-${Date.now()}`,</span>
+<span class="cstat-no" title="statement not covered" >      topic,</span>
+<span class="cstat-no" title="statement not covered" >      affirmLabel,</span>
+<span class="cstat-no" title="statement not covered" >      negateLabel,</span>
+<span class="cstat-no" title="statement not covered" >      status: 'waiting',</span>
+<span class="cstat-no" title="statement not covered" >      currentRound: 0,</span>
+<span class="cstat-no" title="statement not covered" >      currentPhase: 'early',</span>
+<span class="cstat-no" title="statement not covered" >      maxSeats: 6,</span>
+<span class="cstat-no" title="statement not covered" >      seats: Array.from({ length: 6 }, (_, i) =&gt; ({</span>
+<span class="cstat-no" title="statement not covered" >        index: i,</span>
+<span class="cstat-no" title="statement not covered" >        side: (i &lt; 3 ? 'affirm' : 'negate') as DebateSide,</span>
+<span class="cstat-no" title="statement not covered" >        status: 'vacant' as const,</span>
+<span class="cstat-no" title="statement not covered" >        roundScore: 0,</span>
+<span class="cstat-no" title="statement not covered" >        removalVotes: 0,</span>
+<span class="cstat-no" title="statement not covered" >      })),</span>
+<span class="cstat-no" title="statement not covered" >      spectatorCount: 0,</span>
+<span class="cstat-no" title="statement not covered" >      createdAt: new Date().toISOString(),</span>
+<span class="cstat-no" title="statement not covered" >      entryCostBase: 30,</span>
+<span class="cstat-no" title="statement not covered" >      currentEntryCost: 30,</span>
+<span class="cstat-no" title="statement not covered" >      substitutionCount: 0,</span>
+<span class="cstat-no" title="statement not covered" >      rules: { ...DEFAULT_ROOM_RULES },</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" >    roomsCache.unshift(room)</span>
+<span class="cstat-no" title="statement not covered" >    speechesCache.set(room.id, [])</span>
+<span class="cstat-no" title="statement not covered" >    judgmentsCache.set(room.id, [])</span>
+<span class="cstat-no" title="statement not covered" >    return room</span>
+<span class="cstat-no" title="statement not covered" >  },</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  /** 加入房间（占座） */</span>
+<span class="cstat-no" title="statement not covered" >  async joinRoom(roomId: string, userId: string, nickname: string, avatar: string): Promise&lt;{ room: DebateRoom; seatIndex: number } | null&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    initMockRooms()</span>
+<span class="cstat-no" title="statement not covered" >    await delay(300)</span>
+<span class="cstat-no" title="statement not covered" >    const room = roomsCache.find(r =&gt; r.id === roomId)</span>
+<span class="cstat-no" title="statement not covered" >    if (!room) return null</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    // 找空位</span>
+<span class="cstat-no" title="statement not covered" >    const vacantSeat = room.seats.find(s =&gt; s.status === 'vacant')</span>
+<span class="cstat-no" title="statement not covered" >    if (!vacantSeat) return null</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    // 更新席位</span>
+<span class="cstat-no" title="statement not covered" >    vacantSeat.status = 'occupied'</span>
+<span class="cstat-no" title="statement not covered" >    vacantSeat.userId = userId</span>
+<span class="cstat-no" title="statement not covered" >    vacantSeat.nickname = nickname</span>
+<span class="cstat-no" title="statement not covered" >    vacantSeat.avatar = avatar</span>
+<span class="cstat-no" title="statement not covered" >    vacantSeat.joinedAt = new Date().toISOString()</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    // 如果房间在等待且现在每方至少有1人，检查是否可以开始</span>
+<span class="cstat-no" title="statement not covered" >    // (实际开始由前端控制)</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    return { room: { ...room }, seatIndex: vacantSeat.index }</span>
+<span class="cstat-no" title="statement not covered" >  },</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  /** 离开房间 */</span>
+<span class="cstat-no" title="statement not covered" >  async leaveRoom(roomId: string, userId: string): Promise&lt;DebateRoom | null&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    initMockRooms()</span>
+<span class="cstat-no" title="statement not covered" >    await delay(200)</span>
+<span class="cstat-no" title="statement not covered" >    const room = roomsCache.find(r =&gt; r.id === roomId)</span>
+<span class="cstat-no" title="statement not covered" >    if (!room) return null</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    const seat = room.seats.find(s =&gt; s.userId === userId)</span>
+<span class="cstat-no" title="statement not covered" >    if (seat) {</span>
+<span class="cstat-no" title="statement not covered" >      seat.status = 'vacant'</span>
+<span class="cstat-no" title="statement not covered" >      seat.userId = undefined</span>
+<span class="cstat-no" title="statement not covered" >      seat.nickname = undefined</span>
+<span class="cstat-no" title="statement not covered" >      seat.avatar = undefined</span>
+<span class="cstat-no" title="statement not covered" >      seat.joinedAt = undefined</span>
+<span class="cstat-no" title="statement not covered" >      seat.roundScore = 0</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    return { ...room }</span>
+<span class="cstat-no" title="statement not covered" >  },</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  /** 提交发言 */</span>
+<span class="cstat-no" title="statement not covered" >  async submitSpeech(</span>
+<span class="cstat-no" title="statement not covered" >    roomId: string,</span>
+<span class="cstat-no" title="statement not covered" >    userId: string,</span>
+<span class="cstat-no" title="statement not covered" >    nickname: string,</span>
+<span class="cstat-no" title="statement not covered" >    avatar: string,</span>
+<span class="cstat-no" title="statement not covered" >    content: string,</span>
+<span class="cstat-no" title="statement not covered" >  ): Promise&lt;{ speech: DebateSpeech; translation: string | null } | null&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    initMockRooms()</span>
+<span class="cstat-no" title="statement not covered" >    await delay(200)</span>
+<span class="cstat-no" title="statement not covered" >    const room = roomsCache.find(r =&gt; r.id === roomId)</span>
+<span class="cstat-no" title="statement not covered" >    if (!room) return null</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    const seat = room.seats.find(s =&gt; s.userId === userId)</span>
+<span class="cstat-no" title="statement not covered" >    if (!seat) return null</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    const charLimit = getCharLimit(room.currentPhase, room.rules)</span>
+<span class="cstat-no" title="statement not covered" >    if (content.length &gt; charLimit) return null</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    const speech: DebateSpeech = {</span>
+<span class="cstat-no" title="statement not covered" >      id: `sp-${Date.now()}`,</span>
+<span class="cstat-no" title="statement not covered" >      roomId,</span>
+<span class="cstat-no" title="statement not covered" >      round: room.currentRound,</span>
+<span class="cstat-no" title="statement not covered" >      seatIndex: seat.index,</span>
+<span class="cstat-no" title="statement not covered" >      userId,</span>
+<span class="cstat-no" title="statement not covered" >      nickname,</span>
+<span class="cstat-no" title="statement not covered" >      avatar,</span>
+<span class="cstat-no" title="statement not covered" >      side: seat.side,</span>
+<span class="cstat-no" title="statement not covered" >      content,</span>
+<span class="cstat-no" title="statement not covered" >      speechType: 'text',</span>
+<span class="cstat-no" title="statement not covered" >      charLimit,</span>
+<span class="cstat-no" title="statement not covered" >      createdAt: new Date().toISOString(),</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    // 存储发言</span>
+<span class="cstat-no" title="statement not covered" >    const speeches = speechesCache.get(roomId) || []</span>
+<span class="cstat-no" title="statement not covered" >    speeches.push(speech)</span>
+<span class="cstat-no" title="statement not covered" >    speechesCache.set(roomId, speeches)</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    // AI翻译</span>
+<span class="cstat-no" title="statement not covered" >    let translation: string | null = null</span>
+<span class="cstat-no" title="statement not covered" >    try {</span>
+<span class="cstat-no" title="statement not covered" >      translation = await translateSpeech(content)</span>
+<span class="cstat-no" title="statement not covered" >      speech.translatedContent = translation || undefined</span>
+<span class="cstat-no" title="statement not covered" >    } catch {</span>
+<span class="cstat-no" title="statement not covered" >      // 翻译失败不影响发言</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    return { speech, translation }</span>
+<span class="cstat-no" title="statement not covered" >  },</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  /** 获取发言历史 */</span>
+<span class="cstat-no" title="statement not covered" >  async getSpeeches(roomId: string): Promise&lt;DebateSpeech[]&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    initMockRooms()</span>
+<span class="cstat-no" title="statement not covered" >    await delay(150)</span>
+<span class="cstat-no" title="statement not covered" >    return speechesCache.get(roomId) || []</span>
+<span class="cstat-no" title="statement not covered" >  },</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  /** 开始新一轮 */</span>
+<span class="cstat-no" title="statement not covered" >  async startNewRound(roomId: string): Promise&lt;{ room: DebateRoom; judgment: RoundJudgment | null }&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    initMockRooms()</span>
+<span class="cstat-no" title="statement not covered" >    await delay(200)</span>
+<span class="cstat-no" title="statement not covered" >    const room = roomsCache.find(r =&gt; r.id === roomId)</span>
+<span class="cstat-no" title="statement not covered" >    if (!room) return { room: null as any, judgment: null }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    // 如果当前轮有发言，先评分</span>
+<span class="cstat-no" title="statement not covered" >    let judgment: RoundJudgment | null = null</span>
+<span class="cstat-no" title="statement not covered" >    const speeches = speechesCache.get(roomId) || []</span>
+<span class="cstat-no" title="statement not covered" >    const currentRoundSpeeches = speeches.filter(s =&gt; s.round === room.currentRound)</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    if (currentRoundSpeeches.length &gt; 0 &amp;&amp; room.currentRound &gt; 0) {</span>
+<span class="cstat-no" title="statement not covered" >      const judgeInput: JudgeInput = {</span>
+<span class="cstat-no" title="statement not covered" >        topic: room.topic,</span>
+<span class="cstat-no" title="statement not covered" >        affirmLabel: room.affirmLabel,</span>
+<span class="cstat-no" title="statement not covered" >        negateLabel: room.negateLabel,</span>
+<span class="cstat-no" title="statement not covered" >        round: room.currentRound,</span>
+<span class="cstat-no" title="statement not covered" >        speeches: currentRoundSpeeches.map(s =&gt; ({</span>
+<span class="cstat-no" title="statement not covered" >          seatIndex: s.seatIndex,</span>
+<span class="cstat-no" title="statement not covered" >          nickname: s.nickname,</span>
+<span class="cstat-no" title="statement not covered" >          side: s.side,</span>
+<span class="cstat-no" title="statement not covered" >          content: s.content,</span>
+<span class="cstat-no" title="statement not covered" >        })),</span>
+<span class="cstat-no" title="statement not covered" >      }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >      const result: JudgeResult = await judgeRound(judgeInput)</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >      judgment = {</span>
+<span class="cstat-no" title="statement not covered" >        round: room.currentRound,</span>
+<span class="cstat-no" title="statement not covered" >        roomId,</span>
+<span class="cstat-no" title="statement not covered" >        seatScores: result.seatScores.map(ss =&gt; ({</span>
+<span class="cstat-no" title="statement not covered" >          ...ss,</span>
+<span class="cstat-no" title="statement not covered" >          userId: room.seats.find(s =&gt; s.index === ss.seatIndex)?.userId || '',</span>
+<span class="cstat-no" title="statement not covered" >          nickname: room.seats.find(s =&gt; s.index === ss.seatIndex)?.nickname || '',</span>
+<span class="cstat-no" title="statement not covered" >        })),</span>
+<span class="cstat-no" title="statement not covered" >        fallacies: result.fallacies.map(f =&gt; ({</span>
+<span class="cstat-no" title="statement not covered" >          ...f,</span>
+<span class="cstat-no" title="statement not covered" >          userId: room.seats.find(s =&gt; s.index === f.seatIndex)?.userId || '',</span>
+<span class="cstat-no" title="statement not covered" >          nickname: room.seats.find(s =&gt; s.index === f.seatIndex)?.nickname || '',</span>
+<span class="cstat-no" title="statement not covered" >        })),</span>
+<span class="cstat-no" title="statement not covered" >        roundWinner: result.roundWinner,</span>
+<span class="cstat-no" title="statement not covered" >        judgeComment: result.judgeComment,</span>
+<span class="cstat-no" title="statement not covered" >        judgedAt: new Date().toISOString(),</span>
+<span class="cstat-no" title="statement not covered" >      }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >      // 更新个人得分</span>
+<span class="cstat-no" title="statement not covered" >      result.seatScores.forEach(ss =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >        const seat = room.seats.find(s =&gt; s.index === ss.seatIndex)</span>
+<span class="cstat-no" title="statement not covered" >        if (seat) seat.roundScore += ss.score</span>
+<span class="cstat-no" title="statement not covered" >      })</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >      // 存储评分</span>
+<span class="cstat-no" title="statement not covered" >      const judgments = judgmentsCache.get(roomId) || []</span>
+<span class="cstat-no" title="statement not covered" >      judgments.push(judgment!)</span>
+<span class="cstat-no" title="statement not covered" >      judgmentsCache.set(roomId, judgments)</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    // 推进轮次</span>
+<span class="cstat-no" title="statement not covered" >    room.currentRound++</span>
+<span class="cstat-no" title="statement not covered" >    room.currentPhase = getDebatePhase(room.currentRound, room.rules)</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    // 检查是否达到最大轮次（比如6轮结束）</span>
+<span class="cstat-no" title="statement not covered" >    if (room.currentRound &gt; 6) {</span>
+<span class="cstat-no" title="statement not covered" >      room.status = 'ended'</span>
+<span class="cstat-no" title="statement not covered" >    } else {</span>
+<span class="cstat-no" title="statement not covered" >      room.status = 'debating'</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    return { room: { ...room }, judgment }</span>
+<span class="cstat-no" title="statement not covered" >  },</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  /** 投抬走票 */</span>
+<span class="cstat-no" title="statement not covered" >  async castRemovalVote(roomId: string, _voterUserId: string, targetSeatIndex: number): Promise&lt;{ removed: boolean; room: DebateRoom }&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    initMockRooms()</span>
+<span class="cstat-no" title="statement not covered" >    await delay(200)</span>
+<span class="cstat-no" title="statement not covered" >    const room = roomsCache.find(r =&gt; r.id === roomId)</span>
+<span class="cstat-no" title="statement not covered" >    if (!room) return { removed: false, room: null as any }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    const targetSeat = room.seats.find(s =&gt; s.index === targetSeatIndex)</span>
+<span class="cstat-no" title="statement not covered" >    if (!targetSeat || targetSeat.status !== 'occupied') return { removed: false, room: { ...room } }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    targetSeat.removalVotes++</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    // 计算阈值：80%的在场辩手</span>
+<span class="cstat-no" title="statement not covered" >    const onStageCount = room.seats.filter(s =&gt; s.status === 'occupied').length</span>
+<span class="cstat-no" title="statement not covered" >    const threshold = Math.ceil(onStageCount * room.rules.removalThreshold)</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    if (targetSeat.removalVotes &gt;= threshold) {</span>
+<span class="cstat-no" title="statement not covered" >      // 抬走！</span>
+<span class="cstat-no" title="statement not covered" >      targetSeat.status = 'vacant'</span>
+<span class="cstat-no" title="statement not covered" >      targetSeat.userId = undefined</span>
+<span class="cstat-no" title="statement not covered" >      targetSeat.nickname = undefined</span>
+<span class="cstat-no" title="statement not covered" >      targetSeat.avatar = undefined</span>
+<span class="cstat-no" title="statement not covered" >      targetSeat.removalVotes = 0</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >      // 阶梯递增入场费</span>
+<span class="cstat-no" title="statement not covered" >      room.substitutionCount++</span>
+<span class="cstat-no" title="statement not covered" >      room.currentEntryCost = calculateEntryCost(room.entryCostBase, room.substitutionCount)</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >      return { removed: true, room: { ...room } }</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    return { removed: false, room: { ...room } }</span>
+<span class="cstat-no" title="statement not covered" >  },</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  /** 请求辩论总结 */</span>
+<span class="cstat-no" title="statement not covered" >  async requestSummary(roomId: string): Promise&lt;DebateSummary | null&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    initMockRooms()</span>
+<span class="cstat-no" title="statement not covered" >    const room = roomsCache.find(r =&gt; r.id === roomId)</span>
+<span class="cstat-no" title="statement not covered" >    if (!room) return null</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    // 检查缓存</span>
+<span class="cstat-no" title="statement not covered" >    if (summaryCache.has(roomId)) return summaryCache.get(roomId)!</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    const speeches = speechesCache.get(roomId) || []</span>
+<span class="cstat-no" title="statement not covered" >    const judgments = judgmentsCache.get(roomId) || []</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    const input: SummaryInput = {</span>
+<span class="cstat-no" title="statement not covered" >      topic: room.topic,</span>
+<span class="cstat-no" title="statement not covered" >      affirmLabel: room.affirmLabel,</span>
+<span class="cstat-no" title="statement not covered" >      negateLabel: room.negateLabel,</span>
+<span class="cstat-no" title="statement not covered" >      totalRounds: room.currentRound,</span>
+<span class="cstat-no" title="statement not covered" >      allSpeeches: speeches.map(s =&gt; ({</span>
+<span class="cstat-no" title="statement not covered" >        round: s.round,</span>
+<span class="cstat-no" title="statement not covered" >        seatIndex: s.seatIndex,</span>
+<span class="cstat-no" title="statement not covered" >        nickname: s.nickname,</span>
+<span class="cstat-no" title="statement not covered" >        side: s.side,</span>
+<span class="cstat-no" title="statement not covered" >        content: s.content,</span>
+<span class="cstat-no" title="statement not covered" >      })),</span>
+<span class="cstat-no" title="statement not covered" >      allJudgments: judgments.map(j =&gt; ({</span>
+<span class="cstat-no" title="statement not covered" >        round: j.round,</span>
+<span class="cstat-no" title="statement not covered" >        seatScores: j.seatScores.map(ss =&gt; ({</span>
+<span class="cstat-no" title="statement not covered" >          seatIndex: ss.seatIndex,</span>
+<span class="cstat-no" title="statement not covered" >          nickname: ss.nickname,</span>
+<span class="cstat-no" title="statement not covered" >          score: ss.score,</span>
+<span class="cstat-no" title="statement not covered" >        })),</span>
+<span class="cstat-no" title="statement not covered" >        roundWinner: j.roundWinner,</span>
+<span class="cstat-no" title="statement not covered" >      })),</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    const result = await generateSummary(input)</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    const summary: DebateSummary = {</span>
+<span class="cstat-no" title="statement not covered" >      roomId,</span>
+<span class="cstat-no" title="statement not covered" >      topic: room.topic,</span>
+<span class="cstat-no" title="statement not covered" >      totalRounds: room.currentRound,</span>
+<span class="cstat-no" title="statement not covered" >      winner: result.winner,</span>
+<span class="cstat-no" title="statement not covered" >      keyArguments: result.keyArguments,</span>
+<span class="cstat-no" title="statement not covered" >      fallacySummary: [],</span>
+<span class="cstat-no" title="statement not covered" >      mvpUserId: result.mvpUserId,</span>
+<span class="cstat-no" title="statement not covered" >      mvpNickname: result.mvpNickname,</span>
+<span class="cstat-no" title="statement not covered" >      affirmTotalScore: result.affirmTotalScore,</span>
+<span class="cstat-no" title="statement not covered" >      negateTotalScore: result.negateTotalScore,</span>
+<span class="cstat-no" title="statement not covered" >      generatedAt: new Date().toISOString(),</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    summaryCache.set(roomId, summary)</span>
+<span class="cstat-no" title="statement not covered" >    room.status = 'ended'</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >    return summary</span>
+<span class="cstat-no" title="statement not covered" >  },</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >  /** 获取回合评分 */</span>
+<span class="cstat-no" title="statement not covered" >  async getJudgments(roomId: string): Promise&lt;RoundJudgment[]&gt; {</span>
+<span class="cstat-no" title="statement not covered" >    initMockRooms()</span>
+<span class="cstat-no" title="statement not covered" >    await delay(100)</span>
+<span class="cstat-no" title="statement not covered" >    return judgmentsCache.get(roomId) || []</span>
+<span class="cstat-no" title="statement not covered" >  },</span>
+<span class="cstat-no" title="statement not covered" >}</span>
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-07-17T06:45:57.270Z
+            </div>
+        <script src="../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../sorter.js"></script>
+        <script src="../block-navigation.js"></script>
+    </body>
+</html>
+    

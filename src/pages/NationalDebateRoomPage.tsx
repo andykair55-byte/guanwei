@@ -38,26 +38,6 @@ export default function NationalDebateRoomPage() {
     setPhaseRemaining(getDemoDuration(firstPhase.duration))
   }, [roomId])
 
-  // 进入下一发言或环节
-  const nextSpeech = useCallback(() => {
-    const phase = NATIONAL_PHASES[currentPhaseIndex]
-    if (!phase) return
-
-    if (currentSpeechIndex + 1 < phase.order.length) {
-      setCurrentSpeechIndex(prev => prev + 1)
-      setPhaseRemaining(getDemoDuration(phase.duration))
-    } else {
-      if (currentPhaseIndex + 1 < NATIONAL_PHASES.length) {
-        const nextIdx = currentPhaseIndex + 1
-        setCurrentPhaseIndex(nextIdx)
-        setCurrentSpeechIndex(0)
-        setPhaseRemaining(getDemoDuration(NATIONAL_PHASES[nextIdx].duration))
-      } else {
-        finishDebate()
-      }
-    }
-  }, [currentPhaseIndex, currentSpeechIndex])
-
   // 辩论结束 → 评委评议
   const finishDebate = useCallback(async () => {
     if (!room) return
@@ -77,6 +57,26 @@ export default function NationalDebateRoomPage() {
     setIsJudging(false)
     setShowSummary(true)
   }, [room])
+
+  // 进入下一发言或环节
+  const nextSpeech = useCallback(() => {
+    const phase = NATIONAL_PHASES[currentPhaseIndex]
+    if (!phase) return
+
+    if (currentSpeechIndex + 1 < phase.order.length) {
+      setCurrentSpeechIndex(prev => prev + 1)
+      setPhaseRemaining(getDemoDuration(phase.duration))
+    } else {
+      if (currentPhaseIndex + 1 < NATIONAL_PHASES.length) {
+        const nextIdx = currentPhaseIndex + 1
+        setCurrentPhaseIndex(nextIdx)
+        setCurrentSpeechIndex(0)
+        setPhaseRemaining(getDemoDuration(NATIONAL_PHASES[nextIdx].duration))
+      } else {
+        finishDebate()
+      }
+    }
+  }, [currentPhaseIndex, currentSpeechIndex, finishDebate])
 
   // 驱动 AI 发言
   const advanceSpeech = useCallback(async () => {
@@ -245,7 +245,7 @@ export default function NationalDebateRoomPage() {
               affirmScore={affirmTotal}
               negateScore={negateTotal}
               highlight={room.speeches[0]?.content?.slice(0, 80) || ''}
-              source="national"
+              source="national-4v4"
             />
 
             {/* 三位评委的详细评分 */}

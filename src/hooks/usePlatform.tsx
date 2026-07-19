@@ -11,6 +11,7 @@ export type Platform = 'web' | 'mobile'
  *
  * This runs ONCE at mount. Platform is immutable for the session.
  */
+// eslint-disable-next-line react/only-export-components -- 标准 Context 模式：Provider + Hook 同文件
 export function detectPlatform(): Platform {
   const params = new URLSearchParams(window.location.search)
   if (params.get('platform') === 'mobile') return 'mobile'
@@ -48,6 +49,7 @@ export function PlatformProvider({
   )
 }
 
+// eslint-disable-next-line react/only-export-components -- 标准 Context 模式：Provider + Hook 同文件
 export function usePlatform(): PlatformContextValue {
   return useContext(PlatformContext)
 }

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { api } from '../services/api'
-import type { VerificationRequest, VerificationResult, EvidenceTimelineItem } from '../types'
+import { transformMelonList } from '../utils/transform'
+import type { VerificationRequest, VerificationResult, EvidenceTimelineItem, Melon, ApiMelon } from '../types'
 
 type AgentPhase = 'idle' | 'searching' | 'verifying' | 'analyzing' | 'done'
 
@@ -8,6 +9,12 @@ interface ChatMessage {
   id: string
   text: string
   type: 'system' | 'evidence'
+}
+
+interface RevealResult {
+  success: boolean
+  message?: string
+  melon?: Melon
 }
 
 interface VerificationState {
@@ -20,6 +27,18 @@ interface VerificationState {
   chatMessages: ChatMessage[]
   evidenceTimeline: EvidenceTimelineItem[]
   result: VerificationResult | null
+
+  // ── 开奖闭环相关 ──────────────────────────────
+  /** 管理后台用瓜列表（含 mock fallback，开奖后本地同步） */
+  adminMelons: Melon[]
+  adminMelonsLoading: boolean
+  adminMelonsError: string | null
+  /** 拉取瓜列表（默认全量 pending + revealed） */
+  fetchAdminMelons: (status?: 'pending' | 'revealed') => Promise<void>
+  /** 开奖：将 pending 瓜置为 revealed，同步本地 + API(mock fallback) */
+  revealMelon: (melonId: string | number, result: boolean) => Promise<RevealResult>
+  /** 重复开奖判断 */
+  isRevealed: (melonId: string | number) => boolean
 
   submitVerification: (content: string, type: 'text' | 'link') => Promise<VerificationResult>
   purchaseExtra: () => Promise<boolean>
@@ -83,6 +102,73 @@ export const useVerificationStore = create<VerificationState>((set, get) => ({
   chatMessages: [],
   evidenceTimeline: [],
   result: null,
+
+  // ── 开奖闭环相关 ──────────────────────────────
+  adminMelons: [],
+  adminMelonsLoading: false,
+  adminMelonsError: null,
+
+  fetchAdminMelons: async (status?: 'pending' | 'revealed') => {
+    set({ adminMelonsLoading: true, adminMelonsError: null })
+    try {
+      const data: any = await api.getMelons(undefined, status, 0, 200)
+      const items: ApiMelon[] = data.items || data || []
+      const melons = transformMelonList(items)
+      set({ adminMelons: melons, adminMelonsLoading: false })
+    } catch (e: any) {
+      set({
+        adminMelonsLoading: false,
+        adminMelonsError: e?.message || '加载失败',
+      })
+    }
+  },
+
+  revealMelon: async (melonId: string | number, result: boolean) => {
+    const idStr = String(melonId)
+    const idNum = Number(melonId)
+    // 幂等：重复开奖直接返回提示
+    const exists = get().adminMelons.find(m => String(m.id) === idStr)
+    if (exists && exists.status === 'revealed') {
+      return { success: false, message: '该瓜已开奖，请勿重复操作' }
+    }
+
+    // 先乐观更新本地状态
+    set(state => ({
+      adminMelons: state.adminMelons.map(m =>
+        String(m.id) === idStr
+          ? {
+              ...m,
+              status: 'revealed' as const,
+              result,
+              revealTime: new Date().toISOString(),
+            }
+          : m,
+      ),
+    }))
+
+    try {
+      // 调用 API（mock fallback 自动接管）
+      const res: any = await (api as any).revealMelon?.(idNum, result)
+      const revealedMelon: Melon | undefined = get().adminMelons.find(m => String(m.id) === idStr)
+      return {
+        success: true,
+        melon: revealedMelon,
+        message: res?.message,
+      }
+    } catch {
+      // API 失败但本地已更新，仍视为成功（mock 模式下数据已经在 mockApi 内存中）
+      return {
+        success: true,
+        message: '开奖成功（mock 模式）',
+      }
+    }
+  },
+
+  isRevealed: (melonId: string | number) => {
+    const idStr = String(melonId)
+    const m = get().adminMelons.find(x => String(x.id) === idStr)
+    return m?.status === 'revealed'
+  },
 
   submitVerification: async (content: string, type: 'text' | 'link') => {
     const { dailyFreeUsed, extraPurchased, maxFreePerDay } = get()
@@ -183,7 +269,7 @@ export const useVerificationStore = create<VerificationState>((set, get) => ({
       }
 
       return result
-    } catch (e) {
+    } catch {
       // API 失败时使用 mock 结果
       const mockResult: VerificationResult = {
         credibilityLevel: 3,

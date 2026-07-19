@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
+from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
@@ -11,6 +11,8 @@ from database import get_db
 from models import User
 import os
 import logging
+import secrets
+import pathlib
 
 logger = logging.getLogger(__name__)
 
@@ -31,13 +33,30 @@ if not DEV_MODE and not SECRET_KEY:
     )
 
 if DEV_MODE and not SECRET_KEY:
-    SECRET_KEY = "jianwei-secret-key-change-in-production"
-    logger.warning(
-        "【警告】当前处于开发模式 (DEV_MODE=true)，正在使用默认 SECRET_KEY。\n"
-        "默认密钥仅适用于本地开发和测试，请勿在生产环境中使用。\n"
-        "生产环境请配置强随机密钥，可使用以下命令生成：\n"
-        "  openssl rand -hex 32"
-    )
+    # DEV_MODE 兜底：从持久化文件读取 SECRET_KEY，首次生成时写入文件，
+    # 保证重启后 SECRET_KEY 稳定，避免旧 JWT 失效导致前端 401 风暴。
+    _secret_key_file = pathlib.Path(__file__).resolve().parent / ".secret_key"
+    if _secret_key_file.exists():
+        file_key = _secret_key_file.read_text(encoding="utf-8").strip()
+        if file_key:
+            SECRET_KEY = file_key
+            logger.info("DEV_MODE SECRET_KEY 来源：来自持久化文件")
+
+    if not SECRET_KEY:
+        SECRET_KEY = secrets.token_hex(32)
+        try:
+            _secret_key_file.write_text(SECRET_KEY, encoding="utf-8")
+            try:
+                _secret_key_file.chmod(0o600)
+            except OSError:
+                # Windows 文件系统不支持 Unix 权限位，忽略
+                pass
+            logger.info("DEV_MODE SECRET_KEY 来源：首次生成并写入文件")
+        except OSError as e:
+            # 持久化失败时回退到内存随机 key（重启后失效，但保证启动成功）
+            logger.warning(f"DEV_MODE SECRET_KEY 持久化失败，使用临时 key：{e}")
+elif SECRET_KEY:
+    logger.info("SECRET_KEY 来源：来自环境变量")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer(auto_error=False)

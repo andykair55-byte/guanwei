@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   Search, Star, Sparkles, FileText,
-  Shield, BarChart3, Clock, Link2, Layers, Camera, Zap,
+  Shield, BarChart3, Clock, Layers, Camera, Zap,
   Microscope, FileSearch, AlertTriangle, ScanEye,
 } from 'lucide-react'
 import { useVerificationStore } from '../stores/verificationStore'
@@ -250,7 +250,6 @@ function VerifyPage() {
   }
 
   // ===== 默认输入 =====
-  const defaultPadding = notchHeight > 0 ? `${notchHeight + 8}px` : undefined
   return (
     <div className="flex flex-col min-h-full" style={{ background: 'linear-gradient(180deg, #FFFBEB 0%, #ffffff 320px)' }}>
       {/* ═══════ 顶部 Banner（社区风格）═══════ */}

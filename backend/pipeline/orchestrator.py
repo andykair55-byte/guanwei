@@ -268,6 +268,12 @@ class PipelineOrchestrator:
             }
             final_result["checkpoint_count"] = len(result.get("checkpoints", []))
 
+            # 节点执行状态（供 AdminPage Pipeline 历史显示）
+            # 从最终 state 中提取各节点产出，标记为 success
+            for node_key in ["moderation_result", "collected_sources", "verified_sources", "analysis_result"]:
+                if node_key in result:
+                    final_result[node_key] = result.get(node_key)
+
             return final_result
 
         except Exception as e:

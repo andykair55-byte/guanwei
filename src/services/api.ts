@@ -2,10 +2,50 @@ import { mockApi } from './mockApi'
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
-const getToken = (): string | null => localStorage.getItem('token')
+/**
+ * 读取 token 并做 JWT 过期检查（spec-19 任务 2）
+ *
+ * - 解析 JWT payload 第二段，检查 exp 字段
+ * - 过期则清除 localStorage 并返回 null（不再用过期 token 请求后端）
+ * - 非 JWT 格式（如 mock 模式下的占位 token）保持兼容，原样返回
+ *
+ * 注意：localStorage 仍可被 XSS 读取，本方案仅降低过期 token 被滥用的风险；
+ * 真正的 XSS 防护依赖任务 3 的 rehype-sanitize。
+ */
+export function getToken(): string | null {
+  const token = localStorage.getItem('token')
+  if (!token) return null
+  try {
+    // JWT 格式：header.payload.signature，取 payload 解析 exp
+    const parts = token.split('.')
+    if (parts.length !== 3) return token // 非 JWT 格式，保持兼容
+    const payload = JSON.parse(atob(parts[1]))
+    if (payload?.exp && Date.now() >= payload.exp * 1000) {
+      localStorage.removeItem('token')
+      return null
+    }
+    return token
+  } catch {
+    // 解析失败（非 JWT 或 base64 损坏），保持兼容返回原 token
+    return token
+  }
+}
 
 // 后端是否可用：未配置 API 地址时直接走 mock，不做探测
 let backendAvailable: boolean | null = import.meta.env.VITE_API_BASE_URL ? null : false
+
+// ---------- 全局 loading 事件 ----------
+type LoadingListener = (isLoading: boolean) => void
+const loadingListeners: Set<LoadingListener> = new Set()
+
+export function onLoadingChange(listener: LoadingListener) {
+  loadingListeners.add(listener)
+  return () => loadingListeners.delete(listener)
+}
+
+function setLoading(isLoading: boolean) {
+  loadingListeners.forEach(l => l(isLoading))
+}
 
 // 统一错误响应格式
 interface ApiError {
@@ -27,7 +67,7 @@ export class ApiErrorClass extends Error {
   }
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}, timeout = 2000): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> || {}),
@@ -38,27 +78,34 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers['Authorization'] = `Bearer ${token}`
   }
 
-  const response = await fetch(`${BASE_URL}${path}`, {
-    ...options,
-    headers,
-    signal: AbortSignal.timeout(2000), // 2秒超时
-  })
+  setLoading(true)
+  try {
+    const response = await fetch(`${BASE_URL}${path}`, {
+      ...options,
+      headers,
+      signal: AbortSignal.timeout(timeout),
+    })
 
-  if (!response.ok) {
-    // 处理统一错误格式
-    const error: ApiError = await response.json().catch(() => ({
-      code: response.status,
-      message: `请求失败: ${response.status}`,
-    }))
-    throw new ApiErrorClass(error)
+    if (!response.ok) {
+      // 处理统一错误格式
+      const error: ApiError = await response.json().catch(() => ({
+        code: response.status,
+        message: `请求失败: ${response.status}`,
+      }))
+      throw new ApiErrorClass(error)
+    }
+
+    return response.json()
+  } finally {
+    setLoading(false)
   }
-
-  return response.json()
 }
 
 /**
  * 带 mock fallback 的请求包装器
  * 先尝试真实后端，网络失败时自动切换到 mock
+ * - 业务错误（4xx 除 401/429）不降级，直接抛出
+ * - 网络错误 / 5xx / 401（未授权） / 429（限流）降级到 mock
  */
 async function withFallback<T>(
   realCall: () => Promise<T>,
@@ -68,7 +115,12 @@ async function withFallback<T>(
   if (backendAvailable === true) {
     try {
       return await realCall()
-    } catch {
+    } catch (e) {
+      // 业务错误（4xx 除 401/429）不降级，直接抛
+      if (e instanceof ApiErrorClass && e.code >= 400 && e.code < 500 && e.code !== 401 && e.code !== 429) {
+        throw e
+      }
+      // 网络错误 / 5xx / 401 / 429 降级到 mock
       backendAvailable = false
       return mockCall()
     }
@@ -84,7 +136,11 @@ async function withFallback<T>(
     const result = await realCall()
     backendAvailable = true
     return result
-  } catch {
+  } catch (e) {
+    // 业务错误不降级，直接抛（首次探测也保持业务错误可见）
+    if (e instanceof ApiErrorClass && e.code >= 400 && e.code < 500 && e.code !== 401 && e.code !== 429) {
+      throw e
+    }
     backendAvailable = false
     return mockCall()
   }
@@ -151,13 +207,22 @@ export const api = {
       () => mockApi.getMelon(id),
     ),
 
-  submitGuess: (melonId: number, choice: boolean, evidenceContent?: string) =>
+  submitGuess: (melonId: number, choice: boolean, evidenceContent?: string, requestId?: string) =>
     withFallback(
       () => request(`/melons/${melonId}/guess`, {
         method: 'POST',
-        body: JSON.stringify({ melon_id: melonId, choice, evidence_content: evidenceContent })
+        body: JSON.stringify({ melon_id: melonId, choice, evidence_content: evidenceContent, request_id: requestId })
       }),
-      () => mockApi.submitGuess(melonId, choice, evidenceContent),
+      () => mockApi.submitGuess(melonId, choice, evidenceContent, requestId),
+    ),
+
+  revealMelon: (melonId: number, result: boolean) =>
+    withFallback(
+      () => request(`/admin/melons/${melonId}/reveal`, {
+        method: 'PUT',
+        body: JSON.stringify({ result })
+      }),
+      () => mockApi.revealMelon(melonId, result),
     ),
 
   getMyGuess: (melonId: number) =>
@@ -204,7 +269,7 @@ export const api = {
       () => request('/verify', {
         method: 'POST',
         body: JSON.stringify({ content, type })
-      }),
+      }, 15000),
       () => mockApi.verify(content, type),
     ),
 
@@ -213,13 +278,13 @@ export const api = {
       () => request('/moderate', {
         method: 'POST',
         body: JSON.stringify({ text })
-      }),
+      }, 15000),
       () => mockApi.moderate(text),
     ),
 
   getProviders: () =>
     withFallback(
-      () => request('/models/providers'),
+      () => request('/models/providers', {}, 15000),
       () => mockApi.getProviders(),
     ),
 
@@ -228,7 +293,7 @@ export const api = {
       () => request('/models/set-provider', {
         method: 'POST',
         body: JSON.stringify({ provider })
-      }),
+      }, 15000),
       () => mockApi.setProvider(provider),
     ),
 
@@ -257,5 +322,22 @@ export const api = {
     withFallback(
       () => request(`/comments/${commentId}/like`, { method: 'POST' }),
       () => mockApi.likeComment(commentId),
+    ),
+
+  // spec-19: LLM 连接测试走后端代理，避免浏览器直接 fetch 第三方 API 触发 CORS。
+  // 不走 withFallback —— 测试连接需要看到真实错误，mock 没有意义。
+  testLLMConnection: (payload: {
+    provider: string
+    api_key: string
+    base_url?: string
+    model?: string
+  }) =>
+    request<{ success: boolean; model?: string; error?: string }>(
+      '/admin/llm/test-connection',
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      },
+      15000, // LLM 测试可能慢，15 秒超时（后端 httpx 10s + 网络/排队余量）
     ),
 }
